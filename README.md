@@ -1,6 +1,6 @@
 # STATLAB-Pro
 
-📊O STATLAB Pro é uma solução local baseada em tecnologias web (HTML, CSS e JavaScript) desenvolvida para centralizar, analisar e monitorar a qualidade de dados de engenharia. Diferente dos relatórios tradicionais de "passou ou falhou", a ferramenta funciona como um motor de inteligência analítica, processando dados brutos de execução, desempenho e estabilidade de testes.
+📊O STATLAB Pro é uma solução local que roda no navegador através de um HTML baseada em tecnologias web (HTML, CSS e JavaScript) desenvolvida para centralizar, analisar e monitorar a qualidade de dados de engenharia. Diferente dos relatórios tradicionais de a ferramenta funciona como um motor de inteligência analítica, processando dados brutos de execução, desempenho e estabilidade de testes.
 Por rodar diretamente no navegador sem a necessidade de infraestruturas complexas de servidores, o programa oferece uma interface gráfica fluida, interativa e totalmente personalizável.
 
 💡 100% Local: Nenhum dado é enviado a servidores externos. Todo o processamento ocorre diretamente no seu navegador, garantindo privacidade e funcionamento offline.
