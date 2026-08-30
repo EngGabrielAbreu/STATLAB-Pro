@@ -28465,6 +28465,15 @@ var edsResult=null;               // resultado da última análise
 var edsChart=null;
 var _edsDragStart=null;
 var _EDS_MAXDIM=1400;             // limita o lado maior ao desenhar (desempenho); a proporção é mantida
+// ov.1.1.1: 🔬 ESTUDO LOCALIZADO — usuário seleciona uma área da imagem (Modo 1/combinado) e
+// roda a mesma análise só dentro dela. edsLocalSel guarda {x,y,w,h} em coordenadas ORIGINAIS
+// da imagem (mesmo espaço de edsMasks); edsLocalResult é o resultado dessa análise restrita.
+var edsLocalSel=null;
+var edsLocalResult=null;
+var edsLocalZoom=1;
+var edsLocalChartInst=null;
+var _edsLocalDragStart=null;
+var _edsLocalCanvasHooked=false;
 // ov.1.1.1: paleta usada nas miniaturas do Modo 2 e no gráfico de barras dos mapas separados.
 var _EDS_COLORS=['#ff3b30','#34c759','#0a84ff','#ffd60a','#bf5af2','#ff9f0a','#5ac8fa','#ff2d55'];
 
@@ -28538,6 +28547,10 @@ function edsSetMode(m){
   edsResult=null;
   _edsRenderResults();
   _edsRenderImage();
+  // ov.1.1.1: Estudo Localizado só existe no modo combinado — limpa e atualiza a aba ao trocar
+  edsLocalSel=null; edsLocalResult=null;
+  if(edsLocalChartInst){ try{ edsLocalChartInst.destroy(); }catch(e){} edsLocalChartInst=null; }
+  try{ _edsLocalShowResEmpty(); _edsLocalRenderImage(); }catch(e){}
 }
 function edsAddElement(){
   var en=_edsEN();
@@ -28730,9 +28743,11 @@ function edsHandleFile1(input){
   var f=input&&input.files&&input.files[0]; if(!f) return;
   _edsLoadImage(f,function(im){
     edsImg=im; edsImgName=f.name; edsMasks=[]; edsResult=null;
+    edsLocalSel=null; edsLocalResult=null; // ov.1.1.1: nova imagem, seleção antiga não vale mais
     var fn=document.getElementById('edsFileName1');
     if(fn) fn.textContent='✓ '+f.name+' ('+im.naturalWidth+'×'+im.naturalHeight+' px)';
     _edsRenderImage(); _edsRenderResults(); _edsUpdateMaskInfo();
+    try{ _edsLocalShowResEmpty(); _edsLocalRenderImage(); }catch(e){}
   });
   try{ input.value=''; }catch(e){}
 }
@@ -28942,7 +28957,274 @@ function _edsSetupCanvas(){
     _edsRenderElements(); _edsRenderImage();
   });
 }
-// ── análise ────────────────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════════════════
+// 🔬 ESTUDO LOCALIZADO — usuário seleciona uma área da imagem (arrastando) e a mesma análise
+// roda só dentro dela. Só disponível no Modo 1 (Mapa colorido / combined) com imagem carregada.
+// Reaproveita ao máximo o que já existe: _edsRunCombined(restrictRect), _edsIsoCanvas(idx,R),
+// _edsOverlapCanvas(pair,R) e a janela pop-up edsOpenLightbox — só o canvas de seleção, o
+// zoom e as caixas de resultado (tabela/gráfico/grades) são específicos desta aba.
+// ══════════════════════════════════════════════════════════════════════════════════════════
+function edsLocalSetZoom(v){
+  var z=Math.max(1,Math.min(8,(parseFloat(v)||100)/100));
+  edsLocalZoom=z;
+  var sl=document.getElementById('edsLocalZoomSl'); if(sl) sl.value=Math.round(z*100);
+  var lb=document.getElementById('edsLocalZoomVal'); if(lb) lb.textContent=Math.round(z*100)+'%';
+  _edsLocalRenderImage();
+}
+function edsLocalZoomStep(d){ edsLocalSetZoom(Math.round(edsLocalZoom*100)+d); }
+// ov.1.1.1: formata a área selecionada (em px da imagem original) para a linha de info abaixo do canvas.
+function _edsLocalFmtSelInfo(en){
+  var el=document.getElementById('edsLocalSelInfo'); if(!el) return;
+  if(!edsLocalSel){ el.textContent=''; return; }
+  var s=edsLocalSel;
+  el.innerHTML = (en?'Selected area: ':'Área selecionada: ')
+    + Math.round(s.w)+'×'+Math.round(s.h)+' px'
+    + (en?' (top-left at ':' (canto superior esquerdo em ')+Math.round(s.x)+','+Math.round(s.y)+')';
+}
+function _edsLocalRenderImage(){
+  var box=document.getElementById('edsLocalImgBox'), empty=document.getElementById('edsLocalEmpty'),
+      content=document.getElementById('edsLocalContent'), cv=document.getElementById('edsLocalCanvas');
+  if(!box||!empty||!content||!cv) return;
+  var en=_edsEN();
+  // ov.1.1.1: só funciona no Modo 1 (Mapa colorido) com imagem carregada — nos outros
+  // casos mostra a mensagem vazia e sai, igual ao restante do estudo EDS.
+  if(edsMode!=='combined' || !edsImg){
+    content.style.display='none'; empty.style.display='block';
+    return;
+  }
+  content.style.display='block'; empty.style.display='none';
+  var d=_edsDrawDims(edsImg);
+  cv.width=Math.round(d.w*edsLocalZoom); cv.height=Math.round(d.h*edsLocalZoom);
+  var ctx=cv.getContext('2d');
+  ctx.imageSmoothingEnabled=(edsLocalZoom<2);
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.drawImage(edsImg,0,0,cv.width,cv.height);
+  // máscaras de exclusão do estudo geral também aparecem aqui (referência visual — a análise
+  // localizada também as respeita, ver _edsRunCombined)
+  edsMasks.forEach(function(m){
+    var x=m.x*d.sc*edsLocalZoom, y=m.y*d.sc*edsLocalZoom, w=m.w*d.sc*edsLocalZoom, h=m.h*d.sc*edsLocalZoom;
+    ctx.save(); ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle='rgba(248,113,113,.7)'; ctx.lineWidth=1.2; ctx.setLineDash([4,3]); ctx.strokeRect(x,y,w,h);
+    ctx.restore();
+  });
+  // área selecionada (persistente, já confirmada)
+  if(edsLocalSel){
+    var sx=edsLocalSel.x*d.sc*edsLocalZoom, sy=edsLocalSel.y*d.sc*edsLocalZoom,
+        sw=edsLocalSel.w*d.sc*edsLocalZoom, sh=edsLocalSel.h*d.sc*edsLocalZoom;
+    ctx.save();
+    ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2; ctx.setLineDash([]); ctx.strokeRect(sx,sy,sw,sh);
+    ctx.fillStyle='rgba(245,158,11,.12)'; ctx.fillRect(sx,sy,sw,sh);
+    ctx.restore();
+  }
+  // retângulo em construção (arrastando agora)
+  if(_edsLocalDragStart && _edsLocalDragStart.cur){
+    var a=_edsLocalDragStart;
+    var x1=Math.min(a.x,a.cur.x)*edsLocalZoom, y1=Math.min(a.y,a.cur.y)*edsLocalZoom;
+    ctx.save(); ctx.strokeStyle='#f59e0b'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]);
+    ctx.strokeRect(x1,y1,Math.abs(a.cur.x-a.x)*edsLocalZoom,Math.abs(a.cur.y-a.y)*edsLocalZoom); ctx.restore();
+  }
+  var hint=document.getElementById('edsLocalImgHint');
+  if(hint) hint.innerHTML = en
+    ? 'Drag over the image to mark the area you want to analyze. Use the zoom for extra precision.'
+    : 'Arraste sobre a imagem para marcar a área que você quer analisar. Use o zoom para maior precisão.';
+  _edsLocalFmtSelInfo(en);
+}
+// Liga os eventos do canvas de seleção. Uma única vez.
+function _edsLocalSetupCanvas(){
+  var cv=document.getElementById('edsLocalCanvas'); if(!cv||_edsLocalCanvasHooked) return;
+  _edsLocalCanvasHooked=true;
+  function rel(e){
+    var r=cv.getBoundingClientRect();
+    var z=(typeof edsLocalZoom==='number'&&edsLocalZoom>0)?edsLocalZoom:1;
+    return {x:(e.clientX-r.left)*(cv.width/r.width)/z, y:(e.clientY-r.top)*(cv.height/r.height)/z};
+  }
+  cv.addEventListener('mousedown',function(e){
+    if(edsMode!=='combined'||!edsImg) return;
+    var p=rel(e); _edsLocalDragStart={x:p.x,y:p.y,cur:null}; e.preventDefault();
+  });
+  cv.addEventListener('mousemove',function(e){
+    if(!_edsLocalDragStart) return;
+    _edsLocalDragStart.cur=rel(e); _edsLocalRenderImage(); e.preventDefault();
+  });
+  cv.addEventListener('mouseup',function(e){
+    if(!_edsLocalDragStart) return;
+    var p=rel(e), a=_edsLocalDragStart; _edsLocalDragStart=null;
+    if(!edsImg) return;
+    var d=_edsDrawDims(edsImg);
+    var x1=Math.min(a.x,p.x)/d.sc, y1=Math.min(a.y,p.y)/d.sc;
+    var w=Math.abs(p.x-a.x)/d.sc, h=Math.abs(p.y-a.y)/d.sc;
+    // ov.1.1.1: uma seleção por vez — um novo arrasto substitui a anterior.
+    if(w>3&&h>3){ edsLocalSel={x:x1,y:y1,w:w,h:h}; edsLocalResult=null; _edsLocalShowResEmpty(); }
+    _edsLocalRenderImage();
+  });
+}
+function edsLocalClearSel(){
+  edsLocalSel=null; edsLocalResult=null;
+  if(edsLocalChartInst){ try{ edsLocalChartInst.destroy(); }catch(e){} edsLocalChartInst=null; }
+  _edsLocalShowResEmpty();
+  _edsLocalRenderImage();
+}
+function _edsLocalShowResEmpty(){
+  var e1=document.getElementById('edsLocalResEmpty'), w1=document.getElementById('edsLocalResWrap');
+  if(e1) e1.style.display='block'; if(w1) w1.style.display='none';
+  var ib=document.getElementById('edsLocalIsoBox'); if(ib) ib.style.display='none';
+  var ob=document.getElementById('edsLocalOverlapBox'); if(ob) ob.style.display='none';
+}
+function edsLocalAnalyze(){
+  var en=_edsEN();
+  if(edsMode!=='combined'){ try{ notify(en?'Only available in "Colored map" mode.':'Disponível apenas no modo "Mapa colorido".'); }catch(_){} return; }
+  if(!edsImg){ try{ notify(en?'Load the map image first.':'Carregue a imagem do mapa primeiro.'); }catch(_){} return; }
+  if(!edsElements.length){ try{ notify(en?'Add at least one element.':'Adicione ao menos um elemento.'); }catch(_){} return; }
+  if(!edsLocalSel){ try{ notify(en?'Drag over the image to mark an area first.':'Arraste sobre a imagem para marcar uma área primeiro.'); }catch(_){} return; }
+  edsLocalResult=_edsRunCombined(edsLocalSel);
+  _edsLocalRenderResults();
+}
+function _edsLocalRenderResults(){
+  var en=_edsEN();
+  var e1=document.getElementById('edsLocalResEmpty'), w1=document.getElementById('edsLocalResWrap');
+  if(!e1||!w1) return;
+  if(!edsLocalResult){ e1.style.display='block'; w1.style.display='none'; return; }
+  e1.style.display='none'; w1.style.display='block';
+  var R=edsLocalResult, tbl=document.getElementById('edsLocalResTable');
+  var f=function(v){ return (typeof fmtSmart==='function')?fmtSmart(v,2):String(Math.round(v*100)/100); };
+  var h='<table class="eds-table"><thead><tr>'
+    +'<th></th><th>'+(en?'Element':'Elemento')+'</th>'
+    +'<th>'+(en?'Pixels':'Pixels')+'</th>'
+    +'<th>'+(en?'% of area':'% da área')+'</th>'
+    +'<th>'+(en?'% of classified':'% do classificado')+'</th></tr></thead><tbody>';
+  R.rows.forEach(function(r){
+    h+='<tr><td><span class="et-sw" style="background:'+_edsEsc(r.color)+'"></span></td>'
+      +'<td>'+_edsEsc(r.name)+'</td><td>'+r.pixels.toLocaleString()+'</td>'
+      +'<td>'+f(r.pctTotal)+'%</td><td>'+f(r.pctClassified)+'%</td></tr>';
+  });
+  h+='<tr><td><span class="et-sw" style="background:#ffffff"></span></td><td>'+(en?'Overlap':'Sobreposição')
+    +'</td><td>'+R.overlap.toLocaleString()+'</td><td>'+f(R.total?R.overlap/R.total*100:0)+'%</td><td>–</td></tr>';
+  (R.ovPairs||[]).forEach(function(p){
+    h+='<tr><td style="padding-left:16px">'
+      +'<span class="et-sw" style="background:'+_edsEsc(p.aColor)+'"></span>'
+      +'<span class="et-sw" style="background:'+_edsEsc(p.bColor)+';margin-left:-3px"></span></td>'
+      +'<td style="padding-left:16px;color:var(--text4);font-size:11px">↳ '
+      +_edsEsc(p.aName)+' <-> '+_edsEsc(p.bName)+'</td>'
+      +'<td style="color:var(--text4)">'+p.count.toLocaleString()+'</td>'
+      +'<td style="color:var(--text4)">'+f(R.total?p.count/R.total*100:0)+'%</td>'
+      +'<td style="color:var(--text4)">–</td></tr>';
+  });
+  h+='<tr><td><span class="et-sw" style="background:#46464c"></span></td><td>'+(en?'Unclassified':'Não classificado')
+    +'</td><td>'+R.unclassified.toLocaleString()+'</td><td>'+f(R.total?R.unclassified/R.total*100:0)+'%</td><td>–</td></tr>';
+  h+='</tbody></table>';
+  h+='<div class="eds-hint">'+(en
+    ? 'Selected area: '+Math.round(edsLocalSel.w)+'×'+Math.round(edsLocalSel.h)+' px · analyzed: '+R.total.toLocaleString()+' px'
+      +(R.masked?(' · excluded by mask: '+R.masked.toLocaleString()+' px'):'')
+      +' · tolerance: '+R.tol+'% · minimum brightness: '+f(R.minLum)+'%'
+    : 'Área selecionada: '+Math.round(edsLocalSel.w)+'×'+Math.round(edsLocalSel.h)+' px · analisados: '+R.total.toLocaleString()+' px'
+      +(R.masked?(' · excluída pela máscara: '+R.masked.toLocaleString()+' px'):'')
+      +' · tolerância: '+R.tol+'% · brilho mínimo: '+f(R.minLum)+'%')+'</div>';
+  if(tbl) tbl.innerHTML=h;
+  _edsLocalDrawChart();
+  _edsLocalDrawIso();
+  _edsLocalDrawOverlaps();
+}
+function _edsLocalDrawChart(){
+  var cv=document.getElementById('edsLocalChart'); if(!cv||!edsLocalResult) return;
+  if(edsLocalChartInst){ try{edsLocalChartInst.destroy();}catch(e){} edsLocalChartInst=null; }
+  var en=_edsEN(), R=edsLocalResult;
+  var labels=[],vals=[],cols=[];
+  R.rows.forEach(function(r){ if(r.pixels>0){ labels.push(r.name); vals.push(+(r.pctTotal).toFixed(2)); cols.push(r.color); } });
+  var _pairs=R.ovPairs||[];
+  if(R.overlap>0){
+    if(_pairs.length){
+      _pairs.forEach(function(p){
+        labels.push(p.aName+' <-> '+p.bName);
+        vals.push(+(p.count/R.total*100).toFixed(2));
+        cols.push('#ffffff');
+      });
+    } else {
+      labels.push(en?'Overlap':'Sobreposição'); vals.push(+(R.overlap/R.total*100).toFixed(2)); cols.push('#ffffff');
+    }
+  }
+  if(R.unclassified>0){ labels.push(en?'Unclassified':'Não classificado'); vals.push(+(R.unclassified/R.total*100).toFixed(2)); cols.push('#46464c'); }
+  if(!labels.length) return;
+  var _c=_edsChartColors();
+  var txt=_c.text;
+  try{
+    edsLocalChartInst=new Chart(cv,{type:'bar',
+      data:{labels:labels,datasets:[{data:vals,backgroundColor:cols,borderColor:cols,borderWidth:1}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:function(c){ return c.parsed.y+'%'; }}}},
+        scales:{
+          x:{ticks:{color:txt,font:{size:11,weight:'600'}},grid:{display:false}},
+          y:{beginAtZero:true,ticks:{color:txt,font:{size:11},callback:function(v){return v+'%';}},
+             grid:{color:_c.grid}}
+        }}});
+  }catch(e){ try{ console.warn('EDS local chart:',e); }catch(_){} }
+}
+// ov.1.1.1: grade de "Elementos separadamente" para a área selecionada — mesmo princípio de
+// _edsDrawIso(), mas lendo de edsLocalResult (via resultOverride em _edsIsoCanvas).
+function _edsLocalDrawIso(){
+  var box=document.getElementById('edsLocalIsoBox'), grid=document.getElementById('edsLocalIsoGrid');
+  if(!box||!grid) return;
+  var R=edsLocalResult;
+  if(!R || !R.owner || !R.rows.length){ box.style.display='none'; return; }
+  box.style.display='block';
+  var en=_edsEN();
+  grid.innerHTML=R.rows.map(function(r,i){
+    return '<div class="eds-iso-card">'
+      +'<div class="eic-h"><span class="eic-sw" style="background:'+_edsEsc(r.color)+'"></span>'
+      +'<span class="eic-n">'+_edsEsc(r.name)+'</span></div>'
+      +'<canvas id="edsLocalIsoCv_'+i+'"></canvas>'
+      +'<div class="eic-p">'+r.pixels.toLocaleString()+' px · '+(typeof fmtSmart==='function'?fmtSmart(r.pctTotal,2):r.pctTotal.toFixed(2))+'%</div>'
+      +'</div>';
+  }).join('');
+  R.rows.forEach(function(r,i){
+    var c=document.getElementById('edsLocalIsoCv_'+i); if(!c) return;
+    var src=_edsIsoCanvas(i,R); if(!src) return;
+    c.width=src.width; c.height=src.height;
+    c.getContext('2d').drawImage(src,0,0);
+    c.style.cursor='zoom-in';
+    c.title=en?'Double-click to enlarge':'Duplo clique para ampliar';
+    c.ondblclick=function(){
+      edsOpenLightbox(src.toDataURL('image/png'),
+        '<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:'+_edsEsc(r.color)+';margin-right:6px;vertical-align:-1px"></span>'+_edsEsc(r.name),
+        r.pixels.toLocaleString()+' px · '+(typeof fmtSmart==='function'?fmtSmart(r.pctTotal,2):r.pctTotal.toFixed(2))+'%');
+    };
+  });
+}
+// ov.1.1.1: grade de "Localização das Sobreposições" para a área selecionada — mesmo
+// princípio de _edsDrawOverlaps(), lendo de edsLocalResult.
+function _edsLocalDrawOverlaps(){
+  var box=document.getElementById('edsLocalOverlapBox'), grid=document.getElementById('edsLocalOverlapGrid');
+  if(!box||!grid) return;
+  var R=edsLocalResult;
+  if(!R || !R.ovOwner || !(R.ovPairs&&R.ovPairs.length)){ box.style.display='none'; return; }
+  box.style.display='block';
+  var en=_edsEN();
+  var f=function(v){ return (typeof fmtSmart==='function')?fmtSmart(v,2):String(Math.round(v*100)/100); };
+  grid.innerHTML=R.ovPairs.map(function(p,i){
+    return '<div class="eds-iso-card">'
+      +'<div class="eic-h"><span class="eic-sw" style="background:'+_edsEsc(p.aColor)+'"></span>'
+      +'<span class="eic-sw" style="background:'+_edsEsc(p.bColor)+';margin-left:-3px"></span>'
+      +'<span class="eic-n">'+_edsEsc(p.aName)+' <-> '+_edsEsc(p.bName)+'</span></div>'
+      +'<canvas id="edsLocalOvCv_'+i+'"></canvas>'
+      +'<div class="eic-p">'+p.count.toLocaleString()+' px · '+f(R.total?p.count/R.total*100:0)+'%</div>'
+      +'</div>';
+  }).join('');
+  R.ovPairs.forEach(function(p,i){
+    var c=document.getElementById('edsLocalOvCv_'+i); if(!c) return;
+    var src=_edsOverlapCanvas(p,R); if(!src) return;
+    c.width=src.width; c.height=src.height;
+    c.getContext('2d').drawImage(src,0,0);
+    c.style.cursor='zoom-in';
+    c.title=en?'Double-click to enlarge':'Duplo clique para ampliar';
+    c.ondblclick=function(){
+      edsOpenLightbox(src.toDataURL('image/png'),
+        '<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:'+_edsEsc(p.aColor)+';margin-right:2px;vertical-align:-1px"></span>'
+        +'<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:'+_edsEsc(p.bColor)+';margin-right:6px;vertical-align:-1px"></span>'
+        +_edsEsc(p.aName)+' <-> '+_edsEsc(p.bName),
+        p.count.toLocaleString()+' px · '+f(R.total?p.count/R.total*100:0)+'%');
+    };
+  });
+}
 // Extrai os pixels de uma imagem num canvas fora da tela e devolve o ImageData + dimensões.
 function _edsPixels(im){
   var d=_edsDrawDims(im);
@@ -28974,7 +29256,10 @@ function edsRun(){
   edsTab('resultados');
 }
 // MODO 1 — classificação por proximidade de cor (HSV) com tolerância e detecção de sobreposição.
-function _edsRunCombined(){
+// ov.1.1.1: restrictRect (opcional, em coordenadas ORIGINAIS da imagem — mesmo espaço de
+// edsMasks) restringe a análise a uma área específica, usado pelo "🔬 Estudo Localizado".
+// Sem esse parâmetro, o comportamento é idêntico ao de sempre (toda a imagem).
+function _edsRunCombined(restrictRect){
   var P=_edsPixels(edsImg);
   var tolG=parseFloat((document.getElementById('edsTol')||{}).value)||25;
   var minLum=(parseFloat((document.getElementById('edsMinLum')||{}).value)||0)/100;
@@ -28997,9 +29282,14 @@ function _edsRunCombined(){
   // gerar depois uma imagem mostrando ONDE cada par específico de cores se confundiu —
   // mesmo mecanismo do "owner" acima, usado nas imagens de "Elementos separadamente".
   var ovOwner=new Int32Array(P.w*P.h); ovOwner.fill(-1);
+  // ov.1.1.1: converte o retângulo de seleção (coords originais) para o espaço de ANÁLISE,
+  // mesma conversão que _edsMasked() já faz com as máscaras (multiplica por P.sc).
+  var rr = restrictRect ? {x:restrictRect.x*P.sc, y:restrictRect.y*P.sc, w:restrictRect.w*P.sc, h:restrictRect.h*P.sc} : null;
+  var outside=0;
   for(var y=0;y<P.h;y++){
     for(var x=0;x<P.w;x++){
       var i=(y*P.w+x)*4, pi=y*P.w+x;
+      if(rr && (x<rr.x||x>=rr.x+rr.w||y<rr.y||y>=rr.y+rr.h)){ outside++; seg[i]=20; seg[i+1]=20; seg[i+2]=22; seg[i+3]=255; continue; }
       if(_edsMasked(x,y,P.sc)){ masked++; seg[i]=30; seg[i+1]=30; seg[i+2]=34; seg[i+3]=255; continue; }
       total++;
       var r=P.data[i], g=P.data[i+1], b=P.data[i+2];
@@ -29039,7 +29329,7 @@ function _edsRunCombined(){
   }
   var classified=counts.reduce(function(a,b){return a+b;},0);
   return {
-    mode:'combined', w:P.w, h:P.h, total:total, masked:masked,
+    mode:'combined', w:P.w, h:P.h, total:total, masked:masked, outside:outside, restrictRect:restrictRect||null,
     unclassified:unclassified, overlap:overlap, classified:classified,
     tol:tolG, tolArr:tolArr, sensMode:edsSensMode, minLum:minLum*100,
     rows:edsElements.map(function(el,k){
@@ -29270,8 +29560,11 @@ function _edsDrawSeg(){
 // Ajuda a conferir a distribuição de um elemento por vez, sem a poluição dos demais.
 // ov.1.1.1: gera um canvas com APENAS os pixels do elemento `idx` (o resto escurecido).
 // Extraído para poder ser reaproveitado tanto na tela quanto no relatório PDF.
-function _edsIsoCanvas(idx){
-  var R=edsResult;
+// ov.1.1.1: resultOverride (opcional) permite reaproveitar esta função com um resultado
+// diferente do global edsResult — usado pelo "🔬 Estudo Localizado" (passa edsLocalResult).
+// Sem esse parâmetro, comportamento idêntico ao de sempre.
+function _edsIsoCanvas(idx, resultOverride){
+  var R=resultOverride||edsResult;
   if(!R || R.mode!=='combined' || !R.owner || !R.srcPixels) return null;
   var W=R.w, H=R.h, own=R.owner, src=R.srcPixels;
   var c=document.createElement('canvas'); c.width=W; c.height=H;
@@ -29345,8 +29638,10 @@ function _edsDrawIso(){
 // _edsIsoCanvas(), mas em vez de "pixels deste elemento" mostra "pixels classificados como
 // sobreposição ENTRE estes dois elementos" (cor original preservada nesses pixels, resto
 // escurecido). pairObj vem de R.ovPairs (tem .a e .b, os índices dos elementos envolvidos).
-function _edsOverlapCanvas(pairObj){
-  var R=edsResult;
+// ov.1.1.1: resultOverride (opcional) — mesma ideia de _edsIsoCanvas(), usado pelo
+// "🔬 Estudo Localizado" (passa edsLocalResult). Sem o parâmetro, comportamento de sempre.
+function _edsOverlapCanvas(pairObj, resultOverride){
+  var R=resultOverride||edsResult;
   if(!R || R.mode!=='combined' || !R.ovOwner || !R.srcPixels) return null;
   var W=R.w, H=R.h, own=R.ovOwner, src=R.srcPixels;
   var key=pairObj.a*1000+pairObj.b;
@@ -30661,6 +30956,8 @@ function edsApplySnapshot(sn, done){
     try{ edsSetSensMode(edsSensMode); }catch(e){}
     var fn=document.getElementById('edsFileName1');
     if(fn && edsImg) fn.textContent='✓ '+edsImgName+' ('+edsImg.naturalWidth+'×'+edsImg.naturalHeight+' px)';
+    edsLocalSel=null; edsLocalResult=null; // ov.1.1.1: seleção antiga não corresponde à imagem recém-carregada
+    try{ _edsLocalShowResEmpty(); _edsLocalRenderImage(); }catch(e){}
     try{ _edsRenderElements(); _edsRenderMaps(); _edsRenderImage(); _edsUpdateMaskInfo(); }catch(e){}
     // re-executa a análise para reproduzir exatamente o resultado salvo
     try{ if((edsMode==='combined'&&edsImg&&edsElements.length)||(edsMode==='separate'&&edsMaps.length)) edsRun(); }catch(e){}
@@ -32635,7 +32932,9 @@ function launchEDS(){
   if(!edsElements.length && edsMode==='combined'){ edsAddElement(); edsAddElement(); }
   edsApplyLangUI();
   _edsSetupCanvas();
+  _edsLocalSetupCanvas(); // ov.1.1.1: eventos de arrastar-para-selecionar da aba Estudo Localizado
   _edsRenderElements(); _edsRenderMaps(); _edsRenderImage(); _edsRenderResults(); _edsUpdateMaskInfo();
+  _edsLocalRenderImage(); _edsLocalShowResEmpty(); // ov.1.1.1
   try{ tourEnsureButtons(); }catch(e){}
 }
 function edsGoEngHome(){
@@ -32646,22 +32945,26 @@ function edsGoEngHome(){
   gridCanvasSetVisible(true);
 }
 function edsTab(name){
-  var tabs=['dados','resultados','rgb','referencia'];
+  var tabs=['dados','resultados','rgb','referencia','local'];
   document.querySelectorAll('#appEDS .eds-tab').forEach(function(el,i){ el.classList.toggle('active', tabs[i]===name); });
   document.querySelectorAll('#appEDS .eds-panel').forEach(function(p){ p.classList.remove('active'); });
   var p=document.getElementById('edsPanel-'+name);
   if(p) p.classList.add('active');
+  if(name==='local'){ try{ _edsLocalRenderImage(); }catch(e){} } // ov.1.1.1: garante o canvas atualizado ao entrar na aba
 }
 function edsClearAll(){
   var en=_edsEN();
   if(!confirm(en?'Clear everything from the EDS study?':'Limpar tudo do estudo EDS?')) return;
   edsImg=null; edsImgName=''; edsElements=[]; edsMaps=[]; edsMasks=[];
   edsPickIdx=-1; edsMaskMode=false; edsResult=null; edsCompareOn=false; edsZoom=1; edsSensMode='group'; // ov.1.1.1
+  edsLocalSel=null; edsLocalResult=null; edsLocalZoom=1; // ov.1.1.1: Estudo Localizado
   if(edsChart){ try{edsChart.destroy();}catch(e){} edsChart=null; }
-  try{ _edsDestroyRgbCharts(); edsSetZoom(100); edsSetSensMode('group'); }catch(e){} // ov.1.1.1
+  if(edsLocalChartInst){ try{edsLocalChartInst.destroy();}catch(e){} edsLocalChartInst=null; } // ov.1.1.1
+  try{ _edsDestroyRgbCharts(); edsSetZoom(100); edsSetSensMode('group'); edsLocalSetZoom(100); }catch(e){} // ov.1.1.1
   var fn=document.getElementById('edsFileName1'); if(fn) fn.textContent='';
   edsAddElement(); edsAddElement();
   _edsRenderElements(); _edsRenderMaps(); _edsRenderImage(); _edsRenderResults(); _edsUpdateMaskInfo();
+  try{ _edsLocalShowResEmpty(); _edsLocalRenderImage(); }catch(e){} // ov.1.1.1
   edsTab('dados');
 }
 // ── i18n ───────────────────────────────────────────────────────────────────────────────────
@@ -32676,6 +32979,7 @@ function edsApplyLangUI(){
   s('edsClearLabel','Limpar','Clear');
   s('edsPageTitle','🗺️ Mapeamento EDS — Composição por Imagem','🗺️ EDS Mapping — Composition by Image');
   s('edsTabDados','DADOS','DATA'); s('edsTabResultados','RESULTADOS','RESULTS'); s('edsTabReferencia','REFERÊNCIA','REFERENCE');
+  s('edsTabLocal','ESTUDO LOCALIZADO','LOCALIZED STUDY'); // ov.1.1.1
   s('edsSideMode','Modo de entrada','Input mode');
   s('edsModeLbl1','Mapa colorido','Color map'); s('edsModeLbl2','Mapas separados','Separate maps');
   s('edsSideImg','Imagem do mapa','Map image');
@@ -32738,11 +33042,29 @@ function edsApplyLangUI(){
   s('edsOverlapTitle','🔀 Localização das Sobreposições','🔀 Overlap Locations');
   s('edsOverlapHint','Cada painel mostra apenas os pixels classificados como sobreposição entre aquele par de elementos — útil para ver onde as cores se confundem na imagem.',
                  'Each panel shows only the pixels classified as overlap between that pair of elements — useful to see where the colors get confused in the image.');
+  // ov.1.1.1: 🔬 ESTUDO LOCALIZADO
+  s('edsLocalEmpty','Carregue uma imagem no modo "🎨 Mapa colorido" para usar o Estudo Localizado.',
+                    'Load an image in "🎨 Colored map" mode to use the Localized Study.');
+  s('edsLocalImgTitle','🔬 Selecione uma área para estudar','🔬 Select an area to study');
+  s('edsLocalZoomLbl','🔍 Zoom','🔍 Zoom');
+  s('edsLocalAnalyzeBtn','Analisar área selecionada','Analyze selected area');
+  s('edsLocalClearBtn','Limpar seleção','Clear selection');
+  s('edsLocalResEmpty','Marque uma área na imagem acima e clique em "Analisar área selecionada".',
+                       'Mark an area on the image above and click "Analyze selected area".');
+  s('edsLocalResTblTitle','📊 Composição estimada','📊 Estimated composition');
+  s('edsLocalChartTitle','📈 Fração de área por elemento','📈 Area fraction per element');
+  s('edsLocalIsoTitle','🎯 Elementos separadamente','🎯 Elements one by one');
+  s('edsLocalIsoHint','Cada painel mostra apenas os pixels classificados naquele elemento, dentro da área selecionada.',
+                      'Each panel shows only the pixels classified into that element, within the selected area.');
+  s('edsLocalOverlapTitle','🔀 Localização das Sobreposições','🔀 Overlap Locations');
+  s('edsLocalOverlapHint','Cada painel mostra apenas os pixels classificados como sobreposição entre aquele par de elementos, dentro da área selecionada.',
+                          'Each panel shows only the pixels classified as overlap between that pair of elements, within the selected area.');
+  try{ _edsLocalFmtSelInfo(en); _edsLocalRenderImage(); if(edsLocalResult) _edsLocalRenderResults(); }catch(e){} // ov.1.1.1: reflete o novo idioma nos textos já calculados
   try{ _edsRenderSensList(); }catch(e){}
   s('edsCmpLblOrig','Imagem original','Original image');
   s('edsCmpLblSeg','Segmentação','Segmentation');
   try{ _edsSyncCompareBtn(); }catch(e){} // ov.1.1.1: rótulo do botão de comparação
-  ['edsWarnBox','edsWarnBox2','edsWarnBox3'].forEach(function(id){
+  ['edsWarnBox','edsWarnBox2','edsWarnBox3','edsWarnBox5'].forEach(function(id){
     var e=document.getElementById(id); if(e) e.innerHTML=_edsWarnTxt();
   });
   var ref=document.getElementById('edsRefBody');
@@ -37008,6 +37330,7 @@ function cgGoHome(ev){
     <div class="eds-tab" onclick="edsTab('resultados')">📊 <span id="edsTabResultados">RESULTADOS</span></div>
     <div class="eds-tab" onclick="edsTab('rgb')">🌈 <span id="edsTabRgb">DIAGRAMA RGB</span></div>
     <div class="eds-tab" onclick="edsTab('referencia')">📚 <span id="edsTabReferencia">REFERÊNCIA</span></div>
+    <div class="eds-tab" onclick="edsTab('local')">🔬 <span id="edsTabLocal">ESTUDO LOCALIZADO</span></div>
   </div>
   <div class="eds-content">
     <!-- ── Sidebar ── -->
@@ -37204,6 +37527,53 @@ function cgGoHome(ev){
       <div class="eds-panel" id="edsPanel-referencia">
         <div class="eds-warn" id="edsWarnBox3"></div>
         <div class="eds-ref" id="edsRefBody"></div>
+      </div>
+      <!-- ov.1.1.1: 🔬 ESTUDO LOCALIZADO — só funciona no modo "Mapa colorido". O usuário
+           arrasta sobre a imagem para marcar uma área e roda a mesma análise só dentro dela. -->
+      <div class="eds-panel" id="edsPanel-local">
+        <div class="eds-warn" id="edsWarnBox5"></div>
+        <div class="eds-empty" id="edsLocalEmpty">Carregue uma imagem no modo "🎨 Mapa colorido" para usar o Estudo Localizado.</div>
+        <div id="edsLocalContent" style="display:none">
+          <div class="eds-imgbox" id="edsLocalImgBox">
+            <h4 id="edsLocalImgTitle" style="margin:0 0 4px">🔬 Selecione uma área para estudar</h4>
+            <div class="eds-hint" id="edsLocalImgHint">Arraste sobre a imagem para marcar a área que você quer analisar. Use o zoom para maior precisão.</div>
+            <div class="eds-zoom">
+              <label id="edsLocalZoomLbl">🔍 Zoom</label>
+              <input type="range" id="edsLocalZoomSl" min="100" max="800" step="25" value="100" oninput="edsLocalSetZoom(this.value)">
+              <span class="ez-val" id="edsLocalZoomVal">100%</span>
+              <button type="button" onclick="edsLocalZoomStep(-25)">−</button>
+              <button type="button" onclick="edsLocalZoomStep(25)">+</button>
+              <button type="button" onclick="edsLocalSetZoom(100)" id="edsLocalZoomReset">1:1</button>
+            </div>
+            <div class="eds-zoomwrap" id="edsLocalZoomWrap"><canvas id="edsLocalCanvas"></canvas></div>
+            <div id="edsLocalSelInfo" class="eds-hint" style="margin-top:6px"></div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">
+              <button type="button" class="eds-addbtn" style="flex:1 1 170px;margin:0" onclick="edsLocalAnalyze()">🔬 <span id="edsLocalAnalyzeBtn">Analisar área selecionada</span></button>
+              <button type="button" class="eds-addbtn" style="flex:1 1 150px;margin:0" onclick="edsLocalClearSel()">🗑 <span id="edsLocalClearBtn">Limpar seleção</span></button>
+            </div>
+          </div>
+          <div class="eds-empty" id="edsLocalResEmpty">Marque uma área na imagem acima e clique em "Analisar área selecionada".</div>
+          <div id="edsLocalResWrap" style="display:none">
+            <div class="eds-imgbox">
+              <h4 id="edsLocalResTblTitle">📊 Composição estimada</h4>
+              <div id="edsLocalResTable"></div>
+            </div>
+            <div class="eds-imgbox">
+              <h4 id="edsLocalChartTitle">📈 Fração de área por elemento</h4>
+              <div style="position:relative;height:300px"><canvas id="edsLocalChart"></canvas></div>
+            </div>
+            <div class="eds-imgbox" id="edsLocalIsoBox" style="display:none">
+              <h4 id="edsLocalIsoTitle">🎯 Elementos separadamente</h4>
+              <div class="eds-hint" id="edsLocalIsoHint">Cada painel mostra apenas os pixels classificados naquele elemento, dentro da área selecionada.</div>
+              <div class="eds-iso-grid" id="edsLocalIsoGrid"></div>
+            </div>
+            <div class="eds-imgbox" id="edsLocalOverlapBox" style="display:none">
+              <h4 id="edsLocalOverlapTitle">🔀 Localização das Sobreposições</h4>
+              <div class="eds-hint" id="edsLocalOverlapHint">Cada painel mostra apenas os pixels classificados como sobreposição entre aquele par de elementos, dentro da área selecionada.</div>
+              <div class="eds-iso-grid" id="edsLocalOverlapGrid"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
