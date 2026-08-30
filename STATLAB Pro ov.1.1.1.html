@@ -28993,6 +28993,10 @@ function _edsRunCombined(){
   // elemento (usada na visualização isolada). Uint32 evita estouro em imagens grandes.
   var hist=edsElements.map(function(){ return {r:new Uint32Array(256),g:new Uint32Array(256),b:new Uint32Array(256)}; });
   var owner=new Int16Array(P.w*P.h); owner.fill(-1);
+  // ov.1.1.1: dono POR PIXEL de cada par de sobreposição (chave a*1000+b, a<b), para poder
+  // gerar depois uma imagem mostrando ONDE cada par específico de cores se confundiu —
+  // mesmo mecanismo do "owner" acima, usado nas imagens de "Elementos separadamente".
+  var ovOwner=new Int32Array(P.w*P.h); ovOwner.fill(-1);
   for(var y=0;y<P.h;y++){
     for(var x=0;x<P.w;x++){
       var i=(y*P.w+x)*4, pi=y*P.w+x;
@@ -29023,6 +29027,7 @@ function _edsRunCombined(){
         if(secondIdx>=0){
           var _a=Math.min(best,secondIdx), _b=Math.max(best,secondIdx), _key=_a+'|'+_b;
           ovPairs[_key]=(ovPairs[_key]||0)+1;
+          ovOwner[pi]=_a*1000+_b; // ov.1.1.1: registra o par para a imagem de localização
         }
         seg[i]=255; seg[i+1]=255; seg[i+2]=255; seg[i+3]=255; continue;
       }
@@ -29044,7 +29049,7 @@ function _edsRunCombined(){
               tol:tolArr[k]};
     }),
     seg:{buf:seg, w:P.w, h:P.h},
-    hist:hist, owner:owner, srcPixels:P,
+    hist:hist, owner:owner, ovOwner:ovOwner, srcPixels:P,
     // ov.1.1.1: pares de sobreposição, ordenados do mais frequente para o menos
     ovPairs:Object.keys(ovPairs).map(function(k){
       var p=k.split('|'), a=+p[0], b=+p[1];
@@ -29088,6 +29093,7 @@ function _edsRenderResults(){
     if(edsChart){try{edsChart.destroy();}catch(e){} edsChart=null;}
     try{ _edsDestroyRgbCharts(); }catch(_){}                       // ov.1.1.1
     var _ib=document.getElementById('edsIsoBox'); if(_ib) _ib.style.display='none';
+    var _ob=document.getElementById('edsOverlapBox'); if(_ob) _ob.style.display='none';
     var _re=document.getElementById('edsRgbEmpty'), _rc=document.getElementById('edsRgbContent');
     if(_re) _re.style.display='block'; if(_rc) _rc.style.display='none';
     return; }
@@ -29149,6 +29155,7 @@ function _edsRenderResults(){
   _edsDrawChart();
   _edsDrawSeg();
   try{ _edsDrawIso(); }catch(e){}    // ov.1.1.1: elementos separadamente
+  try{ _edsDrawOverlaps(); }catch(e){} // ov.1.1.1: localização das sobreposições
   try{ _edsRenderRgb(); }catch(e){}  // ov.1.1.1: diagrama RGB por elemento
 }
 function _edsDrawChart(){
@@ -29282,6 +29289,27 @@ function _edsIsoCanvas(idx){
   cc.putImageData(img,0,0);
   return c;
 }
+// ov.1.1.1: janela pop-up (lightbox) para ampliar as imagens de "Elementos separadamente" e
+// "Localização das Sobreposições" — aberta com duplo clique em qualquer um dos canvases.
+function edsOpenLightbox(dataUrl, titleHtml, captionText){
+  var m=document.getElementById('edsImgLightbox'), img=document.getElementById('edsLbImg'),
+      t=document.getElementById('edsLbTitle'), c=document.getElementById('edsLbCaption');
+  if(!m||!img) return;
+  img.src=dataUrl;
+  if(t) t.innerHTML=titleHtml||'';
+  if(c) c.textContent=captionText||'';
+  m.style.display='flex';
+}
+function edsCloseLightbox(){
+  var m=document.getElementById('edsImgLightbox');
+  if(m) m.style.display='none';
+}
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape'){
+    var m=document.getElementById('edsImgLightbox');
+    if(m && m.style.display==='flex') edsCloseLightbox();
+  }
+});
 function _edsDrawIso(){
   var box=document.getElementById('edsIsoBox'), grid=document.getElementById('edsIsoGrid');
   if(!box||!grid) return;
@@ -29303,6 +29331,75 @@ function _edsDrawIso(){
     var src=_edsIsoCanvas(i); if(!src) return;
     c.width=src.width; c.height=src.height;
     c.getContext('2d').drawImage(src,0,0);
+    // ov.1.1.1: duplo clique abre a imagem ampliada numa janela pop-up
+    c.style.cursor='zoom-in';
+    c.title=en?'Double-click to enlarge':'Duplo clique para ampliar';
+    c.ondblclick=function(){
+      edsOpenLightbox(src.toDataURL('image/png'),
+        '<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:'+_edsEsc(r.color)+';margin-right:6px;vertical-align:-1px"></span>'+_edsEsc(r.name),
+        r.pixels.toLocaleString()+' px · '+(typeof fmtSmart==='function'?fmtSmart(r.pctTotal,2):r.pctTotal.toFixed(2))+'%');
+    };
+  });
+}
+// ov.1.1.1: canvas de LOCALIZAÇÃO de um par de sobreposição — mesmo princípio de
+// _edsIsoCanvas(), mas em vez de "pixels deste elemento" mostra "pixels classificados como
+// sobreposição ENTRE estes dois elementos" (cor original preservada nesses pixels, resto
+// escurecido). pairObj vem de R.ovPairs (tem .a e .b, os índices dos elementos envolvidos).
+function _edsOverlapCanvas(pairObj){
+  var R=edsResult;
+  if(!R || R.mode!=='combined' || !R.ovOwner || !R.srcPixels) return null;
+  var W=R.w, H=R.h, own=R.ovOwner, src=R.srcPixels;
+  var key=pairObj.a*1000+pairObj.b;
+  var c=document.createElement('canvas'); c.width=W; c.height=H;
+  var cc=c.getContext('2d');
+  var img=cc.createImageData(W,H), out=img.data;
+  for(var p=0;p<W*H;p++){
+    var o=p*4;
+    if(own[p]===key){
+      out[o]=src.data[o]; out[o+1]=src.data[o+1]; out[o+2]=src.data[o+2]; out[o+3]=255;
+    } else {
+      var lum=(0.299*src.data[o]+0.587*src.data[o+1]+0.114*src.data[o+2])*0.16;
+      out[o]=lum; out[o+1]=lum; out[o+2]=lum+4; out[o+3]=255;
+    }
+  }
+  cc.putImageData(img,0,0);
+  return c;
+}
+// ov.1.1.1: grade de imagens de localização, uma por par de sobreposição (R.ovPairs),
+// renderizada logo abaixo de "🎯 Elementos separadamente". Só aparece quando existe
+// sobreposição detectada; some quando não há nenhum par ambíguo.
+function _edsDrawOverlaps(){
+  var box=document.getElementById('edsOverlapBox'), grid=document.getElementById('edsOverlapGrid');
+  if(!box||!grid) return;
+  var R=edsResult;
+  if(!R || R.mode!=='combined' || !R.ovOwner || !(R.ovPairs&&R.ovPairs.length)){ box.style.display='none'; return; }
+  box.style.display='block';
+  var en=_edsEN();
+  var f=function(v){ return (typeof fmtSmart==='function')?fmtSmart(v,2):String(Math.round(v*100)/100); };
+  grid.innerHTML=R.ovPairs.map(function(p,i){
+    return '<div class="eds-iso-card">'
+      +'<div class="eic-h"><span class="eic-sw" style="background:'+_edsEsc(p.aColor)+'"></span>'
+      +'<span class="eic-sw" style="background:'+_edsEsc(p.bColor)+';margin-left:-3px"></span>'
+      +'<span class="eic-n">'+_edsEsc(p.aName)+' ↔ '+_edsEsc(p.bName)+'</span></div>'
+      +'<canvas id="edsOvCv_'+i+'"></canvas>'
+      +'<div class="eic-p">'+p.count.toLocaleString()+' px · '+f(R.total?p.count/R.total*100:0)+'%</div>'
+      +'</div>';
+  }).join('');
+  R.ovPairs.forEach(function(p,i){
+    var c=document.getElementById('edsOvCv_'+i); if(!c) return;
+    var src=_edsOverlapCanvas(p); if(!src) return;
+    c.width=src.width; c.height=src.height;
+    c.getContext('2d').drawImage(src,0,0);
+    // ov.1.1.1: duplo clique abre a imagem ampliada numa janela pop-up
+    c.style.cursor='zoom-in';
+    c.title=en?'Double-click to enlarge':'Duplo clique para ampliar';
+    c.ondblclick=function(){
+      edsOpenLightbox(src.toDataURL('image/png'),
+        '<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:'+_edsEsc(p.aColor)+';margin-right:2px;vertical-align:-1px"></span>'
+        +'<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:'+_edsEsc(p.bColor)+';margin-right:6px;vertical-align:-1px"></span>'
+        +_edsEsc(p.aName)+' ↔ '+_edsEsc(p.bName),
+        p.count.toLocaleString()+' px · '+f(R.total?p.count/R.total*100:0)+'%');
+    };
   });
 }
 // ══ ov.1.1.1: DIAGRAMA RGB por elemento ═════════════════════════════════════════════════════
@@ -29676,6 +29773,42 @@ function edsExportPDF(){
         });
         if(col===1) rowTop+=0;                 // linha incompleta: nada a fazer
         y=rowTop;
+      }
+      // ── ov.1.1.1: LOCALIZAÇÃO DAS SOBREPOSIÇÕES ──────────────────────────────────────
+      // Mesma grade de 2 colunas do bloco "Elementos separadamente" acima, uma imagem por
+      // par de cores sobrepostas (R.ovPairs), mostrando ONDE cada par se confundiu na imagem.
+      var ovPairsPdf=R.ovPairs||[];
+      if(ovPairsPdf.length){
+        if(y>235){ doc.addPage(); y=18; }
+        doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
+        doc.text(en?'Overlap locations':'Localização das Sobreposições', M, y); y+=5;
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.6); doc.setTextColor(120,120,120);
+        doc.text(en?'Only the pixels classified as overlap between that pair of elements are shown; everything else is dimmed.'
+                   :'Mostra apenas os pixels classificados como sobreposição entre aquele par de elementos; o restante fica escurecido.', M, y); y+=5;
+        var ovColW=(PW-M*2-6)/2;                // 2 colunas com 6mm de respiro
+        var ovCol=0, ovRowTop=y;
+        ovPairsPdf.forEach(function(p){
+          var cnv=_edsOverlapCanvas(p); if(!cnv) return;
+          var ih3=cnv.height*(ovColW/cnv.width);
+          var blockH3=ih3+9;                    // imagem + legenda
+          if(ovCol===0 && ovRowTop+blockH3>285){ doc.addPage(); ovRowTop=18; }
+          var xPos3=M+ovCol*(ovColW+6);
+          // legenda: dois quadradinhos de cor + nome do par + %
+          var rgbA=_edsHexToRgb(p.aColor), rgbB=_edsHexToRgb(p.bColor);
+          doc.setFillColor(rgbA.r,rgbA.g,rgbA.b); doc.rect(xPos3,ovRowTop,3,3,'F');
+          doc.setFillColor(rgbB.r,rgbB.g,rgbB.b); doc.rect(xPos3+3.4,ovRowTop,3,3,'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(45,45,45);
+          // ov.1.1.1 FIX: "↔" (U+2194) não existe na codificação WinAnsi da fonte padrão do
+          // jsPDF (helvetica) — aparecia como "!”" no PDF. "<->" é ASCII puro e renderiza certo.
+          doc.text((String(p.aName)+' <-> '+String(p.bName)).slice(0,30),xPos3+7.6,ovRowTop+2.7);
+          doc.setFont('helvetica','normal'); doc.setFontSize(7.2); doc.setTextColor(120,120,120);
+          doc.text(f(R.total?p.count/R.total*100:0)+'%  ·  '+p.count.toLocaleString()+' px',xPos3+ovColW,ovRowTop+2.7,{align:'right'});
+          doc.addImage(cnv.toDataURL('image/png'),'PNG',xPos3,ovRowTop+4,ovColW,ih3);
+          ovCol++;
+          if(ovCol===2){ ovCol=0; ovRowTop+=blockH3; }
+        });
+        if(ovCol===1) ovRowTop+=0;              // linha incompleta: nada a fazer
+        y=ovRowTop;
       }
       // ov.1.1.1: 🌈 Diagrama RGB — reconstrói os gráficos (garante que existem mesmo que a
       // aba nunca tenha sido visitada) e embute um por elemento, em grade de 2 colunas.
@@ -32602,6 +32735,9 @@ function edsApplyLangUI(){
   s('edsIsoTitle','🎯 Elementos separadamente','🎯 Elements one by one');
   s('edsIsoHint','Cada painel mostra apenas os pixels classificados naquele elemento — útil para conferir a distribuição de um elemento por vez.',
                  'Each panel shows only the pixels classified into that element — useful to inspect one element\u2019s distribution at a time.');
+  s('edsOverlapTitle','🔀 Localização das Sobreposições','🔀 Overlap Locations');
+  s('edsOverlapHint','Cada painel mostra apenas os pixels classificados como sobreposição entre aquele par de elementos — útil para ver onde as cores se confundem na imagem.',
+                 'Each panel shows only the pixels classified as overlap between that pair of elements — useful to see where the colors get confused in the image.');
   try{ _edsRenderSensList(); }catch(e){}
   s('edsCmpLblOrig','Imagem original','Original image');
   s('edsCmpLblSeg','Segmentação','Segmentation');
@@ -37047,6 +37183,12 @@ function cgGoHome(ev){
             <div class="eds-hint" id="edsIsoHint">Cada painel mostra apenas os pixels classificados naquele elemento — útil para conferir a distribuição de um elemento por vez.</div>
             <div class="eds-iso-grid" id="edsIsoGrid"></div>
           </div>
+          <!-- ov.1.1.1: localização espacial de cada par de cores sobrepostas -->
+          <div class="eds-imgbox" id="edsOverlapBox" style="display:none">
+            <h4 id="edsOverlapTitle">🔀 Localização das Sobreposições</h4>
+            <div class="eds-hint" id="edsOverlapHint">Cada painel mostra apenas os pixels classificados como sobreposição entre aquele par de elementos — útil para ver onde as cores se confundem na imagem.</div>
+            <div class="eds-iso-grid" id="edsOverlapGrid"></div>
+          </div>
         </div>
       </div>
       <!-- ov.1.1.1: DIAGRAMA RGB por elemento -->
@@ -41183,6 +41325,19 @@ function cgGoHome(ev){
       <div class="section-title" id="treatTitleLog">📜 Histórico de transformações</div>
       <div class="chart-box"><div class="treat-log" id="treatLog"><span class="treat-log-empty" id="treatLogEmpty">Nenhuma transformação aplicada ainda nesta sessão.</span></div></div>
     </div>
+  </div>
+</div>
+
+<!-- ov.1.1.1: lightbox de imagem — duplo clique nas imagens do Mapeamento EDS ("Elementos
+     separadamente" / "Localização das Sobreposições") abre aqui, ampliada. -->
+<div id="edsImgLightbox" style="display:none;position:fixed;inset:0;z-index:100270;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;cursor:zoom-out" onclick="edsCloseLightbox()">
+  <div style="max-width:min(94vw,1100px);max-height:92vh;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:default" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;gap:10px;width:100%">
+      <div id="edsLbTitle" style="flex:1;color:#f59e0b;font-weight:800;font-size:14px"></div>
+      <button class="upd-news-close" onclick="edsCloseLightbox()" title="Fechar">✕</button>
+    </div>
+    <img id="edsLbImg" style="max-width:100%;max-height:78vh;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5);background:#111;image-rendering:pixelated" />
+    <div id="edsLbCaption" style="color:var(--text4,#999);font-size:11.5px"></div>
   </div>
 </div>
 
