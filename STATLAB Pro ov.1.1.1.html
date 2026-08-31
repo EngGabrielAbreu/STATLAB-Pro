@@ -29291,6 +29291,43 @@ function _edsLineWidth(){
   var v=parseInt((document.getElementById('edsLocalLineW')||{}).value);
   return (isFinite(v)&&v>0)?v:12;
 }
+// ov.1.1.1: desenha a linha (+ faixa de espessura + marcadores de início/fim) sobre uma
+// cópia da imagem ORIGINAL em resolução plena — mesmo estilo visual já usado no canvas de
+// seleção (_edsLocalRenderImage), só que sem depender do zoom/tamanho de tela, para poder
+// ser inserida no Relatório PDF e mostrar exatamente de onde os dados da linha vieram.
+function _edsLocalLineOverlayCanvas(){
+  if(!edsImg || !edsLocalLine) return null;
+  var w=edsImg.naturalWidth||edsImg.width, h=edsImg.naturalHeight||edsImg.height;
+  if(!w||!h) return null;
+  var c=document.createElement('canvas'); c.width=w; c.height=h;
+  var ctx=c.getContext('2d');
+  ctx.drawImage(edsImg,0,0,w,h);
+  var L=edsLocalLine;
+  var lw=_edsLineWidth();
+  var dx=L.x2-L.x1, dy=L.y2-L.y1, len=Math.sqrt(dx*dx+dy*dy)||1;
+  var px=-dy/len, py=dx/len, half=lw/2;
+  // escala os traços/marcadores proporcionalmente ao tamanho da imagem, para ficarem
+  // visíveis tanto em fotos pequenas quanto em imagens de alta resolução.
+  var strokeW=Math.max(1.5,w/300), dashA=Math.max(3,w/200), dashB=Math.max(2,w/300), rad=Math.max(3,w/150);
+  ctx.save();
+  ctx.fillStyle='rgba(245,158,11,.20)';
+  ctx.beginPath();
+  ctx.moveTo(L.x1+px*half,L.y1+py*half); ctx.lineTo(L.x2+px*half,L.y2+py*half);
+  ctx.lineTo(L.x2-px*half,L.y2-py*half); ctx.lineTo(L.x1-px*half,L.y1-py*half);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(245,158,11,.65)'; ctx.lineWidth=Math.max(1,strokeW*.6); ctx.setLineDash([dashA,dashB]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle='#f59e0b'; ctx.lineWidth=strokeW;
+  ctx.beginPath(); ctx.moveTo(L.x1,L.y1); ctx.lineTo(L.x2,L.y2); ctx.stroke();
+  [[L.x1,L.y1],[L.x2,L.y2]].forEach(function(pt){
+    ctx.beginPath(); ctx.arc(pt[0],pt[1],rad,0,Math.PI*2);
+    ctx.fillStyle='#f59e0b'; ctx.fill();
+    ctx.strokeStyle='#1e1e1e'; ctx.lineWidth=Math.max(1,rad/4); ctx.stroke();
+  });
+  ctx.restore();
+  return c;
+}
 function _edsDestroyLineCharts(){
   _edsLineCharts.forEach(function(c){ try{ c.destroy(); }catch(e){} });
   _edsLineCharts=[];
@@ -29800,6 +29837,24 @@ function edsLocalExportPDF(){
     }
     par.forEach(function(t){ doc.text(doc.splitTextToSize(t,PW-M*2),M,y); y+=4.2; });
     y+=3;
+
+    // ── ov.1.1.1: imagem com a linha posicionada (só no modo linha) — para o usuário
+    // entender exatamente de onde os dados do perfil vieram, antes de ver a tabela/gráficos.
+    if(isLine){
+      var lineImg=_edsLocalLineOverlayCanvas();
+      if(lineImg){
+        if(y>210){ doc.addPage(); y=18; }
+        doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
+        doc.text(en?'Line position on the image':'Posição da linha na imagem', M, y); y+=5;
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.6); doc.setTextColor(120,120,120);
+        doc.text(doc.splitTextToSize(en
+          ? 'Shows exactly where on the original image the line (and its thickness band) was traced.'
+          : 'Mostra exatamente onde, na imagem original, a linha (e a faixa de espessura) foi traçada.', PW-M*2), M, y); y+=4.5;
+        var ihL=lineImg.height*((PW-M*2)/lineImg.width);
+        if(y+ihL>285){ doc.addPage(); y=18; }
+        doc.addImage(lineImg.toDataURL('image/png'),'PNG',M,y,PW-M*2,ihL); y+=ihL+7;
+      }
+    }
 
     // ── tabela ──
     doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
