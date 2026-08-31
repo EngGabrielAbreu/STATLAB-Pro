@@ -2692,6 +2692,20 @@ body.colorblind-theme .po-runbtn{background:#E69F00!important;border-color:#E69F
 body.colorblind-theme .po-btn.on,body.colorblind-theme .po-viewbtn.on{background:rgba(230,159,0,.16)!important;border-color:#E69F00!important;color:#E69F00!important}
 body.colorblind-theme .po-warn{border-color:rgba(230,159,0,.42)!important;border-left-color:#E69F00!important;background:rgba(230,159,0,.10)!important}
 body.colorblind-theme .po-warn b{color:#E69F00!important}
+/* ── ov.1.1.1: ESTUDO LOCALIZADO POR LINHA (perfil ao longo de um traço) ──────────────────── */
+.eds-line-mode{display:flex;gap:6px;background:var(--bg3);padding:4px;border-radius:9px;margin-bottom:10px}
+.eds-line-mode-btn{flex:1;padding:7px 8px;border-radius:7px;border:1px solid transparent;background:none;
+  color:var(--text4);font-size:11.5px;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit;line-height:1.3}
+.eds-line-mode-btn:hover{color:var(--text2);background:var(--bg4)}
+.eds-line-mode-btn.active{background:var(--bg2);border-color:var(--border2);color:var(--text)}
+.eds-lp-card{background:var(--bg3);border:1px solid var(--border2);border-radius:11px;padding:12px;margin-bottom:12px}
+.eds-lp-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.eds-lp-h .elh-sw{width:13px;height:13px;border-radius:4px;flex-shrink:0;border:1px solid rgba(255,255,255,.25)}
+.eds-lp-h .elh-n{font-size:12.5px;font-weight:800;color:var(--text)}
+.eds-lp-h .elh-st{font-size:10.5px;color:var(--text4);margin-left:auto}
+.eds-lp-chart{position:relative;height:150px}
+.eds-lp-big{position:relative;height:300px}
+
 </style>
 </head>
 <body>
@@ -12184,9 +12198,18 @@ function toggleTheme(){
   // então precisam ser redesenhados ao alternar claro/escuro.
   try{
     var _eds=document.getElementById('appEDS');
-    if(_eds && _eds.classList.contains('eds-active') && typeof edsResult!=='undefined' && edsResult){
-      if(typeof _edsDrawChart==='function') _edsDrawChart();
-      if(typeof _edsRenderRgb==='function') _edsRenderRgb();
+    if(_eds && _eds.classList.contains('eds-active')){
+      if(typeof edsResult!=='undefined' && edsResult){
+        if(typeof _edsDrawChart==='function') _edsDrawChart();
+        if(typeof _edsRenderRgb==='function') _edsRenderRgb();
+      }
+      // ov.1.1.1: Estudo Localizado — área e perfil por linha também seguem o tema
+      if(typeof edsLocalResult!=='undefined' && edsLocalResult){
+        if(typeof _edsLocalDrawChart==='function') _edsLocalDrawChart();
+      }
+      if(typeof edsLocalLineResult!=='undefined' && edsLocalLineResult){
+        if(typeof _edsLocalRenderLineResults==='function') _edsLocalRenderLineResults();
+      }
     }
   }catch(e){}
   // ov.1.1.1: idem para o gráfico da Detecção de Porosidade.
@@ -28549,6 +28572,7 @@ function edsSetMode(m){
   _edsRenderImage();
   // ov.1.1.1: Estudo Localizado só existe no modo combinado — limpa e atualiza a aba ao trocar
   edsLocalSel=null; edsLocalResult=null;
+  edsLocalLine=null; edsLocalLineResult=null; try{ _edsDestroyLineCharts(); }catch(e){}
   if(edsLocalChartInst){ try{ edsLocalChartInst.destroy(); }catch(e){} edsLocalChartInst=null; }
   try{ _edsLocalShowResEmpty(); _edsLocalRenderImage(); }catch(e){}
 }
@@ -28744,6 +28768,7 @@ function edsHandleFile1(input){
   _edsLoadImage(f,function(im){
     edsImg=im; edsImgName=f.name; edsMasks=[]; edsResult=null;
     edsLocalSel=null; edsLocalResult=null; // ov.1.1.1: nova imagem, seleção antiga não vale mais
+    edsLocalLine=null; edsLocalLineResult=null; try{ _edsDestroyLineCharts(); }catch(_){}
     var fn=document.getElementById('edsFileName1');
     if(fn) fn.textContent='✓ '+f.name+' ('+im.naturalWidth+'×'+im.naturalHeight+' px)';
     _edsRenderImage(); _edsRenderResults(); _edsUpdateMaskInfo();
@@ -28975,6 +29000,17 @@ function edsLocalZoomStep(d){ edsLocalSetZoom(Math.round(edsLocalZoom*100)+d); }
 // ov.1.1.1: formata a área selecionada (em px da imagem original) para a linha de info abaixo do canvas.
 function _edsLocalFmtSelInfo(en){
   var el=document.getElementById('edsLocalSelInfo'); if(!el) return;
+  // ov.1.1.1: no modo linha informamos comprimento/ângulo em vez das dimensões do retângulo
+  if(edsLocalTool==='line'){
+    if(!edsLocalLine){ el.textContent=''; return; }
+    var L=edsLocalLine;
+    var lenL=Math.sqrt(Math.pow(L.x2-L.x1,2)+Math.pow(L.y2-L.y1,2));
+    var ang=Math.atan2(L.y2-L.y1,L.x2-L.x1)*180/Math.PI;
+    el.innerHTML=(en?'Line: ':'Linha: ')+Math.round(lenL)+' px · '
+      +(en?'thickness ':'espessura ')+_edsLineWidth()+' px · '
+      +(en?'angle ':'ângulo ')+Math.round(ang)+'°';
+    return;
+  }
   if(!edsLocalSel){ el.textContent=''; return; }
   var s=edsLocalSel;
   el.innerHTML = (en?'Selected area: ':'Área selecionada: ')
@@ -29016,6 +29052,38 @@ function _edsLocalRenderImage(){
     ctx.fillStyle='rgba(245,158,11,.12)'; ctx.fillRect(sx,sy,sw,sh);
     ctx.restore();
   }
+  // ov.1.1.1: LINHA confirmada (modo linha) — desenhada como faixa, para o usuário enxergar
+  // exatamente a espessura que está sendo promediada.
+  if(edsLocalLine){
+    var L=edsLocalLine, z=edsLocalZoom, sc2=d.sc;
+    var lx1=L.x1*sc2*z, ly1=L.y1*sc2*z, lx2=L.x2*sc2*z, ly2=L.y2*sc2*z;
+    var lw=_edsLineWidth()*sc2*z;
+    var ldx=lx2-lx1, ldy=ly2-ly1, llen=Math.sqrt(ldx*ldx+ldy*ldy)||1;
+    var lpx=-ldy/llen, lpy=ldx/llen, lh=lw/2;
+    ctx.save();
+    // faixa
+    ctx.fillStyle='rgba(245,158,11,.16)';
+    ctx.beginPath();
+    ctx.moveTo(lx1+lpx*lh,ly1+lpy*lh); ctx.lineTo(lx2+lpx*lh,ly2+lpy*lh);
+    ctx.lineTo(lx2-lpx*lh,ly2-lpy*lh); ctx.lineTo(lx1-lpx*lh,ly1-lpy*lh);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(245,158,11,.55)'; ctx.lineWidth=1; ctx.setLineDash([4,3]); ctx.stroke();
+    // eixo central
+    ctx.setLineDash([]); ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(lx1,ly1); ctx.lineTo(lx2,ly2); ctx.stroke();
+    // marcas de início/fim
+    [[lx1,ly1],[lx2,ly2]].forEach(function(p){
+      ctx.beginPath(); ctx.arc(p[0],p[1],4,0,Math.PI*2); ctx.fillStyle='#f59e0b'; ctx.fill();
+    });
+    ctx.restore();
+  }
+  // linha em construção
+  if(_edsLineDrag && _edsLineDrag.cur){
+    var a2=_edsLineDrag, z2=edsLocalZoom;
+    ctx.save(); ctx.strokeStyle='#f59e0b'; ctx.lineWidth=1.8; ctx.setLineDash([5,3]);
+    ctx.beginPath(); ctx.moveTo(a2.x*z2,a2.y*z2); ctx.lineTo(a2.cur.x*z2,a2.cur.y*z2); ctx.stroke();
+    ctx.restore();
+  }
   // retângulo em construção (arrastando agora)
   if(_edsLocalDragStart && _edsLocalDragStart.cur){
     var a=_edsLocalDragStart;
@@ -29024,9 +29092,11 @@ function _edsLocalRenderImage(){
     ctx.strokeRect(x1,y1,Math.abs(a.cur.x-a.x)*edsLocalZoom,Math.abs(a.cur.y-a.y)*edsLocalZoom); ctx.restore();
   }
   var hint=document.getElementById('edsLocalImgHint');
-  if(hint) hint.innerHTML = en
-    ? 'Drag over the image to mark the area you want to analyze. Use the zoom for extra precision.'
-    : 'Arraste sobre a imagem para marcar a área que você quer analisar. Use o zoom para maior precisão.';
+  if(hint) hint.innerHTML = (edsLocalTool==='line')
+    ? (en?'Drag over the image to draw the line you want to profile. The highlighted band is the thickness being averaged.'
+         :'Arraste sobre a imagem para traçar a linha que você quer analisar. A faixa destacada é a espessura que está sendo promediada.')
+    : (en?'Drag over the image to mark the area you want to analyze. Use the zoom for extra precision.'
+         :'Arraste sobre a imagem para marcar a área que você quer analisar. Use o zoom para maior precisão.');
   _edsLocalFmtSelInfo(en);
 }
 // Liga os eventos do canvas de seleção. Uma única vez.
@@ -29040,17 +29110,35 @@ function _edsLocalSetupCanvas(){
   }
   cv.addEventListener('mousedown',function(e){
     if(edsMode!=='combined'||!edsImg) return;
-    var p=rel(e); _edsLocalDragStart={x:p.x,y:p.y,cur:null}; e.preventDefault();
+    var p=rel(e);
+    // ov.1.1.1: no modo LINHA usamos um estado próprio, para não misturar com o retângulo
+    if(edsLocalTool==='line'){ _edsLineDrag={x:p.x,y:p.y,cur:null}; }
+    else { _edsLocalDragStart={x:p.x,y:p.y,cur:null}; }
+    e.preventDefault();
   });
   cv.addEventListener('mousemove',function(e){
+    if(_edsLineDrag){ _edsLineDrag.cur=rel(e); _edsLocalRenderImage(); e.preventDefault(); return; }
     if(!_edsLocalDragStart) return;
     _edsLocalDragStart.cur=rel(e); _edsLocalRenderImage(); e.preventDefault();
   });
   cv.addEventListener('mouseup',function(e){
-    if(!_edsLocalDragStart) return;
-    var p=rel(e), a=_edsLocalDragStart; _edsLocalDragStart=null;
     if(!edsImg) return;
     var d=_edsDrawDims(edsImg);
+    // ── modo LINHA ──
+    if(_edsLineDrag){
+      var pl=rel(e), al=_edsLineDrag; _edsLineDrag=null;
+      var lx1=al.x/d.sc, ly1=al.y/d.sc, lx2=pl.x/d.sc, ly2=pl.y/d.sc;
+      var llen=Math.sqrt(Math.pow(lx2-lx1,2)+Math.pow(ly2-ly1,2));
+      if(llen>4){
+        edsLocalLine={x1:lx1,y1:ly1,x2:lx2,y2:ly2};
+        edsLocalLineResult=null; edsLocalResult=null;
+        _edsLocalShowResEmpty();
+      }
+      _edsLocalRenderImage();
+      return;
+    }
+    if(!_edsLocalDragStart) return;
+    var p=rel(e), a=_edsLocalDragStart; _edsLocalDragStart=null;
     var x1=Math.min(a.x,p.x)/d.sc, y1=Math.min(a.y,p.y)/d.sc;
     var w=Math.abs(p.x-a.x)/d.sc, h=Math.abs(p.y-a.y)/d.sc;
     // ov.1.1.1: uma seleção por vez — um novo arrasto substitui a anterior.
@@ -29060,15 +29148,18 @@ function _edsLocalSetupCanvas(){
 }
 function edsLocalClearSel(){
   edsLocalSel=null; edsLocalResult=null;
+  edsLocalLine=null; edsLocalLineResult=null;   // ov.1.1.1
   if(edsLocalChartInst){ try{ edsLocalChartInst.destroy(); }catch(e){} edsLocalChartInst=null; }
+  try{ _edsDestroyLineCharts(); }catch(e){}
   _edsLocalShowResEmpty();
   _edsLocalRenderImage();
 }
 function _edsLocalShowResEmpty(){
   var e1=document.getElementById('edsLocalResEmpty'), w1=document.getElementById('edsLocalResWrap');
   if(e1) e1.style.display='block'; if(w1) w1.style.display='none';
-  var ib=document.getElementById('edsLocalIsoBox'); if(ib) ib.style.display='none';
-  var ob=document.getElementById('edsLocalOverlapBox'); if(ob) ob.style.display='none';
+  ['edsLocalIsoBox','edsLocalOverlapBox','edsLocalLineIsoBox','edsLocalLineOvBox'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.style.display='none';   // ov.1.1.1
+  });
 }
 function edsLocalAnalyze(){
   var en=_edsEN();
@@ -29085,6 +29176,13 @@ function _edsLocalRenderResults(){
   if(!e1||!w1) return;
   if(!edsLocalResult){ e1.style.display='block'; w1.style.display='none'; return; }
   e1.style.display='none'; w1.style.display='block';
+  // ov.1.1.1: modo ÁREA — esconde as caixas do modo linha e restaura o título do gráfico
+  try{ _edsDestroyLineCharts(); }catch(_){}
+  ['edsLocalLineIsoBox','edsLocalLineOvBox'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  var _ct=document.getElementById('edsLocalChartTitle');
+  if(_ct) _ct.textContent=en?'📈 Area fraction per element':'📈 Fração de área por elemento';
   var R=edsLocalResult, tbl=document.getElementById('edsLocalResTable');
   var f=function(v){ return (typeof fmtSmart==='function')?fmtSmart(v,2):String(Math.round(v*100)/100); };
   var h='<table class="eds-table"><thead><tr>'
@@ -29161,6 +29259,716 @@ function _edsLocalDrawChart(){
 }
 // ov.1.1.1: grade de "Elementos separadamente" para a área selecionada — mesmo princípio de
 // _edsDrawIso(), mas lendo de edsLocalResult (via resultOverride em _edsIsoCanvas).
+
+// ══════════════════════════════════════════════════════════════════════════════════════════
+// ov.1.1.1 — ESTUDO LOCALIZADO POR LINHA (perfil dos elementos ao longo de um traço)
+// ------------------------------------------------------------------------------------------
+// O usuário traça uma linha sobre o mapa e o programa mostra COMO os elementos variam ao longo
+// dela. A linha é tratada como uma FAIXA (com espessura): cada ponto do perfil é a média
+// perpendicular àquela largura — sem isso, um traço de 1 px pegaria ruído em vez de tendência.
+//
+// A classificação de cada pixel é EXATAMENTE a mesma do restante do estudo (mesma distância
+// HSV, mesmas tolerâncias por elemento, mesmo critério de sobreposição e de brilho mínimo),
+// então o perfil é coerente com os números das outras abas.
+// ══════════════════════════════════════════════════════════════════════════════════════════
+var edsLocalTool='area';        // 'area' | 'line'
+var edsLocalLine=null;          // {x1,y1,x2,y2} em coordenadas ORIGINAIS da imagem
+var edsLocalLineResult=null;    // resultado do perfil
+var _edsLineDrag=null;          // traço em construção
+var _edsLineCharts=[];          // instâncias Chart.js dos perfis
+
+function edsLocalSetTool(t){
+  edsLocalTool=(t==='line')?'line':'area';
+  var ba=document.getElementById('edsLocalToolArea'), bl=document.getElementById('edsLocalToolLine');
+  if(ba) ba.classList.toggle('active', edsLocalTool==='area');
+  if(bl) bl.classList.toggle('active', edsLocalTool==='line');
+  var op=document.getElementById('edsLocalLineOpts');
+  if(op) op.style.display=(edsLocalTool==='line')?'block':'none';
+  _edsLocalDragStart=null; _edsLineDrag=null;
+  _edsLocalRenderImage();
+}
+function _edsLineWidth(){
+  var v=parseInt((document.getElementById('edsLocalLineW')||{}).value);
+  return (isFinite(v)&&v>0)?v:12;
+}
+function _edsDestroyLineCharts(){
+  _edsLineCharts.forEach(function(c){ try{ c.destroy(); }catch(e){} });
+  _edsLineCharts=[];
+}
+// Cores de texto/grade seguindo o tema REAL do programa (branco no escuro, preto no claro).
+function _edsLineColors(){
+  var light=false; try{ light=document.body.classList.contains('light-theme'); }catch(e){}
+  return {text:light?'#1a1a1a':'#ffffff', title:light?'#111111':'#ffffff',
+          grid:light?'rgba(0,0,0,.12)':'rgba(255,255,255,.14)'};
+}
+// ── cálculo do perfil ──────────────────────────────────────────────────────────────────────
+// Classifica cada pixel da faixa e devolve, por posição ao longo da linha, o percentual de
+// cada elemento / sobreposição / não classificado.
+function _edsRunLine(line, width){
+  if(!edsImg||!line) return null;
+  var P=_edsPixels(edsImg), W=P.w, H=P.h;
+  var tolG=parseFloat((document.getElementById('edsTol')||{}).value)||25;
+  var minLum=(parseFloat((document.getElementById('edsMinLum')||{}).value)||0)/100;
+  var tolArr=edsElements.map(function(el){
+    return (edsSensMode==='individual' && typeof el.tol==='number') ? el.tol : tolG;
+  });
+  var refs=edsElements.map(function(el){ var c=_edsHexToRgb(el.color); return _edsRgbToHsv(c.r,c.g,c.b); });
+  var nEl=edsElements.length;
+  // extremos da linha no espaço de ANÁLISE
+  var x1=line.x1*P.sc, y1=line.y1*P.sc, x2=line.x2*P.sc, y2=line.y2*P.sc;
+  var dx=x2-x1, dy=y2-y1;
+  var len=Math.sqrt(dx*dx+dy*dy);
+  if(len<2) return null;
+  var ux=dx/len, uy=dy/len;          // direção
+  var px=-uy, py=ux;                 // perpendicular (para varrer a espessura)
+  var wpx=Math.max(1,width*P.sc);    // espessura no espaço de análise
+  var half=wpx/2;
+  var nSteps=Math.max(2,Math.round(len));            // 1 amostra por pixel de comprimento
+  var nCross=Math.max(1,Math.round(wpx));            // amostras perpendiculares
+  var counts=[];                                     // por passo: [n por elemento]
+  var ovCounts=[];                                   // por passo: {chave par -> n}
+  var uncArr=[], ovArr=[], totArr=[];
+  var ovPairsTot={};
+  var elTotals=new Array(nEl).fill(0);
+  var totalAll=0, unclassAll=0, overlapAll=0;
+  for(var s=0;s<nSteps;s++){
+    var t=(nSteps>1)?(s/(nSteps-1)):0;
+    var cx=x1+dx*t, cy=y1+dy*t;
+    var cnt=new Array(nEl).fill(0);
+    var ovStep={}, unc=0, ov=0, tot=0;
+    for(var c2=0;c2<nCross;c2++){
+      var off=(nCross>1)?(-half+(c2/(nCross-1))*wpx):0;
+      var sx=Math.round(cx+px*off), sy=Math.round(cy+py*off);
+      if(sx<0||sy<0||sx>=W||sy>=H) continue;
+      if(_edsMasked(sx,sy,P.sc)) continue;           // respeita as áreas excluídas
+      tot++;
+      var i=(sy*W+sx)*4;
+      var hsv=_edsRgbToHsv(P.data[i],P.data[i+1],P.data[i+2]);
+      if(hsv.v<minLum){ unc++; continue; }
+      var best=-1,bd=Infinity,second=Infinity,secondIdx=-1;
+      for(var k=0;k<nEl;k++){
+        var dd=_edsHsvDist(hsv,refs[k]);
+        if(dd<bd){ second=bd; secondIdx=best; bd=dd; best=k; }
+        else if(dd<second){ second=dd; secondIdx=k; }
+      }
+      if(best<0 || bd>tolArr[best]){ unc++; continue; }
+      // mesmo critério de sobreposição usado em _edsRunCombined
+      if(nEl>1 && isFinite(second) && (second-bd)<Math.max(4.0,bd*0.15)){
+        ov++;
+        if(secondIdx>=0){
+          var a=Math.min(best,secondIdx), b=Math.max(best,secondIdx), key=a+'|'+b;
+          ovStep[key]=(ovStep[key]||0)+1;
+          ovPairsTot[key]=(ovPairsTot[key]||0)+1;
+        }
+        continue;
+      }
+      cnt[best]++; elTotals[best]++;
+    }
+    counts.push(cnt); ovCounts.push(ovStep);
+    uncArr.push(unc); ovArr.push(ov); totArr.push(tot);
+    totalAll+=tot; unclassAll+=unc; overlapAll+=ov;
+  }
+  // séries em % (do total amostrado naquele passo)
+  var series=edsElements.map(function(el,k){
+    return {name:el.name, color:el.color,
+      data:counts.map(function(cnt,s2){ return totArr[s2]?+(cnt[k]/totArr[s2]*100).toFixed(2):0; }),
+      total:elTotals[k]};
+  });
+  var ovPairs=Object.keys(ovPairsTot).map(function(key){
+    var p=key.split('|'), ai=+p[0], bi=+p[1];
+    return {a:ai,b:bi,key:key,count:ovPairsTot[key],
+      aName:(edsElements[ai]||{}).name||('#'+ai), bName:(edsElements[bi]||{}).name||('#'+bi),
+      aColor:(edsElements[ai]||{}).color||'#888', bColor:(edsElements[bi]||{}).color||'#888',
+      data:ovCounts.map(function(o,s3){ return totArr[s3]?+(((o[key]||0)/totArr[s3])*100).toFixed(2):0; })};
+  }).sort(function(a,b){ return b.count-a.count; });
+  // eixo X: distância em pixels da imagem ORIGINAL (o que o usuário vê na tela)
+  var lenOrig=Math.sqrt(Math.pow(line.x2-line.x1,2)+Math.pow(line.y2-line.y1,2));
+  var labels=[]; for(var s4=0;s4<nSteps;s4++){
+    labels.push(+((nSteps>1?(s4/(nSteps-1)):0)*lenOrig).toFixed(1));
+  }
+  return {
+    line:line, width:width, labels:labels, series:series, ovPairs:ovPairs,
+    unclass:uncArr.map(function(u,s5){ return totArr[s5]?+(u/totArr[s5]*100).toFixed(2):0; }),
+    overlap:ovArr.map(function(o,s6){ return totArr[s6]?+(o/totArr[s6]*100).toFixed(2):0; }),
+    lenOrig:lenOrig, nSteps:nSteps, nCross:nCross,
+    totalAll:totalAll, unclassAll:unclassAll, overlapAll:overlapAll,
+    elTotals:elTotals, tol:tolG, minLum:minLum*100
+  };
+}
+// ── ação do botão ──────────────────────────────────────────────────────────────────────────
+function edsLocalAnalyzeLine(){
+  var en=_edsEN();
+  if(edsMode!=='combined'){ try{ notify(en?'Only available in "Colored map" mode.':'Disponível apenas no modo "Mapa colorido".'); }catch(_){} return; }
+  if(!edsImg){ try{ notify(en?'Load the map image first.':'Carregue a imagem do mapa primeiro.'); }catch(_){} return; }
+  if(!edsElements.length){ try{ notify(en?'Add at least one element.':'Adicione ao menos um elemento.'); }catch(_){} return; }
+  if(!edsLocalLine){
+    try{ notify(en?'Draw a line over the image first (choose the 📏 Line tool).':'Trace uma linha sobre a imagem primeiro (escolha a ferramenta 📏 Linha).'); }catch(_){}
+    return;
+  }
+  edsLocalLineResult=_edsRunLine(edsLocalLine,_edsLineWidth());
+  if(!edsLocalLineResult){ try{ notify(en?'The line is too short.':'A linha está muito curta.'); }catch(_){} return; }
+  edsLocalResult=null;   // o modo linha substitui o resultado por área
+  _edsLocalRenderLineResults();
+}
+// ── renderização dos resultados do perfil ──────────────────────────────────────────────────
+function _edsLocalRenderLineResults(){
+  var en=_edsEN(), R=edsLocalLineResult;
+  var e1=document.getElementById('edsLocalResEmpty'), w1=document.getElementById('edsLocalResWrap');
+  if(!e1||!w1||!R) return;
+  e1.style.display='none'; w1.style.display='block';
+  _edsDestroyLineCharts();
+  // esconde as caixas do modo ÁREA e mostra as do modo LINHA
+  ['edsLocalIsoBox','edsLocalOverlapBox'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  var f=function(v){ return (typeof fmtSmart==='function')?fmtSmart(v,2):String(Math.round(v*100)/100); };
+  // ── tabela-resumo (média ao longo da linha) ──
+  var tbl=document.getElementById('edsLocalResTable');
+  if(tbl){
+    var h='<table class="eds-table"><thead><tr>'
+      +'<th></th><th>'+(en?'Element':'Elemento')+'</th>'
+      +'<th>'+(en?'Mean along line':'Média na linha')+'</th>'
+      +'<th>'+(en?'Peak':'Pico')+'</th>'
+      +'<th>'+(en?'Position of peak':'Posição do pico')+'</th></tr></thead><tbody>';
+    R.series.forEach(function(s){
+      var mean=s.data.length?s.data.reduce(function(a,b){return a+b;},0)/s.data.length:0;
+      var mx=0,mi=0; s.data.forEach(function(v,i){ if(v>mx){ mx=v; mi=i; } });
+      h+='<tr><td><span class="et-sw" style="background:'+_edsEsc(s.color)+'"></span></td>'
+        +'<td>'+_edsEsc(s.name)+'</td>'
+        +'<td>'+f(mean)+'%</td><td>'+f(mx)+'%</td>'
+        +'<td>'+(mx>0?(f(R.labels[mi])+' px'):'–')+'</td></tr>';
+    });
+    var ovMean=R.overlap.length?R.overlap.reduce(function(a,b){return a+b;},0)/R.overlap.length:0;
+    h+='<tr><td><span class="et-sw" style="background:#ffffff"></span></td><td>'+(en?'Overlap':'Sobreposição')
+      +'</td><td>'+f(ovMean)+'%</td><td colspan="2">–</td></tr>';
+    var ucMean=R.unclass.length?R.unclass.reduce(function(a,b){return a+b;},0)/R.unclass.length:0;
+    h+='<tr><td><span class="et-sw" style="background:#46464c"></span></td><td>'+(en?'Unclassified':'Não classificado')
+      +'</td><td>'+f(ucMean)+'%</td><td colspan="2">–</td></tr>';
+    h+='</tbody></table>';
+    h+='<div class="eds-hint">'+(en
+      ? 'Line length: '+f(R.lenOrig)+' px · thickness: '+R.width+' px · '+R.nSteps+' points sampled ('+R.nCross+' pixels averaged per point) · tolerance: '+R.tol+'%'
+      : 'Comprimento da linha: '+f(R.lenOrig)+' px · espessura: '+R.width+' px · '+R.nSteps+' pontos amostrados ('+R.nCross+' pixels na média de cada ponto) · tolerância: '+R.tol+'%')+'</div>';
+    tbl.innerHTML=h;
+  }
+  // ── gráfico principal (todos os elementos juntos) ──
+  var mainCv=document.getElementById('edsLocalChart');
+  if(mainCv){
+    var ds=R.series.map(function(s){
+      return {label:s.name, data:s.data, borderColor:s.color, backgroundColor:s.color+'22',
+              borderWidth:2, pointRadius:0, tension:.25, fill:false};
+    });
+    _edsMakeLineChart(mainCv, R.labels, ds, en?'All elements along the line':'Todos os elementos ao longo da linha', true);
+  }
+  var ct=document.getElementById('edsLocalChartTitle');
+  if(ct) ct.textContent=en?'📈 Element profile along the line':'📈 Perfil dos elementos ao longo da linha';
+  _edsLocalDrawLineIso();
+  _edsLocalDrawLineOverlaps();
+}
+// Cria um gráfico de linha já com as cores do tema aplicadas.
+function _edsMakeLineChart(cv, labels, datasets, yTitle, showLegend){
+  var en=_edsEN(), c=_edsLineColors();
+  try{
+    var ch=new Chart(cv,{type:'line',
+      data:{labels:labels, datasets:datasets},
+      options:{responsive:true,maintainAspectRatio:false,animation:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:!!showLegend,position:'top',
+            labels:{color:c.text,font:{size:11,weight:'600'},boxWidth:16,usePointStyle:true}},
+          tooltip:{callbacks:{
+            title:function(t){ return (en?'Distance: ':'Distância: ')+t[0].label+' px'; },
+            label:function(t){ return t.dataset.label+': '+t.parsed.y+'%'; }}}
+        },
+        scales:{
+          x:{title:{display:true,text:(en?'Distance along the line (px)':'Distância ao longo da linha (px)'),
+                    color:c.title,font:{size:11,weight:'600'}},
+             ticks:{color:c.text,font:{size:10},maxTicksLimit:12},grid:{color:c.grid}},
+          y:{beginAtZero:true,title:{display:true,text:(yTitle||(en?'Share (%)':'Participação (%)')),
+                    color:c.title,font:{size:11,weight:'600'}},
+             ticks:{color:c.text,font:{size:10},callback:function(v){ return v+'%'; }},grid:{color:c.grid}}
+        }}});
+    _edsLineCharts.push(ch);
+    return ch;
+  }catch(e){ try{ console.warn('EDS line chart:',e); }catch(_){} return null; }
+}
+// ── "Elementos separadamente" → um gráfico por elemento ────────────────────────────────────
+function _edsLocalDrawLineIso(){
+  var box=document.getElementById('edsLocalLineIsoBox'), grid=document.getElementById('edsLocalLineIsoGrid');
+  if(!box||!grid) return;
+  var R=edsLocalLineResult;
+  if(!R||!R.series.length){ box.style.display='none'; return; }
+  box.style.display='block';
+  var en=_edsEN();
+  var f=function(v){ return (typeof fmtSmart==='function')?fmtSmart(v,2):String(Math.round(v*100)/100); };
+  grid.innerHTML=R.series.map(function(s,i){
+    var mean=s.data.length?s.data.reduce(function(a,b){return a+b;},0)/s.data.length:0;
+    var mx=0; s.data.forEach(function(v){ if(v>mx) mx=v; });
+    return '<div class="eds-lp-card">'
+      +'<div class="eds-lp-h"><span class="elh-sw" style="background:'+_edsEsc(s.color)+'"></span>'
+      +'<span class="elh-n">'+_edsEsc(s.name)+'</span>'
+      +'<span class="elh-st">'+(en?'mean ':'média ')+f(mean)+'% · '+(en?'peak ':'pico ')+f(mx)+'%</span></div>'
+      +'<div class="eds-lp-chart"><canvas id="edsLpCv_'+i+'"></canvas></div></div>';
+  }).join('');
+  R.series.forEach(function(s,i){
+    var cv=document.getElementById('edsLpCv_'+i); if(!cv) return;
+    _edsMakeLineChart(cv,R.labels,[{label:s.name,data:s.data,borderColor:s.color,
+      backgroundColor:s.color+'33',borderWidth:2,pointRadius:0,tension:.25,fill:true}],null,false);
+  });
+  // ov.1.1.1 FIX: aqui existia um segundo gráfico combinado (todos os elementos juntos), idêntico
+  // ao que a seção "📈 Perfil dos elementos ao longo da linha" já mostra logo acima. Era pura
+  // duplicação visual — esta seção existe para ver UM elemento por vez, então ficou só a grade
+  // de gráficos individuais.
+}
+// ── "Localização das Sobreposições" → perfil de cada par ao longo da linha ─────────────────
+function _edsLocalDrawLineOverlaps(){
+  var box=document.getElementById('edsLocalLineOvBox'), grid=document.getElementById('edsLocalLineOvGrid');
+  if(!box||!grid) return;
+  var R=edsLocalLineResult;
+  if(!R||!R.ovPairs.length){ box.style.display='none'; return; }
+  box.style.display='block';
+  var en=_edsEN();
+  var f=function(v){ return (typeof fmtSmart==='function')?fmtSmart(v,2):String(Math.round(v*100)/100); };
+  grid.innerHTML=R.ovPairs.map(function(p,i){
+    var mean=p.data.length?p.data.reduce(function(a,b){return a+b;},0)/p.data.length:0;
+    var mx=0,mi=0; p.data.forEach(function(v,k){ if(v>mx){ mx=v; mi=k; } });
+    return '<div class="eds-lp-card">'
+      +'<div class="eds-lp-h">'
+      +'<span class="elh-sw" style="background:'+_edsEsc(p.aColor)+'"></span>'
+      +'<span class="elh-sw" style="background:'+_edsEsc(p.bColor)+';margin-left:-3px"></span>'
+      +'<span class="elh-n">'+_edsEsc(p.aName)+' ↔ '+_edsEsc(p.bName)+'</span>'
+      +'<span class="elh-st">'+(en?'mean ':'média ')+f(mean)+'% · '+(en?'peak at ':'pico em ')+f(R.labels[mi])+' px</span></div>'
+      +'<div class="eds-lp-chart"><canvas id="edsLpOvCv_'+i+'"></canvas></div></div>';
+  }).join('');
+  R.ovPairs.forEach(function(p,i){
+    var cv=document.getElementById('edsLpOvCv_'+i); if(!cv) return;
+    // a curva do par usa um gradiente entre as duas cores para lembrar de quem é a sobreposição
+    _edsMakeLineChart(cv,R.labels,[{label:p.aName+' ↔ '+p.bName,data:p.data,
+      borderColor:'#ffffff',backgroundColor:'rgba(255,255,255,.16)',borderWidth:2,
+      pointRadius:0,tension:.25,fill:true}],null,false);
+  });
+  // combinado: todos os pares juntos
+  var allCv=document.getElementById('edsLocalLineOvAllChart');
+  if(allCv){
+    var pal=['#ffffff','#fbbf24','#a78bfa','#2dd4bf','#fb923c','#f472b6'];
+    _edsMakeLineChart(allCv,R.labels,R.ovPairs.map(function(p,i){
+      return {label:p.aName+' ↔ '+p.bName,data:p.data,borderColor:pal[i%pal.length],
+              backgroundColor:pal[i%pal.length]+'22',borderWidth:2,pointRadius:0,tension:.25,fill:false};
+    }),null,true);
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════════════════
+// ov.1.1.1 — EXPORTAÇÃO DO ESTUDO LOCALIZADO (.txt e PDF)
+// ------------------------------------------------------------------------------------------
+// Mesmo padrão da aba 📊 RESULTADOS, mas cobrindo os DOIS modos desta aba:
+//   • Área  — tabela de composição + gráfico de barras + grades de imagem (elementos/sobrep.)
+//   • Linha — tabela de média/pico + perfis ao longo do traço
+//
+// Ponto de atenção no PDF: os gráficos da tela usam texto BRANCO (tema escuro), que sumiria
+// na folha branca. Por isso os gráficos são re-renderizados fora da tela com eixos, títulos e
+// grade em PRETO antes de virarem imagem — ver _edsLocalChartToPNG().
+// ══════════════════════════════════════════════════════════════════════════════════════════
+
+// Renderiza um gráfico num canvas fora da tela, forçando as cores para IMPRESSÃO (preto sobre
+// branco) e devolve o dataURL. `spec` = {type, labels, datasets, yTitle, showLegend}.
+function _edsLocalChartToPNG(spec, wPx, hPx){
+  try{
+    var cv=document.createElement('canvas');
+    cv.width=wPx||1100; cv.height=hPx||420;
+    // fundo branco: sem isso o PNG sai transparente e o texto preto some em visualizadores escuros
+    var bg=cv.getContext('2d');
+    bg.fillStyle='#ffffff'; bg.fillRect(0,0,cv.width,cv.height);
+    var BLACK='#000000', GRID='rgba(0,0,0,.18)';
+    var en=_edsEN();
+    var opts={
+      responsive:false, maintainAspectRatio:false, animation:false, devicePixelRatio:2,
+      plugins:{
+        legend:{display:!!spec.showLegend, position:'top',
+          labels:{color:BLACK,font:{size:13,weight:'600'},boxWidth:18,usePointStyle:true}},
+        tooltip:{enabled:false}
+      },
+      scales:{}
+    };
+    if(spec.type==='bar'){
+      opts.scales={
+        x:{ticks:{color:BLACK,font:{size:12,weight:'600'}},grid:{display:false},
+           border:{color:BLACK}},
+        y:{beginAtZero:true,ticks:{color:BLACK,font:{size:12},callback:function(v){return v+'%';}},
+           grid:{color:GRID},border:{color:BLACK}}
+      };
+    } else {
+      opts.scales={
+        x:{title:{display:true,text:(en?'Distance along the line (px)':'Distância ao longo da linha (px)'),
+                  color:BLACK,font:{size:13,weight:'600'}},
+           ticks:{color:BLACK,font:{size:11},maxTicksLimit:12},grid:{color:GRID},border:{color:BLACK}},
+        y:{beginAtZero:true,title:{display:true,text:(spec.yTitle||(en?'Share (%)':'Participação (%)')),
+                  color:BLACK,font:{size:13,weight:'600'}},
+           ticks:{color:BLACK,font:{size:11},callback:function(v){return v+'%';}},
+           grid:{color:GRID},border:{color:BLACK}}
+      };
+    }
+    var ch=new Chart(cv,{type:spec.type||'line',
+      data:{labels:spec.labels, datasets:spec.datasets}, options:opts});
+    var url=cv.toDataURL('image/png');
+    try{ ch.destroy(); }catch(_){}
+    return {url:url, w:cv.width, h:cv.height};
+  }catch(e){ try{ console.warn('EDS local chart->png:',e); }catch(_){} return null; }
+}
+// Datasets do gráfico de barras do modo ÁREA (mesma composição mostrada na tela).
+function _edsLocalBarSpec(){
+  var R=edsLocalResult; if(!R) return null;
+  var en=_edsEN(), labels=[], vals=[], cols=[];
+  R.rows.forEach(function(r){ if(r.pixels>0){ labels.push(r.name); vals.push(+(r.pctTotal).toFixed(2)); cols.push(r.color); } });
+  var pairs=R.ovPairs||[];
+  if(R.overlap>0){
+    if(pairs.length){
+      pairs.forEach(function(p){ labels.push(p.aName+' <-> '+p.bName);
+        vals.push(+(p.count/R.total*100).toFixed(2)); cols.push('#9ca3af'); });
+    } else { labels.push(en?'Overlap':'Sobreposição'); vals.push(+(R.overlap/R.total*100).toFixed(2)); cols.push('#9ca3af'); }
+  }
+  if(R.unclassified>0){ labels.push(en?'Unclassified':'Não classificado');
+    vals.push(+(R.unclassified/R.total*100).toFixed(2)); cols.push('#6b7280'); }
+  if(!labels.length) return null;
+  return {type:'bar',labels:labels,showLegend:false,
+    datasets:[{data:vals,backgroundColor:cols,borderColor:cols,borderWidth:1}]};
+}
+// ── RELATÓRIO .TXT ─────────────────────────────────────────────────────────────────────────
+function edsLocalExportTXT(){
+  var en=_edsEN();
+  var isLine=!!edsLocalLineResult, isArea=!!edsLocalResult;
+  if(!isLine && !isArea){
+    try{ notify(en?'Run the localized analysis first.':'Execute a análise localizada primeiro.'); }catch(_){}
+    return;
+  }
+  var f=function(v,d){ return (typeof fmtSmart==='function')?fmtSmart(v,d||2):String(Math.round(v*100)/100); };
+  var sep='═'.repeat(64), L=[];
+  L.push(sep);
+  L.push('  STATLAB Pro '+APP_VERSION+' — '+(en?'EDS MAPPING · LOCALIZED STUDY':'MAPEAMENTO EDS · ESTUDO LOCALIZADO'));
+  L.push('  '+new Date().toLocaleDateString(en?'en-US':'pt-BR')+' '+new Date().toLocaleTimeString(en?'en-US':'pt-BR'));
+  L.push(sep); L.push('');
+  L.push(en?'*** IMPORTANT NOTICE ***':'*** AVISO IMPORTANTE ***');
+  L.push(en?'Semi-quantitative estimate by pixel area/intensity. It DOES NOT replace real EDS'
+           :'Estimativa semi-quantitativa por área/intensidade de pixel. NÃO substitui a');
+  L.push(en?'quantification (X-ray spectrum + ZAF/phi-rho-z matrix correction).'
+           :'quantificação EDS real (espectro de raios-X + correção matricial ZAF/phi-rho-z).');
+  L.push('');
+  if(isLine){
+    var R=edsLocalLineResult;
+    L.push(sep); L.push(en?'PARAMETERS — LINE PROFILE':'PARÂMETROS — PERFIL POR LINHA'); L.push(sep);
+    L.push((en?'Image: ':'Imagem: ')+edsImgName);
+    L.push((en?'Line length: ':'Comprimento da linha: ')+f(R.lenOrig,1)+' px');
+    L.push((en?'Thickness: ':'Espessura: ')+R.width+' px');
+    L.push((en?'Sampled points: ':'Pontos amostrados: ')+R.nSteps+' ('+R.nCross+(en?' pixels averaged each':' pixels na média de cada')+')');
+    L.push((en?'Color tolerance: ':'Tolerância de cor: ')+R.tol+'%');
+    L.push((en?'Minimum brightness: ':'Brilho mínimo: ')+f(R.minLum,1)+'%');
+    L.push('');
+    L.push(sep); L.push(en?'SUMMARY ALONG THE LINE':'RESUMO AO LONGO DA LINHA'); L.push(sep);
+    L.push((en?'Element':'Elemento').padEnd(18)+(en?'Mean':'Média').padStart(10)
+      +(en?'Peak':'Pico').padStart(10)+(en?'Peak at':'Pico em').padStart(12));
+    L.push('-'.repeat(50));
+    R.series.forEach(function(s){
+      var mean=s.data.length?s.data.reduce(function(a,b){return a+b;},0)/s.data.length:0;
+      var mx=0,mi=0; s.data.forEach(function(v,i){ if(v>mx){ mx=v; mi=i; } });
+      L.push(String(s.name).slice(0,17).padEnd(18)+(f(mean)+'%').padStart(10)
+        +(f(mx)+'%').padStart(10)+(mx>0?(f(R.labels[mi],1)+' px'):'-').padStart(12));
+    });
+    var ovMean=R.overlap.length?R.overlap.reduce(function(a,b){return a+b;},0)/R.overlap.length:0;
+    var ucMean=R.unclass.length?R.unclass.reduce(function(a,b){return a+b;},0)/R.unclass.length:0;
+    L.push('-'.repeat(50));
+    L.push((en?'Overlap':'Sobreposição').padEnd(18)+(f(ovMean)+'%').padStart(10));
+    L.push((en?'Unclassified':'Não classif.').padEnd(18)+(f(ucMean)+'%').padStart(10));
+    if(R.ovPairs&&R.ovPairs.length){
+      L.push(''); L.push(sep); L.push(en?'OVERLAPS ALONG THE LINE':'SOBREPOSIÇÕES AO LONGO DA LINHA'); L.push(sep);
+      R.ovPairs.forEach(function(p){
+        var mean=p.data.length?p.data.reduce(function(a,b){return a+b;},0)/p.data.length:0;
+        var mx=0,mi=0; p.data.forEach(function(v,i){ if(v>mx){ mx=v; mi=i; } });
+        L.push((p.aName+' <-> '+p.bName).slice(0,28).padEnd(30)
+          +(en?'mean ':'média ')+f(mean)+'%  '+(en?'peak at ':'pico em ')+f(R.labels[mi],1)+' px');
+      });
+    }
+    // perfil ponto a ponto (o dado bruto, para quem quiser replotar noutro programa)
+    L.push(''); L.push(sep);
+    L.push(en?'POINT-BY-POINT PROFILE (%)':'PERFIL PONTO A PONTO (%)'); L.push(sep);
+    var head=(en?'Dist(px)':'Dist(px)').padStart(10);
+    R.series.forEach(function(s){ head+=String(s.name).slice(0,9).padStart(10); });
+    head+=(en?'Overlap':'Sobrep.').padStart(10)+(en?'Unclass':'N.class').padStart(10);
+    L.push(head);
+    for(var i=0;i<R.labels.length;i++){
+      var ln=String(f(R.labels[i],1)).padStart(10);
+      R.series.forEach(function(s){ ln+=String(s.data[i]).padStart(10); });
+      ln+=String(R.overlap[i]).padStart(10)+String(R.unclass[i]).padStart(10);
+      L.push(ln);
+    }
+  } else {
+    var A=edsLocalResult;
+    L.push(sep); L.push(en?'PARAMETERS — SELECTED AREA':'PARÂMETROS — ÁREA SELECIONADA'); L.push(sep);
+    L.push((en?'Image: ':'Imagem: ')+edsImgName);
+    if(edsLocalSel) L.push((en?'Selected area: ':'Área selecionada: ')
+      +Math.round(edsLocalSel.w)+'x'+Math.round(edsLocalSel.h)+' px '
+      +(en?'(top-left at ':'(canto sup. esq. em ')+Math.round(edsLocalSel.x)+','+Math.round(edsLocalSel.y)+')');
+    L.push((en?'Analyzed: ':'Analisados: ')+A.total.toLocaleString()+' px');
+    if(A.masked) L.push((en?'Excluded by mask: ':'Excluído pela máscara: ')+A.masked.toLocaleString()+' px');
+    L.push((en?'Color tolerance: ':'Tolerância de cor: ')+A.tol+'%');
+    L.push((en?'Minimum brightness: ':'Brilho mínimo: ')+f(A.minLum,1)+'%');
+    L.push('');
+    L.push(sep); L.push(en?'RESULTS BY ELEMENT':'RESULTADOS POR ELEMENTO'); L.push(sep);
+    L.push((en?'Element':'Elemento').padEnd(20)+(en?'Pixels':'Pixels').padStart(12)
+      +(en?'% area':'% área').padStart(12)+(en?'% classif.':'% classif.').padStart(12));
+    L.push('-'.repeat(56));
+    A.rows.forEach(function(r){
+      L.push(String(r.name).slice(0,19).padEnd(20)+String(r.pixels).padStart(12)
+        +(f(r.pctTotal)+'%').padStart(12)+(f(r.pctClassified)+'%').padStart(12));
+    });
+    L.push('-'.repeat(56));
+    L.push((en?'Overlap':'Sobreposição').padEnd(20)+String(A.overlap).padStart(12)
+      +(f(A.total?A.overlap/A.total*100:0)+'%').padStart(12)+'-'.padStart(12));
+    (A.ovPairs||[]).forEach(function(p){
+      L.push(('  '+p.aName+' <-> '+p.bName).slice(0,19).padEnd(20)+String(p.count).padStart(12)
+        +(f(A.total?p.count/A.total*100:0)+'%').padStart(12)+'-'.padStart(12));
+    });
+    L.push((en?'Unclassified':'Não classif.').padEnd(20)+String(A.unclassified).padStart(12)
+      +(f(A.total?A.unclassified/A.total*100:0)+'%').padStart(12)+'-'.padStart(12));
+  }
+  L.push(''); L.push(sep);
+  L.push('StatLab Pro '+APP_VERSION+' — '+(en?'Semi-quantitative estimate, not certified composition'
+                                            :'Estimativa semi-quantitativa, não é composição certificada'));
+  L.push(sep);
+  try{
+    var blob=new Blob([L.join('\r\n')],{type:'text/plain;charset=utf-8'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='StatLab_EDS_'+(isLine?'Linha':'Area')+'_'+new Date().toISOString().slice(0,10)+'.txt';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
+  }catch(e){ try{ notify(en?'Could not export the report.':'Não foi possível exportar o relatório.'); }catch(_){} }
+}
+// ── RELATÓRIO PDF ──────────────────────────────────────────────────────────────────────────
+function edsLocalExportPDF(){
+  var en=_edsEN();
+  var isLine=!!edsLocalLineResult, isArea=!!edsLocalResult;
+  if(!isLine && !isArea){
+    try{ notify(en?'Run the localized analysis first.':'Execute a análise localizada primeiro.'); }catch(_){}
+    return;
+  }
+  if(!window.jspdf||!window.jspdf.jsPDF){
+    try{ notify(en?'PDF library not available.':'Biblioteca de PDF indisponível.'); }catch(_){} return;
+  }
+  var f=function(v,d){ return (typeof fmtSmart==='function')?fmtSmart(v,d||2):String(Math.round(v*100)/100); };
+  try{
+    var jsPDF=window.jspdf.jsPDF;
+    var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var PW=210, M=14, y=16;
+    // cabeçalho
+    doc.setFillColor(245,158,11); doc.rect(0,0,PW,3,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(30,30,30);
+    doc.text(en?'EDS Mapping — Localized Study':'Mapeamento EDS — Estudo Localizado', M, y); y+=6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(110,110,110);
+    doc.text('StatLab Pro '+APP_VERSION+'  ·  '+new Date().toLocaleDateString(en?'en-US':'pt-BR')
+      +' '+new Date().toLocaleTimeString(en?'en-US':'pt-BR')
+      +'  ·  '+(isLine?(en?'Line profile':'Perfil por linha'):(en?'Selected area':'Área selecionada')), M, y); y+=7;
+    // aviso científico
+    doc.setFillColor(255,247,230); doc.setDrawColor(245,158,11);
+    doc.roundedRect(M,y,PW-M*2,17,2,2,'FD');
+    doc.setFontSize(8.2); doc.setTextColor(120,80,10);
+    var warn=en
+      ? 'IMPORTANT: semi-quantitative estimate by pixel area/intensity. It DOES NOT replace real EDS quantification (X-ray spectrum + ZAF/phi-rho-z matrix correction). Do not report as certified composition.'
+      : 'IMPORTANTE: estimativa semi-quantitativa por área/intensidade de pixel. NÃO substitui a quantificação EDS real (espectro de raios-X + correção matricial ZAF/phi-rho-z). Não reporte como composição certificada.';
+    doc.text(doc.splitTextToSize(warn,PW-M*2-6), M+3, y+5); y+=22;
+    // parâmetros
+    doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
+    doc.text(en?'Parameters':'Parâmetros', M, y); y+=5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.6); doc.setTextColor(70,70,70);
+    var par=[];
+    par.push((en?'Image: ':'Imagem: ')+edsImgName);
+    if(isLine){
+      var R=edsLocalLineResult;
+      par.push((en?'Line length: ':'Comprimento da linha: ')+f(R.lenOrig,1)+' px  ·  '
+        +(en?'thickness: ':'espessura: ')+R.width+' px');
+      par.push((en?'Sampled points: ':'Pontos amostrados: ')+R.nSteps+'  ('+R.nCross
+        +(en?' pixels averaged per point)':' pixels na média de cada ponto)'));
+      par.push((en?'Color tolerance: ':'Tolerância de cor: ')+R.tol+'%  ·  '
+        +(en?'minimum brightness: ':'brilho mínimo: ')+f(R.minLum,1)+'%');
+    } else {
+      var A=edsLocalResult;
+      if(edsLocalSel) par.push((en?'Selected area: ':'Área selecionada: ')
+        +Math.round(edsLocalSel.w)+'x'+Math.round(edsLocalSel.h)+' px');
+      par.push((en?'Analyzed: ':'Analisados: ')+A.total.toLocaleString()+' px'
+        +(A.masked?('  ·  '+(en?'excluded by mask: ':'excluído pela máscara: ')+A.masked.toLocaleString()+' px'):''));
+      par.push((en?'Color tolerance: ':'Tolerância de cor: ')+A.tol+'%  ·  '
+        +(en?'minimum brightness: ':'brilho mínimo: ')+f(A.minLum,1)+'%');
+    }
+    par.forEach(function(t){ doc.text(doc.splitTextToSize(t,PW-M*2),M,y); y+=4.2; });
+    y+=3;
+
+    // ── tabela ──
+    doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
+    doc.text(isLine?(en?'Summary along the line':'Resumo ao longo da linha')
+                   :(en?'Results by element':'Resultados por elemento'), M, y); y+=5;
+    var cols, rows, cw;
+    if(isLine){
+      var RL=edsLocalLineResult;
+      cols=[en?'Element':'Elemento',en?'Mean':'Média',en?'Peak':'Pico',en?'Peak at':'Pico em'];
+      cw=[70,36,36,40];
+      rows=RL.series.map(function(s){
+        var mean=s.data.length?s.data.reduce(function(a,b){return a+b;},0)/s.data.length:0;
+        var mx=0,mi=0; s.data.forEach(function(v,i){ if(v>mx){ mx=v; mi=i; } });
+        return [s.name,f(mean)+'%',f(mx)+'%',(mx>0?(f(RL.labels[mi],1)+' px'):'—')];
+      });
+      var ovM=RL.overlap.length?RL.overlap.reduce(function(a,b){return a+b;},0)/RL.overlap.length:0;
+      var ucM=RL.unclass.length?RL.unclass.reduce(function(a,b){return a+b;},0)/RL.unclass.length:0;
+      rows.push([en?'Overlap':'Sobreposição',f(ovM)+'%','—','—']);
+      (RL.ovPairs||[]).forEach(function(p){
+        var mean=p.data.length?p.data.reduce(function(a,b){return a+b;},0)/p.data.length:0;
+        var mx=0,mi=0; p.data.forEach(function(v,i){ if(v>mx){ mx=v; mi=i; } });
+        rows.push(['   '+p.aName+' <-> '+p.bName,f(mean)+'%',f(mx)+'%',f(RL.labels[mi],1)+' px']);
+      });
+      rows.push([en?'Unclassified':'Não classificado',f(ucM)+'%','—','—']);
+    } else {
+      var RA=edsLocalResult;
+      cols=[en?'Element':'Elemento',en?'Pixels':'Pixels',en?'% area':'% área',en?'% classified':'% classif.'];
+      cw=[62,38,40,42];
+      rows=RA.rows.map(function(r){ return [r.name,String(r.pixels),f(r.pctTotal)+'%',f(r.pctClassified)+'%']; });
+      rows.push([en?'Overlap':'Sobreposição',String(RA.overlap),f(RA.total?RA.overlap/RA.total*100:0)+'%','—']);
+      (RA.ovPairs||[]).forEach(function(p){
+        rows.push(['   '+p.aName+' <-> '+p.bName,String(p.count),f(RA.total?p.count/RA.total*100:0)+'%','—']);
+      });
+      rows.push([en?'Unclassified':'Não classificado',String(RA.unclassified),f(RA.total?RA.unclassified/RA.total*100:0)+'%','—']);
+    }
+    var th=6.4, tw=cw.reduce(function(a,b){return a+b;},0);
+    doc.setFillColor(245,158,11); doc.rect(M,y,tw,th,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.4); doc.setTextColor(255,255,255);
+    var cx=M; cols.forEach(function(c2,i){ doc.text(String(c2),cx+2,y+4.4); cx+=cw[i]; });
+    y+=th;
+    doc.setFont('helvetica','normal'); doc.setTextColor(55,55,55);
+    rows.forEach(function(rw,ri){
+      if(y>268){ doc.addPage(); y=18; }
+      if(ri%2===0){ doc.setFillColor(248,248,248); doc.rect(M,y,tw,th,'F'); }
+      var xx=M;
+      rw.forEach(function(cell,i){
+        var s2=String(cell);
+        if(i===0) s2=doc.splitTextToSize(s2,cw[0]-4)[0];
+        doc.text(s2,xx+2,y+4.4); xx+=cw[i];
+      });
+      y+=th;
+    });
+    y+=6;
+
+    // ── gráficos (re-renderizados em PRETO para a folha branca) ──
+    var maxW=PW-M*2;
+    function addChart(spec,title,hint,hPx){
+      var img=_edsLocalChartToPNG(spec,1200,hPx||430);
+      if(!img) return;
+      var ih=img.h*(maxW/img.w);
+      if(y+ih+10>285){ doc.addPage(); y=18; }
+      if(title){
+        doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
+        doc.text(title, M, y); y+=5;
+      }
+      if(hint){
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.6); doc.setTextColor(120,120,120);
+        doc.text(doc.splitTextToSize(hint,maxW), M, y); y+=4.5;
+      }
+      doc.addImage(img.url,'PNG',M,y,maxW,ih); y+=ih+7;
+    }
+    if(isLine){
+      var RL2=edsLocalLineResult;
+      // perfil combinado
+      addChart({type:'line',labels:RL2.labels,showLegend:true,
+        datasets:RL2.series.map(function(s){
+          return {label:s.name,data:s.data,borderColor:s.color,backgroundColor:s.color+'22',
+                  borderWidth:2,pointRadius:0,tension:.25,fill:false};
+        })},
+        en?'Element profile along the line':'Perfil dos elementos ao longo da linha', null, 430);
+      // um por elemento
+      RL2.series.forEach(function(s){
+        var mean=s.data.length?s.data.reduce(function(a,b){return a+b;},0)/s.data.length:0;
+        var mx=0; s.data.forEach(function(v){ if(v>mx) mx=v; });
+        addChart({type:'line',labels:RL2.labels,showLegend:false,
+          datasets:[{label:s.name,data:s.data,borderColor:s.color,backgroundColor:s.color+'33',
+                     borderWidth:2,pointRadius:0,tension:.25,fill:true}]},
+          s.name, (en?'mean ':'média ')+f(mean)+'%  ·  '+(en?'peak ':'pico ')+f(mx)+'%', 300);
+      });
+      // sobreposições
+      if(RL2.ovPairs&&RL2.ovPairs.length){
+        var pal=['#111827','#b45309','#6d28d9','#0f766e','#c2410c','#9d174d'];
+        addChart({type:'line',labels:RL2.labels,showLegend:true,
+          datasets:RL2.ovPairs.map(function(p,i){
+            return {label:p.aName+' <-> '+p.bName,data:p.data,borderColor:pal[i%pal.length],
+                    backgroundColor:pal[i%pal.length]+'22',borderWidth:2,pointRadius:0,tension:.25,fill:false};
+          })},
+          en?'Overlaps along the line':'Sobreposições ao longo da linha',
+          en?'Shows where along the line each pair of elements gets confused.'
+            :'Mostra em que trechos da linha cada par de elementos se confunde.', 430);
+      }
+    } else {
+      // gráfico de barras da composição
+      var barSpec=_edsLocalBarSpec();
+      if(barSpec) addChart(barSpec, en?'Area fraction per element':'Fração de área por elemento', null, 400);
+      // grades de imagem (elementos separadamente / sobreposições)
+      var RA2=edsLocalResult;
+      var isoRows=(RA2.rows||[]).filter(function(r){ return r.pixels>0; });
+      if(isoRows.length){
+        if(y>235){ doc.addPage(); y=18; }
+        doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
+        doc.text(en?'Elements one by one':'Elementos separadamente', M, y); y+=5;
+        var colW=(maxW-6)/2, col=0, rowTop=y;
+        isoRows.forEach(function(r){
+          var idx=RA2.rows.indexOf(r);
+          var cnv=_edsIsoCanvas(idx,RA2); if(!cnv) return;
+          var ih2=cnv.height*(colW/cnv.width), blockH=ih2+9;
+          if(col===0 && rowTop+blockH>285){ doc.addPage(); rowTop=18; }
+          var xPos=M+col*(colW+6);
+          var rgb=_edsHexToRgb(r.color);
+          doc.setFillColor(rgb.r,rgb.g,rgb.b); doc.rect(xPos,rowTop,3,3,'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(45,45,45);
+          doc.text(String(r.name).slice(0,26),xPos+4.6,rowTop+2.7);
+          doc.setFont('helvetica','normal'); doc.setFontSize(7.2); doc.setTextColor(120,120,120);
+          doc.text(f(r.pctTotal)+'%  ·  '+r.pixels.toLocaleString()+' px',xPos+colW,rowTop+2.7,{align:'right'});
+          doc.addImage(cnv.toDataURL('image/png'),'PNG',xPos,rowTop+4,colW,ih2);
+          col++; if(col===2){ col=0; rowTop+=blockH; }
+        });
+        y=rowTop+(col===1?((isoRows.length?60:0)*0):0);
+        if(col===1) y=rowTop+90;   // linha incompleta: pula a altura de um bloco
+      }
+      var ovp=RA2.ovPairs||[];
+      if(ovp.length && RA2.ovOwner){
+        if(y>235){ doc.addPage(); y=18; }
+        doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(40,40,40);
+        doc.text(en?'Overlap locations':'Localização das sobreposições', M, y); y+=5;
+        var colW2=(maxW-6)/2, col2=0, rowTop2=y;
+        ovp.forEach(function(p){
+          var cnv=_edsOverlapCanvas(p,RA2); if(!cnv) return;
+          var ih3=cnv.height*(colW2/cnv.width), blockH2=ih3+9;
+          if(col2===0 && rowTop2+blockH2>285){ doc.addPage(); rowTop2=18; }
+          var xPos2=M+col2*(colW2+6);
+          var ra=_edsHexToRgb(p.aColor), rb=_edsHexToRgb(p.bColor);
+          doc.setFillColor(ra.r,ra.g,ra.b); doc.rect(xPos2,rowTop2,3,3,'F');
+          doc.setFillColor(rb.r,rb.g,rb.b); doc.rect(xPos2+3.6,rowTop2,3,3,'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(45,45,45);
+          doc.text((p.aName+' <-> '+p.bName).slice(0,26),xPos2+8.4,rowTop2+2.7);
+          doc.setFont('helvetica','normal'); doc.setFontSize(7.2); doc.setTextColor(120,120,120);
+          doc.text(p.count.toLocaleString()+' px',xPos2+colW2,rowTop2+2.7,{align:'right'});
+          doc.addImage(cnv.toDataURL('image/png'),'PNG',xPos2,rowTop2+4,colW2,ih3);
+          col2++; if(col2===2){ col2=0; rowTop2+=blockH2; }
+        });
+        y=rowTop2;
+      }
+    }
+    // rodapé
+    var pages=doc.internal.getNumberOfPages();
+    for(var p2=1;p2<=pages;p2++){
+      doc.setPage(p2); doc.setFontSize(7.5); doc.setTextColor(150,150,150);
+      doc.text('StatLab Pro '+APP_VERSION+' — '+(en?'Semi-quantitative estimate, not certified composition'
+                                                  :'Estimativa semi-quantitativa, não é composição certificada'), M, 291);
+      doc.text(String(p2)+'/'+String(pages), PW-M, 291, {align:'right'});
+    }
+    doc.save('StatLab_EDS_'+(isLine?'Linha':'Area')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+  }catch(e){
+    try{ console.warn('EDS local pdf:',e); notify(en?'Could not generate the PDF.':'Não foi possível gerar o PDF.'); }catch(_){}
+  }
+}
+
 function _edsLocalDrawIso(){
   var box=document.getElementById('edsLocalIsoBox'), grid=document.getElementById('edsLocalIsoGrid');
   if(!box||!grid) return;
@@ -33047,7 +33855,23 @@ function edsApplyLangUI(){
                     'Load an image in "🎨 Colored map" mode to use the Localized Study.');
   s('edsLocalImgTitle','🔬 Selecione uma área para estudar','🔬 Select an area to study');
   s('edsLocalZoomLbl','🔍 Zoom','🔍 Zoom');
-  s('edsLocalAnalyzeBtn','Analisar área selecionada','Analyze selected area');
+  s('edsLocalAnalyzeBtn','Analisar área','Analyze area');
+  // ov.1.1.1: ferramenta de LINHA
+  s('edsLocalAnalyzeLineBtn','Analisar linha','Analyze line');
+  // ov.1.1.1: exportação do estudo localizado
+  s('edsLocalExportTxtLbl','Exportar relatório (.txt)','Export report (.txt)');
+  s('edsLocalExportPdfLbl','Relatório em PDF','PDF report');
+  s('edsLocalToolAreaLbl','Área','Area');
+  s('edsLocalToolLineLbl','Linha','Line');
+  s('edsLocalLineWLbl','Espessura da linha','Line thickness');
+  s('edsLocalLineWHint','A linha é uma faixa: cada ponto do gráfico é a média dessa espessura.',
+                        'The line is a band: each point on the chart is the average across that thickness.');
+  s('edsLocalLineIsoTitle','🎯 Elementos ao longo da linha','🎯 Elements along the line');
+  s('edsLocalLineIsoHint','Cada gráfico mostra quanto daquele elemento aparece em cada ponto do traço.',
+                          'Each chart shows how much of that element appears at each point along the stroke.');
+  s('edsLocalLineOvTitle','🔀 Sobreposições ao longo da linha','🔀 Overlaps along the line');
+  s('edsLocalLineOvHint','Mostra em que trechos da linha cada par de elementos se confunde.',
+                         'Shows where along the line each pair of elements gets confused.');
   s('edsLocalClearBtn','Limpar seleção','Clear selection');
   s('edsLocalResEmpty','Marque uma área na imagem acima e clique em "Analisar área selecionada".',
                        'Mark an area on the image above and click "Analyze selected area".');
@@ -37537,6 +38361,17 @@ function cgGoHome(ev){
           <div class="eds-imgbox" id="edsLocalImgBox">
             <h4 id="edsLocalImgTitle" style="margin:0 0 4px">🔬 Selecione uma área para estudar</h4>
             <div class="eds-hint" id="edsLocalImgHint">Arraste sobre a imagem para marcar a área que você quer analisar. Use o zoom para maior precisão.</div>
+            <!-- ov.1.1.1: escolha da ferramenta de seleção -->
+            <div class="eds-line-mode">
+              <button type="button" class="eds-line-mode-btn active" id="edsLocalToolArea" onclick="edsLocalSetTool('area')">▭ <span id="edsLocalToolAreaLbl">Área</span></button>
+              <button type="button" class="eds-line-mode-btn" id="edsLocalToolLine" onclick="edsLocalSetTool('line')">📏 <span id="edsLocalToolLineLbl">Linha</span></button>
+            </div>
+            <div id="edsLocalLineOpts" style="display:none;margin-bottom:9px">
+              <div class="eds-hud-label"><span id="edsLocalLineWLbl">Espessura da linha</span> <span id="edsLocalLineWVal" style="color:#f59e0b">12</span> px</div>
+              <input type="range" id="edsLocalLineW" min="1" max="60" value="12" style="width:100%;accent-color:#f59e0b"
+                oninput="document.getElementById('edsLocalLineWVal').textContent=this.value;_edsLocalRenderImage()">
+              <div class="eds-hint" id="edsLocalLineWHint">A linha é uma faixa: cada ponto do gráfico é a média dessa espessura.</div>
+            </div>
             <div class="eds-zoom">
               <label id="edsLocalZoomLbl">🔍 Zoom</label>
               <input type="range" id="edsLocalZoomSl" min="100" max="800" step="25" value="100" oninput="edsLocalSetZoom(this.value)">
@@ -37548,7 +38383,9 @@ function cgGoHome(ev){
             <div class="eds-zoomwrap" id="edsLocalZoomWrap"><canvas id="edsLocalCanvas"></canvas></div>
             <div id="edsLocalSelInfo" class="eds-hint" style="margin-top:6px"></div>
             <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">
-              <button type="button" class="eds-addbtn" style="flex:1 1 170px;margin:0" onclick="edsLocalAnalyze()">🔬 <span id="edsLocalAnalyzeBtn">Analisar área selecionada</span></button>
+              <button type="button" class="eds-addbtn" style="flex:1 1 170px;margin:0" onclick="edsLocalAnalyze()">🔬 <span id="edsLocalAnalyzeBtn">Analisar área</span></button>
+              <!-- ov.1.1.1: análise ao longo de uma LINHA (perfil de intensidade dos elementos) -->
+              <button type="button" class="eds-addbtn" style="flex:1 1 170px;margin:0" onclick="edsLocalAnalyzeLine()">📈 <span id="edsLocalAnalyzeLineBtn">Analisar linha</span></button>
               <button type="button" class="eds-addbtn" style="flex:1 1 150px;margin:0" onclick="edsLocalClearSel()">🗑 <span id="edsLocalClearBtn">Limpar seleção</span></button>
             </div>
           </div>
@@ -37557,6 +38394,11 @@ function cgGoHome(ev){
             <div class="eds-imgbox">
               <h4 id="edsLocalResTblTitle">📊 Composição estimada</h4>
               <div id="edsLocalResTable"></div>
+              <!-- ov.1.1.1: exportação do estudo localizado (área ou linha) -->
+              <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">
+                <button type="button" class="eds-addbtn" style="flex:1 1 170px;margin:0" onclick="edsLocalExportTXT()">📄 <span id="edsLocalExportTxtLbl">Exportar relatório (.txt)</span></button>
+                <button type="button" class="eds-addbtn" style="flex:1 1 170px;margin:0" onclick="edsLocalExportPDF()">📕 <span id="edsLocalExportPdfLbl">Relatório em PDF</span></button>
+              </div>
             </div>
             <div class="eds-imgbox">
               <h4 id="edsLocalChartTitle">📈 Fração de área por elemento</h4>
@@ -37566,6 +38408,20 @@ function cgGoHome(ev){
               <h4 id="edsLocalIsoTitle">🎯 Elementos separadamente</h4>
               <div class="eds-hint" id="edsLocalIsoHint">Cada painel mostra apenas os pixels classificados naquele elemento, dentro da área selecionada.</div>
               <div class="eds-iso-grid" id="edsLocalIsoGrid"></div>
+            </div>
+            <!-- ov.1.1.1: perfis ao longo da linha (substituem as grades de imagem no modo linha) -->
+            <div class="eds-imgbox" id="edsLocalLineIsoBox" style="display:none">
+              <h4 id="edsLocalLineIsoTitle">🎯 Elementos ao longo da linha</h4>
+              <div class="eds-hint" id="edsLocalLineIsoHint">Cada gráfico mostra quanto daquele elemento aparece em cada ponto do traço.</div>
+              <div id="edsLocalLineIsoGrid"></div>
+            </div>
+            <div class="eds-imgbox" id="edsLocalLineOvBox" style="display:none">
+              <h4 id="edsLocalLineOvTitle">🔀 Sobreposições ao longo da linha</h4>
+              <div class="eds-hint" id="edsLocalLineOvHint">Mostra em que trechos da linha cada par de elementos se confunde.</div>
+              <div class="eds-imgbox" style="margin-bottom:12px">
+                <div class="eds-lp-big"><canvas id="edsLocalLineOvAllChart"></canvas></div>
+              </div>
+              <div id="edsLocalLineOvGrid"></div>
             </div>
             <div class="eds-imgbox" id="edsLocalOverlapBox" style="display:none">
               <h4 id="edsLocalOverlapTitle">🔀 Localização das Sobreposições</h4>
