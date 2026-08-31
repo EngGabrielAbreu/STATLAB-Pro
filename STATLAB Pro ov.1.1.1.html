@@ -43754,7 +43754,39 @@ function cgGoHome(ev){
               <!-- Mostrar média -->
               <div class="cg-field" style="display:flex;align-items:center;gap:8px">
                 <label id="cgLblBpShowMean" style="flex:1">Mostrar Média (✕)</label>
-                <input type="checkbox" id="cgBoxShowMean" onchange="cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899">
+                <input type="checkbox" id="cgBoxShowMean" onchange="cgToggleMeanPanel();cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899">
+              </div>
+              <!-- ov.1.1.1: personalização do marcador da média (ícone, cor e tamanho) -->
+              <div id="cgBoxMeanPanel" style="display:none;margin:0 0 6px;padding:8px;background:rgba(236,72,153,.07);border:1px solid rgba(236,72,153,.2);border-radius:6px">
+                <div class="cg-field">
+                  <label id="cgLblBpMeanIcon" style="font-size:10px;color:var(--text4)">Ícone</label>
+                  <select id="cgBoxMeanIcon" onchange="cgUpdateChart()" style="font-size:11px;padding:3px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+                    <option value="cross" id="cgBpMeanIcCross">✕ Cruz</option>
+                    <option value="plus" id="cgBpMeanIcPlus">+ Mais</option>
+                    <option value="circle" id="cgBpMeanIcCircle">● Círculo</option>
+                    <option value="circleOpen" id="cgBpMeanIcCircleO">○ Círculo vazado</option>
+                    <option value="square" id="cgBpMeanIcSquare">■ Quadrado</option>
+                    <option value="squareOpen" id="cgBpMeanIcSquareO">□ Quadrado vazado</option>
+                    <option value="diamond" id="cgBpMeanIcDiamond">◆ Losango</option>
+                    <option value="triangle" id="cgBpMeanIcTriangle">▲ Triângulo</option>
+                    <option value="star" id="cgBpMeanIcStar">★ Estrela</option>
+                    <option value="line" id="cgBpMeanIcLine">— Traço</option>
+                  </select>
+                </div>
+                <div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-top:5px">
+                  <label id="cgLblBpMeanColorMatch" style="flex:1;font-size:10px;color:var(--text4)">Usar a cor da série</label>
+                  <input type="checkbox" id="cgBoxMeanColorMatch" onchange="cgToggleMeanPanel();cgUpdateChart()" style="width:15px;height:15px;accent-color:#ec4899">
+                </div>
+                <div class="cg-field" id="cgBoxMeanColorRow" style="margin-top:5px">
+                  <label id="cgLblBpMeanColor" style="font-size:10px;color:var(--text4)">Cor do marcador</label>
+                  <input type="color" id="cgBoxMeanColor" value="#ffffff" oninput="cgUpdateChart()" style="width:100%;height:26px;padding:1px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;cursor:pointer">
+                </div>
+                <div class="cg-field" style="margin-top:5px">
+                  <label id="cgLblBpMeanSize">Tamanho <span id="cgBoxMeanSzVal" style="color:#ec4899">6</span>px</label>
+                  <input type="range" id="cgBoxMeanSz" min="2" max="20" value="6"
+                    oninput="document.getElementById('cgBoxMeanSzVal').textContent=this.value;cgUpdateChart()"
+                    style="accent-color:#ec4899">
+                </div>
               </div>
               <!-- Mostrar valor da mediana -->
               <div class="cg-field" style="display:flex;align-items:center;gap:8px">
@@ -43763,13 +43795,24 @@ function cgGoHome(ev){
               </div>
               <div id="cgMedianValPosPanel" style="display:none;margin-bottom:4px">
                 <div class="cg-field">
-                  <label style="font-size:10px;color:var(--text4)">Posição do valor</label>
-                  <select id="cgBoxMedianPos" onchange="cgUpdateChart()" style="font-size:11px;padding:3px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
-                    <option value="top">Cima</option>
-                    <option value="bottom">Baixo</option>
-                    <option value="right">Direita</option>
-                    <option value="left">Esquerda</option>
+                  <label id="cgLblBpMedianPos" style="font-size:10px;color:var(--text4)">Posição do valor</label>
+                  <select id="cgBoxMedianPos" onchange="cgToggleMedianValPanel();cgUpdateChart()" style="font-size:11px;padding:3px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+                    <option value="top" id="cgBpMedPosTop">Cima</option>
+                    <option value="bottom" id="cgBpMedPosBottom">Baixo</option>
+                    <option value="right" id="cgBpMedPosRight">Direita</option>
+                    <option value="left" id="cgBpMedPosLeft">Esquerda</option>
+                    <option value="custom" id="cgBpMedPosCustom">Personalizado (arraste no gráfico)</option>
                   </select>
+                </div>
+                <!-- ov.1.1.1: tamanho da fonte do valor da mediana -->
+                <div class="cg-field" style="margin-top:5px">
+                  <label id="cgLblBpMedianSize">Tamanho do valor <span id="cgBoxMedianSzVal" style="color:#ec4899">10</span>px</label>
+                  <input type="range" id="cgBoxMedianSz" min="6" max="28" value="10"
+                    oninput="document.getElementById('cgBoxMedianSzVal').textContent=this.value;cgUpdateChart()"
+                    style="accent-color:#ec4899">
+                </div>
+                <div id="cgBoxMedianCustomHint" style="display:none;font-size:10px;color:var(--text4);line-height:1.5;margin-top:5px">
+                  ⟵ Dê 2 cliques sobre o valor no gráfico e arraste para reposicioná-lo.
                 </div>
               </div>
               <!-- Apenas Q1 e Q3 -->
@@ -43781,6 +43824,11 @@ function cgGoHome(ev){
               <div class="cg-field" style="display:flex;align-items:center;gap:8px">
                 <label id="cgLblBpOnlyMaxMin" style="flex:1">Apenas Max e Min (sem caixa)</label>
                 <input type="checkbox" id="cgBoxOnlyMaxMin" onchange="cgToggleBpDisplayMode('maxmin')" style="width:16px;height:16px;accent-color:#ec4899">
+              </div>
+              <!-- ov.1.1.1: Apenas Dados — só a nuvem de pontos, sem caixa e sem whiskers -->
+              <div class="cg-field" style="display:flex;align-items:center;gap:8px">
+                <label id="cgLblBpOnlyData" style="flex:1">Apenas Dados (sem caixa e sem whiskers)</label>
+                <input type="checkbox" id="cgBoxOnlyData" onchange="cgToggleBpDisplayMode('onlydata')" style="width:16px;height:16px;accent-color:#ec4899">
               </div>
               <!-- Mostrar dados individuais -->
               <div class="cg-field" style="display:flex;align-items:center;gap:8px">
@@ -45992,19 +46040,99 @@ function _cgSwapSeries(rowA, rowB){
 }
 
 // ── v7.0.1: Boxplot display mode toggle (mutual exclusion) ───────────────────
+// ══ ov.1.1.1: MARCADOR DA MÉDIA (Boxplot/Violino) ═══════════════════════════════════════════
+// Desenha o ícone escolhido pelo usuário centrado em (cx,cy). Um único desenhador serve os dois
+// tipos de gráfico, então a aparência fica idêntica entre eles.
+function _cgDrawMeanMarker(ctx, cx, cy, size, color, icon, lineW){
+  var s=Math.max(1,size), lw=lineW||1.5;
+  ctx.save();
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=lw; ctx.setLineDash([]);
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  switch(icon){
+    case 'plus':
+      ctx.beginPath(); ctx.moveTo(cx-s,cy); ctx.lineTo(cx+s,cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx,cy-s); ctx.lineTo(cx,cy+s); ctx.stroke();
+      break;
+    case 'circle':
+      ctx.beginPath(); ctx.arc(cx,cy,s,0,Math.PI*2); ctx.fill();
+      break;
+    case 'circleOpen':
+      ctx.beginPath(); ctx.arc(cx,cy,s,0,Math.PI*2); ctx.stroke();
+      break;
+    case 'square':
+      ctx.fillRect(cx-s,cy-s,s*2,s*2);
+      break;
+    case 'squareOpen':
+      ctx.strokeRect(cx-s,cy-s,s*2,s*2);
+      break;
+    case 'diamond':
+      ctx.beginPath(); ctx.moveTo(cx,cy-s); ctx.lineTo(cx+s,cy);
+      ctx.lineTo(cx,cy+s); ctx.lineTo(cx-s,cy); ctx.closePath(); ctx.fill();
+      break;
+    case 'triangle':
+      ctx.beginPath(); ctx.moveTo(cx,cy-s); ctx.lineTo(cx+s,cy+s*0.8);
+      ctx.lineTo(cx-s,cy+s*0.8); ctx.closePath(); ctx.fill();
+      break;
+    case 'star':
+      ctx.beginPath();
+      for(var i=0;i<10;i++){
+        var r=(i%2===0)?s:s*0.45, a=(Math.PI/5)*i-Math.PI/2;
+        var px=cx+Math.cos(a)*r, py=cy+Math.sin(a)*r;
+        i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+      }
+      ctx.closePath(); ctx.fill();
+      break;
+    case 'line':
+      ctx.lineWidth=Math.max(lw,s*0.45);
+      ctx.beginPath(); ctx.moveTo(cx-s,cy); ctx.lineTo(cx+s,cy); ctx.stroke();
+      break;
+    default:  // 'cross' — o ✕ original
+      ctx.beginPath(); ctx.moveTo(cx-s,cy-s); ctx.lineTo(cx+s,cy+s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+s,cy-s); ctx.lineTo(cx-s,cy+s); ctx.stroke();
+  }
+  ctx.restore();
+}
+// ov.1.1.1: deslocamentos do valor da mediana no modo "personalizado" — chave "s<índice da série>".
+// Guardados em px relativos à posição padrão, e persistidos na config da aba.
+var _cgBpMedianOffsets={};
+// Caixas do texto da mediana desenhadas no último quadro — usadas pelo duplo-clique/arraste.
+var _cgBpMedianRects=[];
+var _cgDragMedianKey=null;    // série cujo valor da mediana está sendo arrastado
+var _cgDragMedianBase=null;   // posição padrão do valor, para calcular o deslocamento
 function cgToggleBpDisplayMode(mode){
   var q1q3=document.getElementById('cgBoxOnlyQ1Q3');
   var maxmin=document.getElementById('cgBoxOnlyMaxMin');
+  var onlyData=document.getElementById('cgBoxOnlyData');   // ov.1.1.1
   if(!q1q3||!maxmin) return;
-  if(mode==='q1q3'&&q1q3.checked) maxmin.checked=false;
-  if(mode==='maxmin'&&maxmin.checked) q1q3.checked=false;
+  // ov.1.1.1: os três modos são mutuamente exclusivos — ligar um desliga os outros.
+  if(mode==='q1q3'&&q1q3.checked){ maxmin.checked=false; if(onlyData) onlyData.checked=false; }
+  if(mode==='maxmin'&&maxmin.checked){ q1q3.checked=false; if(onlyData) onlyData.checked=false; }
+  if(mode==='onlydata'&&onlyData&&onlyData.checked){
+    q1q3.checked=false; maxmin.checked=false;
+    // "Apenas Dados" sem pontos na tela não mostraria nada — liga a nuvem automaticamente.
+    var sd=document.getElementById('cgBoxShowData');
+    if(sd&&!sd.checked){ sd.checked=true; }
+  }
   cgUpdateChart();
+}
+// ov.1.1.1: mostra/esconde o painel de personalização do marcador da média.
+function cgToggleMeanPanel(){
+  var cb=document.getElementById('cgBoxShowMean');
+  var panel=document.getElementById('cgBoxMeanPanel');
+  if(panel) panel.style.display=(cb&&cb.checked)?'block':'none';
+  var match=document.getElementById('cgBoxMeanColorMatch');
+  var row=document.getElementById('cgBoxMeanColorRow');
+  if(row) row.style.display=(match&&match.checked)?'none':'block';
 }
 
 function cgToggleMedianValPanel(){
   var cb=document.getElementById('cgBoxShowMedianVal');
   var panel=document.getElementById('cgMedianValPosPanel');
   if(panel) panel.style.display=(cb&&cb.checked)?'block':'none';
+  // ov.1.1.1: a dica de arrastar só faz sentido no modo "personalizado"
+  var pos=(document.getElementById('cgBoxMedianPos')||{}).value||'top';
+  var hint=document.getElementById('cgBoxMedianCustomHint');
+  if(hint) hint.style.display=(pos==='custom')?'block':'none';
 }
 
 // ── "Espaçar igualmente" (Boxplot/Violino) ──────────────────────────────────
@@ -49210,6 +49338,15 @@ var _cgI18N={
     refDragHint:'⟵ Arraste a linha no gráfico para reposicionar',
     axisLabel:'Eixo',
     bpBoxWidth:'Largura da Caixa',bpShowOutliers:'Mostrar Outliers',bpShowMean:'Mostrar Média (✕)',
+    bpMeanIcon:'Ícone',bpMeanColorMatch:'Usar a cor da série',bpMeanColor:'Cor do marcador',
+    bpMeanSize:'Tamanho',bpMedianPos:'Posição do valor',bpMedianSize:'Tamanho do valor',
+    bpOnlyData:'Apenas Dados (sem caixa e sem whiskers)',
+    bpMedCustomHint:'⟵ Dê 2 cliques sobre o valor no gráfico e arraste para reposicioná-lo.',
+    bpMeanIcCross:'✕ Cruz',bpMeanIcPlus:'+ Mais',bpMeanIcCircle:'● Círculo',bpMeanIcCircleO:'○ Círculo vazado',
+    bpMeanIcSquare:'■ Quadrado',bpMeanIcSquareO:'□ Quadrado vazado',bpMeanIcDiamond:'◆ Losango',
+    bpMeanIcTriangle:'▲ Triângulo',bpMeanIcStar:'★ Estrela',bpMeanIcLine:'— Traço',
+    bpMedPosTop:'Cima',bpMedPosBottom:'Baixo',bpMedPosRight:'Direita',bpMedPosLeft:'Esquerda',
+    bpMedPosCustom:'Personalizado (arraste no gráfico)',
     bpShowData:'Mostrar Dados',bpJitter:'Jitter (espalhamento X)',bpPtSize:'Tamanho do ponto',
     bpPtOpacity:'Opacidade dos pontos',bpBorderThick:'Espessura da Borda',bpFillOpacity:'Opacidade do Preenchimento',
     vlHint:'Cole os valores de cada série/coluna — o mesmo formato do Boxplot. Cada coluna vira um "violino" (estimativa de densidade espelhada), com a caixa de quartis sobreposta.',
@@ -49424,6 +49561,15 @@ var _cgI18N={
     xjitterLabel:'Data jitter', xjitterHint:'Slightly shifts the points along X (visual only — does not change the data).',
     bpDblClickReset:'Double-click to reset to zero',bpDblClickType:'Double-click to type the value',
     bpBoxWidth:'Box Width',bpShowOutliers:'Show Outliers',bpShowMean:'Show Mean (✕)',
+    bpMeanIcon:'Icon',bpMeanColorMatch:'Use the series colour',bpMeanColor:'Marker colour',
+    bpMeanSize:'Size',bpMedianPos:'Value position',bpMedianSize:'Value size',
+    bpOnlyData:'Data only (no box, no whiskers)',
+    bpMedCustomHint:'⟵ Double-click the value on the chart and drag to reposition it.',
+    bpMeanIcCross:'✕ Cross',bpMeanIcPlus:'+ Plus',bpMeanIcCircle:'● Circle',bpMeanIcCircleO:'○ Open circle',
+    bpMeanIcSquare:'■ Square',bpMeanIcSquareO:'□ Open square',bpMeanIcDiamond:'◆ Diamond',
+    bpMeanIcTriangle:'▲ Triangle',bpMeanIcStar:'★ Star',bpMeanIcLine:'— Dash',
+    bpMedPosTop:'Top',bpMedPosBottom:'Bottom',bpMedPosRight:'Right',bpMedPosLeft:'Left',
+    bpMedPosCustom:'Custom (drag on the chart)',
     bpShowData:'Show Data',bpJitter:'Jitter (X spread)',bpPtSize:'Point size',
     bpPtOpacity:'Point opacity',bpBorderThick:'Border Thickness',bpFillOpacity:'Fill Opacity',
     vlHint:'Paste the values for each series/column — same format as the Boxplot. Each column becomes a "violin" (mirrored density estimate), with the quartile box overlaid.',
@@ -50312,7 +50458,17 @@ function cgApplyLang(){
     'cgLblBpPtOpacity':'bpPtOpacity','cgLblBpBorderThick':'bpBorderThick','cgLblBpFillOpacity':'bpFillOpacity',
     'cgBpConnHint':'bpConnHint','cgLblBpConnActivate':'bpConnActivate',
     'cgLblBpConnStyle':'bpConnStyle','cgLblBpConnThick':'bpConnThick',
-    'cgLblBpShowMedianVal':'bpShowMedianVal','cgLblBpOnlyQ1Q3':'bpOnlyQ1Q3','cgLblBpOnlyMaxMin':'bpOnlyMaxMin'
+    'cgLblBpShowMedianVal':'bpShowMedianVal','cgLblBpOnlyQ1Q3':'bpOnlyQ1Q3','cgLblBpOnlyMaxMin':'bpOnlyMaxMin',
+    // ov.1.1.1: marcador da média, valor da mediana e modo "Apenas Dados"
+    'cgLblBpMeanIcon':'bpMeanIcon','cgLblBpMeanColorMatch':'bpMeanColorMatch','cgLblBpMeanColor':'bpMeanColor',
+    'cgLblBpMeanSize':'bpMeanSize','cgLblBpMedianPos':'bpMedianPos','cgLblBpMedianSize':'bpMedianSize',
+    'cgLblBpOnlyData':'bpOnlyData','cgBoxMedianCustomHint':'bpMedCustomHint',
+    'cgBpMeanIcCross':'bpMeanIcCross','cgBpMeanIcPlus':'bpMeanIcPlus','cgBpMeanIcCircle':'bpMeanIcCircle',
+    'cgBpMeanIcCircleO':'bpMeanIcCircleO','cgBpMeanIcSquare':'bpMeanIcSquare','cgBpMeanIcSquareO':'bpMeanIcSquareO',
+    'cgBpMeanIcDiamond':'bpMeanIcDiamond','cgBpMeanIcTriangle':'bpMeanIcTriangle','cgBpMeanIcStar':'bpMeanIcStar',
+    'cgBpMeanIcLine':'bpMeanIcLine',
+    'cgBpMedPosTop':'bpMedPosTop','cgBpMedPosBottom':'bpMedPosBottom','cgBpMedPosRight':'bpMedPosRight',
+    'cgBpMedPosLeft':'bpMedPosLeft','cgBpMedPosCustom':'bpMedPosCustom'
   };
   for(var bid in bpStaticMap){
     var bel=document.getElementById(bid);
@@ -56307,6 +56463,17 @@ function cgUpdateChart(){
     var boxMedianPos=(document.getElementById('cgBoxMedianPos')||{value:'top'}).value||'top';
     var boxOnlyQ1Q3  =(document.getElementById('cgBoxOnlyQ1Q3')||{}).checked===true;
     var boxOnlyMaxMin=(document.getElementById('cgBoxOnlyMaxMin')||{}).checked===true;
+    // ── ov.1.1.1: novos controles ────────────────────────────────────────────
+    _cgBpMedianRects=[];   // reconstruído a cada quadro (hit-test do valor arrastável)
+    var boxOnlyData  =(document.getElementById('cgBoxOnlyData')||{}).checked===true;
+    var boxMeanIcon  =(document.getElementById('cgBoxMeanIcon')||{value:'cross'}).value||'cross';
+    var boxMeanMatch =(document.getElementById('cgBoxMeanColorMatch')||{}).checked===true;
+    var boxMeanColor =(document.getElementById('cgBoxMeanColor')||{value:'#ffffff'}).value||'#ffffff';
+    var boxMeanSz    =parseInt((document.getElementById('cgBoxMeanSz')||{value:'6'}).value)||6;
+    var boxMedianSz  =parseInt((document.getElementById('cgBoxMedianSz')||{value:'10'}).value)||10;
+    // "Apenas Dados" esconde caixa E whiskers — implementado reaproveitando os dois flags que
+    // o desenho já respeita, em vez de espalhar mais uma condição por todo o código.
+    if(boxOnlyData){ boxOnlyMaxMin=true; boxOnlyQ1Q3=true; }
 
     // Show/hide data options sub-panel
     var bpDataOpts=document.getElementById('cgBoxDataOptions');
@@ -56666,9 +56833,12 @@ function cgUpdateChart(){
         }
 
         // ── Median value label ────────────────────────────────────────────────
-        if(boxShowMedianVal&&!boxOnlyMaxMin){
+        // ov.1.1.1: tamanho configurável + posição "personalizado" (arrastável no gráfico).
+        // Em "Apenas Dados" o valor continua disponível, pois ele descreve a distribuição —
+        // por isso a condição usa boxOnlyData em vez de simplesmente boxOnlyMaxMin.
+        if(boxShowMedianVal && (!boxOnlyMaxMin || boxOnlyData)){
           ctx2.save();
-          ctx2.font='bold 10px '+(tv.fontFamily||'sans-serif');
+          ctx2.font='bold '+boxMedianSz+'px '+(tv.fontFamily||'sans-serif');
           ctx2.fillStyle=col;
           var medLabelX=cx, medLabelY=yMed;
           var medAlign='center', medBaseline='bottom';
@@ -56676,18 +56846,32 @@ function cgUpdateChart(){
           if(boxMedianPos==='bottom'){ medLabelX=cx;          medLabelY=yMed+4;       medAlign='center';  medBaseline='top'; }
           if(boxMedianPos==='right') { medLabelX=cx+halfW+4;  medLabelY=yMed;         medAlign='left';    medBaseline='middle'; }
           if(boxMedianPos==='left')  { medLabelX=cx-halfW-4;  medLabelY=yMed;         medAlign='right';   medBaseline='middle'; }
+          if(boxMedianPos==='custom'){
+            var _mk='s'+idx;
+            var _off=_cgBpMedianOffsets[_mk]||{dx:0,dy:-14};
+            medLabelX=cx+_off.dx; medLabelY=yMed+_off.dy;
+            medAlign='center'; medBaseline='middle';
+          }
           ctx2.textAlign=medAlign;
           ctx2.textBaseline=medBaseline;
-          ctx2.fillText(parseFloat(s.med.toFixed(3)),medLabelX,medLabelY);
+          var _medTxt=String(parseFloat(s.med.toFixed(3)));
+          ctx2.fillText(_medTxt,medLabelX,medLabelY);
+          // publica a caixa do texto para o duplo-clique/arraste encontrá-la
+          if(boxMedianPos==='custom'){
+            var _mw=ctx2.measureText(_medTxt).width, _mh=boxMedianSz;
+            var _mx0=medLabelX-_mw/2, _my0=medLabelY-_mh/2;
+            _cgBpMedianRects.push({key:'s'+idx, x:_mx0-5, y:_my0-5, w:_mw+10, h:_mh+10,
+                                   baseX:cx, baseY:yMed});
+          }
           ctx2.restore();
         }
 
-        // ── Mean (✕) ─────────────────────────────────────────────────────────
-        if(boxShowMean&&!boxOnlyMaxMin){
-          var yMn=yAx.getPixelForValue(s.mean),mSz=6;
-          ctx2.strokeStyle='#ffffff';ctx2.lineWidth=1.5;ctx2.setLineDash([]);
-          ctx2.beginPath();ctx2.moveTo(cx-mSz,yMn-mSz);ctx2.lineTo(cx+mSz,yMn+mSz);ctx2.stroke();
-          ctx2.beginPath();ctx2.moveTo(cx+mSz,yMn-mSz);ctx2.lineTo(cx-mSz,yMn+mSz);ctx2.stroke();
+        // ── Mean marker ──────────────────────────────────────────────────────
+        // ov.1.1.1: ícone, cor e tamanho configuráveis (antes era um ✕ branco fixo).
+        if(boxShowMean && !boxOnlyMaxMin){
+          var yMn=yAx.getPixelForValue(s.mean);
+          _cgDrawMeanMarker(ctx2, cx, yMn, boxMeanSz,
+            (boxMeanMatch?col:boxMeanColor), boxMeanIcon, 1.5);
         }
 
         // ── Whiskers (hidden in onlyQ1Q3 mode) ───────────────────────────────
@@ -57306,11 +57490,38 @@ function cgUpdateChart(){
             ctx.strokeStyle=col; ctx.lineWidth=Math.max(1,(boxBorder+1)*0.75); ctx.setLineDash([]);
             ctx.stroke();
           }
+          // ov.1.1.1: valor da mediana também no violino (tamanho + posição personalizada)
+          if(boxShowMedianVal && (!boxOnlyMaxMin || boxOnlyData)){
+            ctx.save();
+            ctx.font='bold '+boxMedianSz+'px '+(tv.fontFamily||'sans-serif');
+            ctx.fillStyle=col;
+            var vLx=cx, vLy=yMed, vAl='center', vBl='bottom';
+            if(boxMedianPos==='top')   { vLy=yMed-4; }
+            if(boxMedianPos==='bottom'){ vLy=yMed+4; vBl='top'; }
+            if(boxMedianPos==='right') { vLx=cx+halfW+4; vLy=yMed; vAl='left';  vBl='middle'; }
+            if(boxMedianPos==='left')  { vLx=cx-halfW-4; vLy=yMed; vAl='right'; vBl='middle'; }
+            if(boxMedianPos==='custom'){
+              var _vk='s'+idx;
+              var _voff=_cgBpMedianOffsets[_vk]||{dx:0,dy:-14};
+              vLx=cx+_voff.dx; vLy=yMed+_voff.dy; vAl='center'; vBl='middle';
+            }
+            ctx.textAlign=vAl; ctx.textBaseline=vBl;
+            var _vTxt=String(parseFloat(s.med.toFixed(3)));
+            ctx.fillText(_vTxt,vLx,vLy);
+            if(boxMedianPos==='custom'){
+              var _vw=ctx.measureText(_vTxt).width, _vh=boxMedianSz;
+              _cgBpMedianRects.push({key:'s'+idx, x:vLx-_vw/2-5, y:vLy-_vh/2-5,
+                                     w:_vw+10, h:_vh+10, baseX:cx, baseY:yMed});
+            }
+            ctx.restore();
+          }
           if(boxShowMean&&!boxOnlyMaxMin){
-            var yMn=iy(s.mean), mSz=Math.max(2.5,halfW*0.35);
-            ctx.strokeStyle='#ffffff'; ctx.lineWidth=1; ctx.setLineDash([]);
-            ctx.beginPath(); ctx.moveTo(cx-mSz,yMn-mSz); ctx.lineTo(cx+mSz,yMn+mSz); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx+mSz,yMn-mSz); ctx.lineTo(cx-mSz,yMn+mSz); ctx.stroke();
+            var yMn=iy(s.mean);
+            // ov.1.1.1: no violino o marcador acompanha a largura, mas respeita o tamanho do
+            // usuário como TETO — assim o controle continua tendo efeito visível.
+            var mSz=Math.max(2.5, Math.min(boxMeanSz, halfW*0.35));
+            _cgDrawMeanMarker(ctx, cx, yMn, mSz,
+              (boxMeanMatch?col:boxMeanColor), boxMeanIcon, 1);
           }
           if(!boxOnlyQ1Q3){
             ctx.strokeStyle=col; ctx.lineWidth=Math.max(0.75,boxBorder*0.75); ctx.setLineDash([3,3]);
@@ -61060,6 +61271,7 @@ function _cgBuildConfigObject(includeData){
     // v9.12.9: posição (dx,dy em px) de cada etiqueta de dados com posição "Livre (arraste no
     // gráfico)" — chave "seriesIdx_pointIdx".
     freeLabelOffsets: _cgFreeLabelOffsets,
+    bpMedianOffsets: _cgBpMedianOffsets,   // ov.1.1.1: posição personalizada do valor da mediana
     // v9.12.9: valores colados por série em "Barras de Erro" → "Personalizado em colunas".
     errColsBySeries: (function(){
       var out={};
@@ -61663,6 +61875,7 @@ function cgApplyConfigObject(cfg, opts){
       _cgIndividualLabelColors=(cfg.individualLabelColors&&typeof cfg.individualLabelColors==='object')?cfg.individualLabelColors:{};
       // v9.12.9: posições livres de etiquetas (arraste no gráfico)
       _cgFreeLabelOffsets=(cfg.freeLabelOffsets&&typeof cfg.freeLabelOffsets==='object')?cfg.freeLabelOffsets:{};
+      _cgBpMedianOffsets=(cfg.bpMedianOffsets&&typeof cfg.bpMedianOffsets==='object')?cfg.bpMedianOffsets:{};   // ov.1.1.1
       cgRenderRefLines(); cgRenderAnnotations(); cgRenderHlRegions(); cgRenderZoomInsets(); cgRenderShapes();
 
       // Apply theme and sync UI visibility
@@ -61761,6 +61974,11 @@ function cgApplyConfigObject(cfg, opts){
       _cgFilterChecked = (cfg.filterChecked && typeof cfg.filterChecked==='object') ? Object.assign({},cfg.filterChecked) : {};
       try{ if(typeof cgRenderFilterModeButtons==='function') cgRenderFilterModeButtons(); }catch(e){}
       try{ if(typeof cgRenderFilterMenu==='function') cgRenderFilterMenu(); }catch(e){}
+
+      // ov.1.1.1: reabre os sub-painéis do Boxplot/Violino conforme os checkboxes restaurados,
+      // senão eles ficariam escondidos mesmo com a opção marcada.
+      try{ if(typeof cgToggleMeanPanel==='function') cgToggleMeanPanel(); }catch(e){}
+      try{ if(typeof cgToggleMedianValPanel==='function') cgToggleMedianValPanel(); }catch(e){}
 
       cgFitCanvas();
       cgUpdateChart();
@@ -63226,6 +63444,17 @@ var _cgSuppressNextLabelClick = false;
     return { x: p.sxMin + fx*(p.sxMax-p.sxMin), y: p.syMin + fy*(p.syMax-p.syMin) };
   }
 
+  // ── ov.1.1.1: valor da mediana no modo "personalizado" (Boxplot/Violino) ─────────────────
+  // Procura a caixa do texto sob o cursor. As caixas são publicadas pelo renderizador a cada
+  // quadro em _cgBpMedianRects, então o hit-test acompanha zoom e reposicionamento sozinho.
+  function findBpMedianNear(mx,my){
+    if(typeof _cgBpMedianRects==='undefined'||!_cgBpMedianRects.length) return null;
+    for(var i=_cgBpMedianRects.length-1;i>=0;i--){
+      var r=_cgBpMedianRects[i];
+      if(mx>=r.x&&mx<=r.x+r.w&&my>=r.y&&my<=r.y+r.h) return r;
+    }
+    return null;
+  }
   function findRefLineNear(mx,my){
     // v8.8.14: sideby uses the per-panel geometry instead of Chart.js scales
     if(_cgIsSideby()){
@@ -63324,6 +63553,15 @@ var _cgSuppressNextLabelClick = false;
     var mx=e.clientX-rect.left,my=e.clientY-rect.top;
     // ov.1.1.1: movimento em GRUPO tem prioridade — move todos os aspectos selecionados juntos.
     if(_cgGroupDrag.active){ _cgGroupApply(mx,my); if(_cgChart) _cgChart.update('none'); e.preventDefault(); return; }
+    // ov.1.1.1: arraste do valor da mediana (Boxplot/Violino, posição "personalizado").
+    // Guardamos o deslocamento RELATIVO à posição padrão do valor, para que ele acompanhe a
+    // caixa quando os dados/zoom mudarem, em vez de ficar preso a um pixel absoluto.
+    if(_cgDragMedianKey&&_cgDragMedianBase&&_cgDragMode){
+      _cgBpMedianOffsets[_cgDragMedianKey]={dx:mx-_cgDragMedianBase.x, dy:my-_cgDragMedianBase.y};
+      cgUpdateChart();
+      e.preventDefault();
+      return;
+    }
     // ── v8.8.14: sideby-specific drag handling ──
     if(_cgIsSideby()){
       // v9.12.9: while 🥅/🔭 drag-to-select is armed or actively dragging, their own
@@ -63505,6 +63743,19 @@ var _cgSuppressNextLabelClick = false;
       e.preventDefault();
       return;
     }
+    // ov.1.1.1: valor da mediana (Boxplot/Violino) no modo "personalizado"
+    var medHit=findBpMedianNear(mx,my);
+    if(medHit){
+      _cgDragMedianKey=medHit.key; _cgDragMedianBase={x:medHit.baseX,y:medHit.baseY};
+      _cgDragLabelKey=null; _cgDragAnnotIdx=-1; _cgDragRefIdx=-1; _cgDragLegend=false; _cgDragMode=true;
+      canvas.style.cursor='grabbing';
+      if(_cgChart&&_cgChart.options&&_cgChart.options.plugins&&_cgChart.options.plugins.zoom&&_cgChart.options.plugins.zoom.zoom){
+        _cgChart.options.plugins.zoom.zoom.drag.enabled=false;
+        _cgChart.update('none');
+      }
+      e.preventDefault();
+      return;
+    }
     var lblHit=findFreeLabelNear(mx,my);
     if(lblHit){
       _cgDragLabelKey=lblHit.key; _cgDragAnnotIdx=-1; _cgDragRefIdx=-1; _cgDragLegend=false; _cgDragMode=true;
@@ -63552,6 +63803,7 @@ var _cgSuppressNextLabelClick = false;
       _cgDragMode=false;
       var wasAnnot=_cgDragAnnotIdx>=0;
       var wasLabelDrag=!!_cgDragLabelKey; // v9.8: see _cgSuppressNextLabelClick above
+      _cgDragMedianKey=null; _cgDragMedianBase=null;   // ov.1.1.1
       _cgDragAnnotIdx=-1; _cgDragRefIdx=-1; _cgDragLegend=false; _cgDragLabelKey=null;
       if(wasLabelDrag) _cgSuppressNextLabelClick=true;
       canvas.style.cursor='';
