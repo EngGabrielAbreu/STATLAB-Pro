@@ -10,3 +10,5 @@ Por rodar diretamente no navegador sem a necessidade de infraestruturas complexa
 No ecossistema da Engenharia Mecânica e de Materiais, a caracterização de propriedades e o comportamento de componentes geram volumes massivos de dados brutos. O processamento analítico desses dados frequentemente enfrenta barreiras metodológicas: informações fragmentadas em diferentes softwares de fabricantes, dependência de rotinas complexas e dificuldade de consolidar históricos de ensaios para comparação direta.
 
 💡A motivação surge da necessidade de centralizar e automatizar o tratamento de dados em uma única interface web, unificando o cálculo de parâmetros estatísticos complexos e a geração de curvas e distribuições robustas. Além da otimização analítica, o projeto foca na portabilidade e segurança da informação por meio da persistência de dados em JSON.
+
+Conjunto de programas que o STATLab busca agrupar - Microsoft Excel, Minitab, Linguagem R e ImageJ.
