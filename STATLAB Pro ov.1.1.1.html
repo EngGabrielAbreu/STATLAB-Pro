@@ -44487,6 +44487,15 @@ function cgGoHome(ev){
                   <label id="cgLblRegrExtendInf" style="flex:1">Linha de regressão se estende infinitamente</label>
                   <input type="checkbox" id="cgRegrExtendInf" onchange="cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899">
                 </div>
+                <!-- ov.1.1.1 FIX: este campo havia sido inserido na seção "Legenda" (dataopt) por
+                     engano — o comentário-âncora usado existia nas duas seções. Agora fica onde
+                     pertence: dentro do painel de Regressão, junto das demais opções do ajuste.
+                     Como o container pai já é exibido só para XY/Linha/lado a lado, não precisa
+                     de controle próprio de visibilidade. -->
+                <div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                  <label id="cgLblRegrIgnoreJitter" style="flex:1">Regressão não seguir jitter</label>
+                  <input type="checkbox" id="cgRegrIgnoreJitter" onchange="cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899">
+                </div>
               </div>
               <div id="cgRegrResult" style="font-size:11px;color:#ec4899;padding:6px 0;min-height:18px;font-family:monospace;white-space:pre-wrap"></div>
             </div>
@@ -49612,10 +49621,12 @@ function cgOnSeriesDataInput(si){
 function cgRebuildRegrList(){
   var c=document.getElementById('cgRegrSeriesList'); if(!c) return;
   // Preserve existing selections
-  var prev={};
+  var prev={}, prevT={};
   for(var ri=1;ri<=_cgSeriesCount+5;ri++){
     var sel=document.getElementById('cgRegrType_'+ri);
     if(sel) prev[ri]=sel.value;
+    var selT=document.getElementById('cgRegrTarget_'+ri);   // ov.1.1.1
+    if(selT) prevT[ri]=selT.value;
   }
   c.innerHTML='';
   var opts='<option value="none">'+cgT('regrNone')+'</option><option value="linear">'+cgT('regrLinear')+'</option><option value="poly2">'+cgT('regrPoly2')+'</option><option value="poly3">'+cgT('regrPoly3')+'</option><option value="exp">'+cgT('regrExp')+'</option><option value="log">'+cgT('regrLog')+'</option><option value="power">'+cgT('regrPower')+'</option>';
@@ -49631,15 +49642,50 @@ function cgRebuildRegrList(){
     try{ if(_taR && typeof cgParseDataMultiY==='function') _nYR=Math.max(1,(cgParseDataMultiY(_taR.value||'').nCols)||1); }catch(e){}
     var optsI = opts + ((_nYR>1) ? ('<option value="mean">'+cgT('regrMean')+'</option>') : '');
     var row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:5px';
-    row.innerHTML='<span style="width:8px;height:8px;border-radius:50%;background:'+col+';flex-shrink:0;display:inline-block"></span>'
-      +'<span style="flex:1;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+nm+'</span>'
-      +'<select id="cgRegrType_'+i+'" onchange="cgUpdateChart()" style="font-size:11px;padding:2px 4px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'+optsI+'</select>';
+    row.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap';
+    var _html='<span style="width:8px;height:8px;border-radius:50%;background:'+col+';flex-shrink:0;display:inline-block"></span>'
+      +'<span style="flex:1;min-width:60px;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+nm+'</span>'
+      +'<select id="cgRegrType_'+i+'" onchange="cgOnRegrTypeChange('+i+')" style="font-size:11px;padding:2px 4px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'+optsI+'</select>';
+    // ov.1.1.1: com VÁRIAS colunas Y é preciso dizer SOBRE QUAL dado o ajuste é calculado.
+    // Antes o código procurava o dataset pelo nome exato da série — que com multi-Y vira
+    // "Série — Y1" — então a regressão simplesmente não era gerada. Este seletor resolve isso
+    // e ainda abre as opções de média/conjunto.
+    if(_nYR>1){
+      var _tOpts='';
+      for(var _c=0;_c<_nYR;_c++){
+        var _cn=(typeof cgYColName==='function')?cgYColName(i,_c,nm,_nYR):(nm+' — Y'+(_c+1));
+        var _short=String(_cn).indexOf(' — ')>=0 ? String(_cn).split(' — ').slice(1).join(' — ') : ('Y'+(_c+1));
+        _tOpts+='<option value="col'+_c+'">'+String(_short).replace(/</g,'&lt;')+'</option>';
+      }
+      _tOpts+='<option value="mean">'+cgT('regrTargetMean')+'</option>';
+      _tOpts+='<option value="all">'+cgT('regrTargetAll')+'</option>';
+      _html+='<select id="cgRegrTarget_'+i+'" onchange="cgUpdateChart()" title="'+cgT('regrTargetHint')+'"'
+        +' style="font-size:10.5px;padding:2px 4px;background:var(--bg);border:1px solid rgba(236,72,153,.35);border-radius:4px;color:var(--text);max-width:112px">'
+        +_tOpts+'</select>';
+    }
+    row.innerHTML=_html;
     c.appendChild(row);
     // Restore prior selection
     var newSel=document.getElementById('cgRegrType_'+i);
     if(newSel&&prev[i]) newSel.value=prev[i];
+    var newTgt=document.getElementById('cgRegrTarget_'+i);
+    if(newTgt&&prevT[i]) newTgt.value=prevT[i];
+    // o alvo só interessa quando há um ajuste selecionado
+    try{ cgSyncRegrTargetVis(i); }catch(e){}
   }
+}
+// ov.1.1.1: esconde o seletor de alvo quando o tipo é "Nenhum" ou "Média" (a "Média" já é,
+// por definição, calculada sobre a média das colunas — não haveria o que escolher).
+function cgSyncRegrTargetVis(i){
+  var t=document.getElementById('cgRegrType_'+i);
+  var g=document.getElementById('cgRegrTarget_'+i);
+  if(!g) return;
+  var v=t?t.value:'none';
+  g.style.display=(v==='none'||v==='mean')?'none':'';
+}
+function cgOnRegrTypeChange(i){
+  try{ cgSyncRegrTargetVis(i); }catch(e){}
+  cgUpdateChart();
 }
 
 // v6.3.1 — Clear all data from all series text areas
@@ -49722,7 +49768,7 @@ var _cgI18N={
     multiPasteBtn:'Aplicar',multiPasteCancel:'Cancelar',
     minorGrid:'Grade Menor',exportNote:'A imagem sai exatamente em Largura\u00d7Altura (px). A Resolu\u00e7\u00e3o (DPI) s\u00f3 aumenta a nitidez, sem mudar o tamanho. \u00b7 Full HD: 1920\u00d71080 \u00b7 Coluna IEEE/ABNT: \u2248325 px',
     cgTabWord:'Gr\u00e1fico',cgTabNewTitle:'Novo gr\u00e1fico (nova aba)',cgTabColorHint:'Mudar cor da aba',cgTabRenameHint:'Duplo clique para renomear',cgTabDeleteHint:'Excluir aba',cgTabRenamePrompt:'Nome da aba:',cgTabDeleteConfirm:'Excluir a aba',cgTabDeleteLastAlert:'N\u00e3o \u00e9 poss\u00edvel excluir a \u00fanica aba.',
-    addSeries:'+ S\u00e9rie',removeSeries:'\u2212',axis:'Eixo',cgTitle:'T\u00edtulo do Gr\u00e1fico',cgSubtitle:'Subt\u00edtulo',cgTheme:'Tema',cgLegend:'Legenda',cgGrid:'Grade',cgMinorGrid:'Grade Menor',cgCustomMajorGrid:'Personalizar Grade Maior',cgMajorGridColor:'Cor da Grade Maior',cgMajorGridOpacity:'Opacidade da Grade Maior',cgCustomMinorGrid:'Personalizar Grade Menor',cgMinorGridColor:'Cor da Grade Menor',cgMinorGridOpacity:'Opacidade da Grade Menor',cgErrorBars:'Barras de Erro (\u00b11\u03c3)',cgXLabel:'R\u00f3tulo Eixo X',cgYLabel:'R\u00f3tulo Eixo Y',showX2:'Eixo X2 (topo)',showY2:'Eixo Y2 (direita)',cgDefault:'Padr\u00e3o',cgTop:'topo',cgRight:'dir.',cgLegendSec:'Legenda',cgLegendPos:'Posi\u00e7\u00e3o',cgLegendBottom:'Inferior',cgLegendTop:'Superior',cgLegendRight:'Lateral direita',cgLegendLeft:'Lateral esquerda',cgLegendInsideTop:'Dentro superior',cgLegendInsideBottom:'Dentro inferior',cgLegendCustom:'Personalizado (arraste no gráfico)',cgLegendCustomHint:'⟵ Dê 2 cliques na legenda dentro do gráfico e arraste para reposicioná-la',cgLegendHide:'Ocultar',cgLegendTextColor:'Cor do Texto da Legenda',cgLegendFontSize:'Tamanho da Legenda',cgLegendBgColor:'Cor do Fundo da Legenda',cgLegendBgOpacity:'Opacidade do Fundo',cgLegendBgWidth:'Largura extra do Fundo',cgLegendBold:'Texto da Legenda em Negrito',cgLegendShadow:'Sombreamento do Fundo',cgLegendShadowNone:'Nenhum',cgLegendShadowBR:'Externa \u2014 inferior direita',cgLegendShadowBottom:'Externa \u2014 inferior',cgLegendShadowBL:'Externa \u2014 inferior esquerda',cgLegendShadowRight:'Externa \u2014 direita',cgLegendShadowLeft:'Externa \u2014 esquerda',cgLegendShadowTR:'Externa \u2014 superior direita',cgLegendShadowTop:'Externa \u2014 superior',cgLegendShadowTL:'Externa \u2014 superior esquerda',cgLegendShadowCenter:'Externa \u2014 centralizada',cgLegendBgOpacityHint:'Para legendas exibidas dentro da área do gráfico ("Dentro superior/inferior"), um fundo semi-transparente é aplicado automaticamente quando a opacidade aqui está em 0%, para manter o texto legível sobre os dados.',cgCustomLegend:'Legenda totalmente personalizada',cgBtnAddCustomLegendItem:'+ Item da Legenda',cgXScale:'Escala X',cgYScale:'Escala Y',cgRegrNone:'Nenhum',cgRegrLinear:'Linear',cgRegrPoly2:'Polinomial Grau 2',cgRegrPoly3:'Polinomial Grau 3',cgRegrExp:'Exponencial',cgRegrLog:'Logar\u00edtmico',cgRegrPower:'Pot\u00eancia',cgRegName_linear:'Reg. Linear',cgRegName_poly2:'Reg. Polinomial (G2)',cgRegName_poly3:'Reg. Polinomial (G3)',cgRegName_exp:'Reg. Exponencial',cgRegName_log:'Reg. Logar\u00edtmica',cgRegName_power:'Reg. Pot\u00eancia',cgRegName_fourier:'S\u00e9rie de Fourier',cgRegName_spline:'Spline',cgRegName_moving:'M\u00e9dia M\u00f3vel',cgRegName_expsmooth:'Suaviza\u00e7\u00e3o Exp.',cgRegName_mean:'M\u00e9dia dos Y',cgRegrLineStyleLbl:'Estilo da Linha',cgRegrLineWidthLbl:'Espessura',cgRegrStyleSolid:'Cont\u00ednua',cgRegrStyleDash:'Tracejada',cgRegrStyleDot:'Pontilhada',cgRegrStyleDashdot:'Tra\u00e7o-ponto',cgRegrShowEqLbl:'Mostrar equa\u00e7\u00e3o da regress\u00e3o na legenda',cgRegrHideLegendLbl:'Esconder regress\u00e3o na legenda',cgRegrExtendInfLbl:'Linha de regress\u00e3o se estende infinitamente',cgEtStageNamePh:'Nome da etapa',cgEtStatN:'n',cgEtStatStages:'Etapas',cgEtHint:'Cole 1 categoria por linha: nome e um valor por etapa, separados por v\u00edrgula (ex: Produto A, 48, 72). Configure a quantidade e os nomes das etapas na janela 📊 Informa\u00e7\u00f5es.',cgLblEtData:'Dados',cgLblEtPointSize:'Tamanho dos Pontos',cgLblEtLineWidth:'Espessura da Linha Conectora',cgLblEtLineColor:'Cor da Linha Conectora',cgLblEtStageCount:'Qtd. de Etapas',cgLblEtColorMode:'Modo de Cor dos Pontos',cgEtColorModeManualOpt:'Manual (por etapa)',cgEtColorModePaletteOpt:'Paleta pr\u00e9-definida',cgLblEtPalette:'Paleta',cgEtPalColdHotOpt:'Do Frio ao Quente',cgEtPalWhiteRedOpt:'Do Branco ao Vermelho',cgEtPalWhiteBlueOpt:'Do Branco ao Azul',cgEtPalGreenRedOpt:'Do Verde ao Vermelho',cgChartTypeEtapasOpt:'Etapas',cgWbParamsLegendTitle:'Legenda dos Par\u00e2metros (Weibull)',cgWbParamsBgColor:'Cor do Fundo',cgWbParamsBgOpacity:'Opacidade do Fundo',cgWbParamsBorder:'Contorno',cgWbParamsBorderColor:'Cor do Contorno',cgRefHint:'Adicione linhas horizontais ou verticais.',cgBtnAddRef:'+ Linha de Refer\u00eancia',cgAnnotHint:'Duplo-clique para arrastar anota\u00e7\u00f5es.',cgBtnAddAnnot:'+ Anota\u00e7\u00e3o',cgSaveConfig:'Salvar (.json)',cgLoadConfig:'Carregar',cgTitlePh:'ex: Curva de Tra\u00e7\u00e3o',cgSubtitlePh:'opcional',cgXTitlePh:'ex: Temperatura (\u00b0C)',cgYTitlePh:'ex: Resist\u00eancia (MPa)',cgX2Off:'Desligado',cgX2Linear:'Linear',cgX2Log:'Logar\u00edtmico',cgTitlesSection:'T\u00edtulos',cgDataSection:'Dados',cgShowLegend:'Mostrar Legenda',cgErrorBarsLabel:'Barras de Erro',cgErrType:'Tipo de Erro',cgErrCustom:'Valor do Erro',cgEditTitlePrompt:'Editar título do gráfico:',cgEditSubtitlePrompt:'Editar subtítulo:',cgEditXTitlePrompt:'Editar rótulo do Eixo X:',cgEditYTitlePrompt:'Editar rótulo do Eixo Y:',
+    addSeries:'+ S\u00e9rie',removeSeries:'\u2212',axis:'Eixo',cgTitle:'T\u00edtulo do Gr\u00e1fico',cgSubtitle:'Subt\u00edtulo',cgTheme:'Tema',cgLegend:'Legenda',cgGrid:'Grade',cgMinorGrid:'Grade Menor',cgCustomMajorGrid:'Personalizar Grade Maior',cgMajorGridColor:'Cor da Grade Maior',cgMajorGridOpacity:'Opacidade da Grade Maior',cgCustomMinorGrid:'Personalizar Grade Menor',cgMinorGridColor:'Cor da Grade Menor',cgMinorGridOpacity:'Opacidade da Grade Menor',cgErrorBars:'Barras de Erro (\u00b11\u03c3)',cgXLabel:'R\u00f3tulo Eixo X',cgYLabel:'R\u00f3tulo Eixo Y',showX2:'Eixo X2 (topo)',showY2:'Eixo Y2 (direita)',cgDefault:'Padr\u00e3o',cgTop:'topo',cgRight:'dir.',cgLegendSec:'Legenda',cgLegendPos:'Posi\u00e7\u00e3o',cgLegendBottom:'Inferior',cgLegendTop:'Superior',cgLegendRight:'Lateral direita',cgLegendLeft:'Lateral esquerda',cgLegendInsideTop:'Dentro superior',cgLegendInsideBottom:'Dentro inferior',cgLegendCustom:'Personalizado (arraste no gráfico)',cgLegendCustomHint:'⟵ Dê 2 cliques na legenda dentro do gráfico e arraste para reposicioná-la',cgLegendHide:'Ocultar',cgLegendTextColor:'Cor do Texto da Legenda',cgLegendFontSize:'Tamanho da Legenda',cgLegendBgColor:'Cor do Fundo da Legenda',cgLegendBgOpacity:'Opacidade do Fundo',cgLegendBgWidth:'Largura extra do Fundo',cgLegendBold:'Texto da Legenda em Negrito',cgLegendShadow:'Sombreamento do Fundo',cgLegendShadowNone:'Nenhum',cgLegendShadowBR:'Externa \u2014 inferior direita',cgLegendShadowBottom:'Externa \u2014 inferior',cgLegendShadowBL:'Externa \u2014 inferior esquerda',cgLegendShadowRight:'Externa \u2014 direita',cgLegendShadowLeft:'Externa \u2014 esquerda',cgLegendShadowTR:'Externa \u2014 superior direita',cgLegendShadowTop:'Externa \u2014 superior',cgLegendShadowTL:'Externa \u2014 superior esquerda',cgLegendShadowCenter:'Externa \u2014 centralizada',cgLegendBgOpacityHint:'Para legendas exibidas dentro da área do gráfico ("Dentro superior/inferior"), um fundo semi-transparente é aplicado automaticamente quando a opacidade aqui está em 0%, para manter o texto legível sobre os dados.',cgCustomLegend:'Legenda totalmente personalizada',cgBtnAddCustomLegendItem:'+ Item da Legenda',cgXScale:'Escala X',cgYScale:'Escala Y',cgRegrNone:'Nenhum',cgRegrLinear:'Linear',cgRegrPoly2:'Polinomial Grau 2',cgRegrPoly3:'Polinomial Grau 3',cgRegrExp:'Exponencial',cgRegrLog:'Logar\u00edtmico',cgRegrPower:'Pot\u00eancia',cgRegName_linear:'Reg. Linear',cgRegName_poly2:'Reg. Polinomial (G2)',cgRegName_poly3:'Reg. Polinomial (G3)',cgRegName_exp:'Reg. Exponencial',cgRegName_log:'Reg. Logar\u00edtmica',cgRegName_power:'Reg. Pot\u00eancia',cgRegName_fourier:'S\u00e9rie de Fourier',cgRegName_spline:'Spline',cgRegName_moving:'M\u00e9dia M\u00f3vel',cgRegName_expsmooth:'Suaviza\u00e7\u00e3o Exp.',cgRegName_mean:'M\u00e9dia dos Y',cgRegrLineStyleLbl:'Estilo da Linha',cgRegrLineWidthLbl:'Espessura',cgRegrStyleSolid:'Cont\u00ednua',cgRegrStyleDash:'Tracejada',cgRegrStyleDot:'Pontilhada',cgRegrStyleDashdot:'Tra\u00e7o-ponto',cgRegrShowEqLbl:'Mostrar equa\u00e7\u00e3o da regress\u00e3o na legenda',cgRegrHideLegendLbl:'Esconder regress\u00e3o na legenda',cgRegrExtendInfLbl:'Linha de regress\u00e3o se estende infinitamente',cgRegrIgnoreJitterLbl:'Regress\u00e3o n\u00e3o seguir jitter',cgEtStageNamePh:'Nome da etapa',cgEtStatN:'n',cgEtStatStages:'Etapas',cgEtHint:'Cole 1 categoria por linha: nome e um valor por etapa, separados por v\u00edrgula (ex: Produto A, 48, 72). Configure a quantidade e os nomes das etapas na janela 📊 Informa\u00e7\u00f5es.',cgLblEtData:'Dados',cgLblEtPointSize:'Tamanho dos Pontos',cgLblEtLineWidth:'Espessura da Linha Conectora',cgLblEtLineColor:'Cor da Linha Conectora',cgLblEtStageCount:'Qtd. de Etapas',cgLblEtColorMode:'Modo de Cor dos Pontos',cgEtColorModeManualOpt:'Manual (por etapa)',cgEtColorModePaletteOpt:'Paleta pr\u00e9-definida',cgLblEtPalette:'Paleta',cgEtPalColdHotOpt:'Do Frio ao Quente',cgEtPalWhiteRedOpt:'Do Branco ao Vermelho',cgEtPalWhiteBlueOpt:'Do Branco ao Azul',cgEtPalGreenRedOpt:'Do Verde ao Vermelho',cgChartTypeEtapasOpt:'Etapas',cgWbParamsLegendTitle:'Legenda dos Par\u00e2metros (Weibull)',cgWbParamsBgColor:'Cor do Fundo',cgWbParamsBgOpacity:'Opacidade do Fundo',cgWbParamsBorder:'Contorno',cgWbParamsBorderColor:'Cor do Contorno',cgRefHint:'Adicione linhas horizontais ou verticais.',cgBtnAddRef:'+ Linha de Refer\u00eancia',cgAnnotHint:'Duplo-clique para arrastar anota\u00e7\u00f5es.',cgBtnAddAnnot:'+ Anota\u00e7\u00e3o',cgSaveConfig:'Salvar (.json)',cgLoadConfig:'Carregar',cgTitlePh:'ex: Curva de Tra\u00e7\u00e3o',cgSubtitlePh:'opcional',cgXTitlePh:'ex: Temperatura (\u00b0C)',cgYTitlePh:'ex: Resist\u00eancia (MPa)',cgX2Off:'Desligado',cgX2Linear:'Linear',cgX2Log:'Logar\u00edtmico',cgTitlesSection:'T\u00edtulos',cgDataSection:'Dados',cgShowLegend:'Mostrar Legenda',cgErrorBarsLabel:'Barras de Erro',cgErrType:'Tipo de Erro',cgErrCustom:'Valor do Erro',cgEditTitlePrompt:'Editar título do gráfico:',cgEditSubtitlePrompt:'Editar subtítulo:',cgEditXTitlePrompt:'Editar rótulo do Eixo X:',cgEditYTitlePrompt:'Editar rótulo do Eixo Y:',
     bpSpacing:'Espaçamento entre colunas',
     bpHShift:'Deslocar série horizontalmente',
     xjitterLabel:'Jitter de dados', xjitterHint:'Desloca levemente os pontos na direção X (apenas visual — não altera os dados).',
@@ -49771,6 +49817,8 @@ var _cgI18N={
     barConnActivate:'Ativar Ligação',barConnStyle:'Estilo da Linha',barConnThick:'Espessura',
     barConnSolid:'Contínua',barConnDash:'Tracejada',barConnDot:'Pontilhada',barConnDashdot:'Traço-ponto',
     barConnMarker:'Marcador nos topos',barConnSameColor:'Mesma cor da série',barConnColor:'Cor da linha',
+    regrTargetMean:'Média das colunas',regrTargetAll:'Todos os pontos',
+    regrTargetHint:'Sobre qual dado o ajuste é calculado',
     regrMean:'Média das colunas Y (linha-guia)',
     regrMeanInfo:'média por linha entre {n} colunas Y — linha-guia, não é um ajuste estatístico',
     xjitterColTitle:'Jitter por coluna',
@@ -50008,7 +50056,7 @@ var _cgI18N={
     multiPasteBtn:'Apply',multiPasteCancel:'Cancel',
     minorGrid:'Minor Grid',exportNote:'The image is exported at exactly Width\u00d7Height (px). Resolution (DPI) only increases sharpness, without changing the size. \u00b7 Full HD: 1920\u00d71080 \u00b7 IEEE/ABNT column: \u2248325 px',
     cgTabWord:'Chart',cgTabNewTitle:'New chart (new tab)',cgTabColorHint:'Change tab color',cgTabRenameHint:'Double-click to rename',cgTabDeleteHint:'Delete tab',cgTabRenamePrompt:'Tab name:',cgTabDeleteConfirm:'Delete tab',cgTabDeleteLastAlert:'Cannot delete the only tab.',
-    addSeries:'+ Series',removeSeries:'\u2212',axis:'Axis',cgTitle:'Chart Title',cgSubtitle:'Subtitle',cgTheme:'Theme',cgLegend:'Legend',cgGrid:'Grid',cgMinorGrid:'Minor Grid',cgCustomMajorGrid:'Customize Major Grid',cgMajorGridColor:'Major Grid Color',cgMajorGridOpacity:'Major Grid Opacity',cgCustomMinorGrid:'Customize Minor Grid',cgMinorGridColor:'Minor Grid Color',cgMinorGridOpacity:'Minor Grid Opacity',cgErrorBars:'Error Bars (\u00b11\u03c3)',cgXLabel:'X Axis Label',cgYLabel:'Y Axis Label',showX2:'X2 Axis (top)',showY2:'Y2 Axis (right)',cgDefault:'Default',cgTop:'top',cgRight:'right',cgLegendSec:'Legend',cgLegendPos:'Position',cgLegendBottom:'Bottom',cgLegendTop:'Top',cgLegendRight:'Right',cgLegendLeft:'Left',cgLegendInsideTop:'Inside top',cgLegendInsideBottom:'Inside bottom',cgLegendCustom:'Custom (drag on chart)',cgLegendCustomHint:'⟵ Double-click the legend inside the chart and drag to reposition it',cgLegendHide:'Hide',cgLegendTextColor:'Legend Text Color',cgLegendFontSize:'Legend Size',cgLegendBgColor:'Legend Background Color',cgLegendBgOpacity:'Background Opacity',cgLegendBgWidth:'Extra Background Width',cgLegendBold:'Bold Legend Text',cgLegendShadow:'Background Shadow',cgLegendShadowNone:'None',cgLegendShadowBR:'Outer \u2014 bottom right',cgLegendShadowBottom:'Outer \u2014 bottom',cgLegendShadowBL:'Outer \u2014 bottom left',cgLegendShadowRight:'Outer \u2014 right',cgLegendShadowLeft:'Outer \u2014 left',cgLegendShadowTR:'Outer \u2014 top right',cgLegendShadowTop:'Outer \u2014 top',cgLegendShadowTL:'Outer \u2014 top left',cgLegendShadowCenter:'Outer \u2014 centered',cgLegendBgOpacityHint:'For legends displayed inside the chart area ("Inside top/bottom"), a semi-transparent background is automatically applied when opacity here is at 0%, to keep the text readable over the data.',cgCustomLegend:'Fully custom legend',cgBtnAddCustomLegendItem:'+ Legend Item',cgXScale:'X Scale',cgYScale:'Y Scale',cgRegrNone:'None',cgRegrLinear:'Linear',cgRegrPoly2:'Polynomial Deg 2',cgRegrPoly3:'Polynomial Deg 3',cgRegrExp:'Exponential',cgRegrLog:'Logarithmic',cgRegrPower:'Power',cgRegName_linear:'Linear Fit',cgRegName_poly2:'Poly Fit (D2)',cgRegName_poly3:'Poly Fit (D3)',cgRegName_exp:'Exp. Fit',cgRegName_log:'Log. Fit',cgRegName_power:'Power Fit',cgRegName_fourier:'Fourier Series',cgRegName_spline:'Spline',cgRegName_moving:'Moving Avg.',cgRegName_expsmooth:'Exp. Smoothing',cgRegName_mean:'Mean of Y',cgRegrLineStyleLbl:'Line Style',cgRegrLineWidthLbl:'Thickness',cgRegrStyleSolid:'Solid',cgRegrStyleDash:'Dashed',cgRegrStyleDot:'Dotted',cgRegrStyleDashdot:'Dash-dot',cgRegrShowEqLbl:'Show regression equation in legend',cgRegrHideLegendLbl:'Hide regression from legend',cgRegrExtendInfLbl:'Regression line extends infinitely',cgEtStageNamePh:'Stage name',cgEtStatN:'n',cgEtStatStages:'Stages',cgEtHint:'Paste 1 category per line: name and one value per stage, separated by commas (e.g.: Product A, 48, 72). Set the stage count and names in the 📊 Info window.',cgLblEtData:'Data',cgLblEtPointSize:'Point Size',cgLblEtLineWidth:'Connector Line Thickness',cgLblEtLineColor:'Connector Line Color',cgLblEtStageCount:'Stage Count',cgLblEtColorMode:'Point Color Mode',cgEtColorModeManualOpt:'Manual (per stage)',cgEtColorModePaletteOpt:'Preset palette',cgLblEtPalette:'Palette',cgEtPalColdHotOpt:'Cold to Hot',cgEtPalWhiteRedOpt:'White to Red',cgEtPalWhiteBlueOpt:'White to Blue',cgEtPalGreenRedOpt:'Green to Red',cgChartTypeEtapasOpt:'Stages',cgWbParamsLegendTitle:'Parameters Legend (Weibull)',cgWbParamsBgColor:'Background Color',cgWbParamsBgOpacity:'Background Opacity',cgWbParamsBorder:'Border',cgWbParamsBorderColor:'Border Color',cgRefHint:'Add horizontal or vertical lines.',cgBtnAddRef:'+ Reference Line',cgAnnotHint:'Double-click to drag annotations.',cgBtnAddAnnot:'+ Annotation',cgSaveConfig:'Save (.json)',cgLoadConfig:'Load',cgTitlePh:'e.g.: Stress-Strain Curve',cgSubtitlePh:'optional',cgXTitlePh:'e.g.: Temperature (\u00b0C)',cgYTitlePh:'e.g.: Strength (MPa)',cgX2Off:'Off',cgX2Linear:'Linear',cgX2Log:'Logarithmic',cgTitlesSection:'Titles',cgDataSection:'Data',cgShowLegend:'Show Legend',cgErrorBarsLabel:'Error Bars',cgErrType:'Error Type',cgErrCustom:'Error Value',cgEditTitlePrompt:'Edit chart title:',cgEditSubtitlePrompt:'Edit subtitle:',cgEditXTitlePrompt:'Edit X axis label:',cgEditYTitlePrompt:'Edit Y axis label:',
+    addSeries:'+ Series',removeSeries:'\u2212',axis:'Axis',cgTitle:'Chart Title',cgSubtitle:'Subtitle',cgTheme:'Theme',cgLegend:'Legend',cgGrid:'Grid',cgMinorGrid:'Minor Grid',cgCustomMajorGrid:'Customize Major Grid',cgMajorGridColor:'Major Grid Color',cgMajorGridOpacity:'Major Grid Opacity',cgCustomMinorGrid:'Customize Minor Grid',cgMinorGridColor:'Minor Grid Color',cgMinorGridOpacity:'Minor Grid Opacity',cgErrorBars:'Error Bars (\u00b11\u03c3)',cgXLabel:'X Axis Label',cgYLabel:'Y Axis Label',showX2:'X2 Axis (top)',showY2:'Y2 Axis (right)',cgDefault:'Default',cgTop:'top',cgRight:'right',cgLegendSec:'Legend',cgLegendPos:'Position',cgLegendBottom:'Bottom',cgLegendTop:'Top',cgLegendRight:'Right',cgLegendLeft:'Left',cgLegendInsideTop:'Inside top',cgLegendInsideBottom:'Inside bottom',cgLegendCustom:'Custom (drag on chart)',cgLegendCustomHint:'⟵ Double-click the legend inside the chart and drag to reposition it',cgLegendHide:'Hide',cgLegendTextColor:'Legend Text Color',cgLegendFontSize:'Legend Size',cgLegendBgColor:'Legend Background Color',cgLegendBgOpacity:'Background Opacity',cgLegendBgWidth:'Extra Background Width',cgLegendBold:'Bold Legend Text',cgLegendShadow:'Background Shadow',cgLegendShadowNone:'None',cgLegendShadowBR:'Outer \u2014 bottom right',cgLegendShadowBottom:'Outer \u2014 bottom',cgLegendShadowBL:'Outer \u2014 bottom left',cgLegendShadowRight:'Outer \u2014 right',cgLegendShadowLeft:'Outer \u2014 left',cgLegendShadowTR:'Outer \u2014 top right',cgLegendShadowTop:'Outer \u2014 top',cgLegendShadowTL:'Outer \u2014 top left',cgLegendShadowCenter:'Outer \u2014 centered',cgLegendBgOpacityHint:'For legends displayed inside the chart area ("Inside top/bottom"), a semi-transparent background is automatically applied when opacity here is at 0%, to keep the text readable over the data.',cgCustomLegend:'Fully custom legend',cgBtnAddCustomLegendItem:'+ Legend Item',cgXScale:'X Scale',cgYScale:'Y Scale',cgRegrNone:'None',cgRegrLinear:'Linear',cgRegrPoly2:'Polynomial Deg 2',cgRegrPoly3:'Polynomial Deg 3',cgRegrExp:'Exponential',cgRegrLog:'Logarithmic',cgRegrPower:'Power',cgRegName_linear:'Linear Fit',cgRegName_poly2:'Poly Fit (D2)',cgRegName_poly3:'Poly Fit (D3)',cgRegName_exp:'Exp. Fit',cgRegName_log:'Log. Fit',cgRegName_power:'Power Fit',cgRegName_fourier:'Fourier Series',cgRegName_spline:'Spline',cgRegName_moving:'Moving Avg.',cgRegName_expsmooth:'Exp. Smoothing',cgRegName_mean:'Mean of Y',cgRegrLineStyleLbl:'Line Style',cgRegrLineWidthLbl:'Thickness',cgRegrStyleSolid:'Solid',cgRegrStyleDash:'Dashed',cgRegrStyleDot:'Dotted',cgRegrStyleDashdot:'Dash-dot',cgRegrShowEqLbl:'Show regression equation in legend',cgRegrHideLegendLbl:'Hide regression from legend',cgRegrExtendInfLbl:'Regression line extends infinitely',cgRegrIgnoreJitterLbl:'Regression ignores jitter',cgEtStageNamePh:'Stage name',cgEtStatN:'n',cgEtStatStages:'Stages',cgEtHint:'Paste 1 category per line: name and one value per stage, separated by commas (e.g.: Product A, 48, 72). Set the stage count and names in the 📊 Info window.',cgLblEtData:'Data',cgLblEtPointSize:'Point Size',cgLblEtLineWidth:'Connector Line Thickness',cgLblEtLineColor:'Connector Line Color',cgLblEtStageCount:'Stage Count',cgLblEtColorMode:'Point Color Mode',cgEtColorModeManualOpt:'Manual (per stage)',cgEtColorModePaletteOpt:'Preset palette',cgLblEtPalette:'Palette',cgEtPalColdHotOpt:'Cold to Hot',cgEtPalWhiteRedOpt:'White to Red',cgEtPalWhiteBlueOpt:'White to Blue',cgEtPalGreenRedOpt:'Green to Red',cgChartTypeEtapasOpt:'Stages',cgWbParamsLegendTitle:'Parameters Legend (Weibull)',cgWbParamsBgColor:'Background Color',cgWbParamsBgOpacity:'Background Opacity',cgWbParamsBorder:'Border',cgWbParamsBorderColor:'Border Color',cgRefHint:'Add horizontal or vertical lines.',cgBtnAddRef:'+ Reference Line',cgAnnotHint:'Double-click to drag annotations.',cgBtnAddAnnot:'+ Annotation',cgSaveConfig:'Save (.json)',cgLoadConfig:'Load',cgTitlePh:'e.g.: Stress-Strain Curve',cgSubtitlePh:'optional',cgXTitlePh:'e.g.: Temperature (\u00b0C)',cgYTitlePh:'e.g.: Strength (MPa)',cgX2Off:'Off',cgX2Linear:'Linear',cgX2Log:'Logarithmic',cgTitlesSection:'Titles',cgDataSection:'Data',cgShowLegend:'Show Legend',cgErrorBarsLabel:'Error Bars',cgErrType:'Error Type',cgErrCustom:'Error Value',cgEditTitlePrompt:'Edit chart title:',cgEditSubtitlePrompt:'Edit subtitle:',cgEditXTitlePrompt:'Edit X axis label:',cgEditYTitlePrompt:'Edit Y axis label:',
     bpSpacing:'Column spacing',
     bpHShift:'Shift series horizontally',
     xjitterLabel:'Data jitter', xjitterHint:'Slightly shifts the points along X (visual only — does not change the data).',
@@ -50082,6 +50130,8 @@ var _cgI18N={
     barConnActivate:'Enable Connection',barConnStyle:'Line Style',barConnThick:'Thickness',
     barConnSolid:'Solid',barConnDash:'Dashed',barConnDot:'Dotted',barConnDashdot:'Dash-dot',
     barConnMarker:'Marker on tops',barConnSameColor:'Same series color',barConnColor:'Line color',
+    regrTargetMean:'Mean of columns',regrTargetAll:'All points',
+    regrTargetHint:'Which data the fit is calculated on',
     regrMean:'Mean of Y columns (guide line)',
     regrMeanInfo:'row-wise mean across {n} Y columns — guide line, not a statistical fit',
     xjitterColTitle:'Jitter per column',
@@ -50935,6 +50985,7 @@ function cgApplyLang(){
   var _rseq=document.getElementById('cgLblRegrShowEq'); if(_rseq) _rseq.textContent=cgT('cgRegrShowEqLbl'); // v10.0.7 (item 1)
   // ov.1.1.0: rótulos "Esconder regressão na legenda" e "Linha de regressão se estende infinitamente" (bilíngue)
   var _rhl=document.getElementById('cgLblRegrHideLegend'); if(_rhl) _rhl.textContent=cgT('cgRegrHideLegendLbl');
+  var _rij=document.getElementById('cgLblRegrIgnoreJitter'); if(_rij) _rij.textContent=cgT('cgRegrIgnoreJitterLbl');   // ov.1.1.1
   var _rei=document.getElementById('cgLblRegrExtendInf'); if(_rei) _rei.textContent=cgT('cgRegrExtendInfLbl');
   // v10.0.6 (Weibull item 2): rótulos da legenda de parâmetros do Weibull (bilíngue)
   var _wpMap={cgWbParamsLegendTitle:'cgWbParamsLegendTitle',cgLblWbParamsBgColor:'cgWbParamsBgColor',cgLblWbParamsBorder:'cgWbParamsBorder',cgLblWbParamsBorderColor:'cgWbParamsBorderColor'};
@@ -53859,6 +53910,10 @@ function cgUpdateChart(){
     'exponential_smoothing':cgT('cgRegName_expsmooth')
   };
   // v10.0.6 (item 2): estilo/espessura GLOBAIS das linhas de regressão (aplicados a todas).
+  // ov.1.1.1: quando ligado, a regressão IGNORA o jitter e fica ancorada nos X originais.
+  // O jitter é um deslocamento puramente visual dos pontos; para leituras quantitativas (ler
+  // um valor da curva, comparar ajustes entre séries) faz diferença a curva não estar deslocada.
+  var _regrIgnoreJitter = (document.getElementById('cgRegrIgnoreJitter')||{}).checked===true;
   var _regrLineStyle = (document.getElementById('cgRegrLineStyle')||{}).value||'dash';
   var _regrLineWidth = parseInt((document.getElementById('cgRegrLineWidth')||{}).value)||2;
   var _regrDash = _regrLineStyle==='solid'?[]:_regrLineStyle==='dot'?[2,3]:_regrLineStyle==='dashdot'?[8,4,2,4]:[5,3];
@@ -53915,7 +53970,7 @@ function cgUpdateChart(){
       if(_mPts.length<2) continue;
       // acompanha o jitter da série, senão a linha ficaria deslocada dos próprios pontos
       var _mJitEl=document.getElementById('cgXJitter_'+ri);
-      var _mJit=_mJitEl?(parseFloat(_mJitEl.value)||0):0;
+      var _mJit=_regrIgnoreJitter ? 0 : (_mJitEl?(parseFloat(_mJitEl.value)||0):0);   // ov.1.1.1
       if(_mJit!==0) _mPts=_mPts.map(function(p){ return {x:p.x+_mJit, y:p.y}; });
       var _mColEl=document.getElementById('cgColor_'+ri);
       var _mCol=_mColEl?_mColEl.value:'#fbbf24';
@@ -53941,21 +53996,76 @@ function cgUpdateChart(){
       continue;
     }
 
-    // find dataset for this series
-    var rDs=null;
-    for(var rdi=0;rdi<allDatasets.length;rdi++){
-      var rNameEl=document.getElementById('cgSeriesName_'+ri);
-      var rName=rNameEl?rNameEl.value:'Série '+ri;
-      if(allDatasets[rdi].label===rName){rDs=allDatasets[rdi];break;}
+    // ── ov.1.1.1: ALVO do ajuste ────────────────────────────────────────────────────────
+    // Com várias colunas Y é preciso saber sobre QUAL dado ajustar. O seletor ao lado do tipo
+    // define: uma coluna específica ("col0", "col1"...), a MÉDIA por linha, ou TODOS os pares
+    // (X,Y) juntos. Montamos os pontos aqui, em vez de procurar o dataset pelo nome — que era
+    // o que impedia a regressão de funcionar em séries multi-coluna (o dataset se chama
+    // "Série — Y1", nunca "Série").
+    var rNameEl=document.getElementById('cgSeriesName_'+ri);
+    var rName=rNameEl?rNameEl.value:'Série '+ri;
+    var _rTaEl=document.getElementById('cgData_'+ri);
+    var _rMulti=(typeof cgParseDataMultiY==='function')?cgParseDataMultiY(_rTaEl?_rTaEl.value:''):{cols:[],nCols:0};
+    var _rCols=_rMulti.cols||[];
+    var _rNY=Math.max(1,_rMulti.nCols||1);
+    var _rTgtEl=document.getElementById('cgRegrTarget_'+ri);
+    var _rTgt=(_rNY>1 && _rTgtEl)?(_rTgtEl.value||'col0'):'col0';
+    var _rPts=null, _rTgtLabel='';
+    if(_rNY<=1){
+      // uma coluna só: caminho antigo — usa o dataset já montado (respeita jitter etc.)
+      for(var rdi=0;rdi<allDatasets.length;rdi++){
+        if(allDatasets[rdi]._isRegr) continue;
+        if(allDatasets[rdi]._cgSeriesIdx===ri){ _rPts=allDatasets[rdi].data; break; }
+      }
+    } else if(_rTgt==='mean'){
+      // média por linha entre as colunas
+      var _mm={}, _mo=[];
+      _rCols.forEach(function(cp){ (cp||[]).forEach(function(p){
+        var k=String(p.x);
+        if(!_mm[k]){ _mm[k]={x:p.x,sum:0,n:0}; _mo.push(k); }
+        if(isFinite(p.y)){ _mm[k].sum+=p.y; _mm[k].n++; }
+      });});
+      _rPts=_mo.map(function(k){return _mm[k];}).filter(function(o){return o.n>0;})
+        .map(function(o){return {x:o.x,y:o.sum/o.n};}).sort(function(a,b){return a.x-b.x;});
+      _rTgtLabel=cgT('regrTargetMean');
+    } else if(_rTgt==='all'){
+      // todos os pares (X,Y) de todas as colunas, como uma nuvem única
+      _rPts=[];
+      _rCols.forEach(function(cp){ (cp||[]).forEach(function(p){ _rPts.push({x:p.x,y:p.y}); }); });
+      _rPts.sort(function(a,b){return a.x-b.x;});
+      _rTgtLabel=cgT('regrTargetAll');
+    } else {
+      var _ci=parseInt(String(_rTgt).replace('col',''),10);
+      if(!isFinite(_ci)||_ci<0||_ci>=_rCols.length) _ci=0;
+      _rPts=(_rCols[_ci]||[]).slice();
+      var _cn=(typeof cgYColName==='function')?cgYColName(ri,_ci,rName,_rNY):(rName+' — Y'+(_ci+1));
+      _rTgtLabel=String(_cn).indexOf(' — ')>=0 ? String(_cn).split(' — ').slice(1).join(' — ') : ('Y'+(_ci+1));
     }
-    if(!rDs||!rDs.data||rDs.data.length<2) continue;
-    var rr=cgCalcRegression(rDs.data, rType, _regrGlobalXRange); // ov.1.1.0: estende até as bordas, se ativo
+    if(!_rPts||_rPts.length<2) continue;
+    // o ajuste acompanha o jitter da série, senão a curva ficaria deslocada dos pontos
+    // ov.1.1.1: o ajuste acompanha o mesmo deslocamento visual dos pontos que ele descreve —
+    // jitter GLOBAL da série mais, quando o alvo é uma coluna específica, o jitter DAQUELA
+    // coluna. (Sem isso, em séries multi-Y a curva ficava deslocada dos próprios pontos.)
+    // O jitter por PONTO fica de fora de propósito: ele varia dentro da mesma série, então não
+    // há um deslocamento único que se aplique à curva inteira.
+    var _rJitEl=document.getElementById('cgXJitter_'+ri);
+    var _rJit=_regrIgnoreJitter ? 0 : (_rJitEl?(parseFloat(_rJitEl.value)||0):0);
+    if(!_regrIgnoreJitter && _rNY>1 && String(_rTgt).indexOf('col')===0){
+      var _rIndOn=(document.getElementById('cgXJitterInd_'+ri)||{}).checked===true;
+      if(_rIndOn && typeof cgIndJitterColGet==='function'){
+        var _rCi=parseInt(String(_rTgt).replace('col',''),10);
+        if(isFinite(_rCi)) _rJit += cgIndJitterColGet(ri,_rCi);
+      }
+    }
+    if(_rJit!==0) _rPts=_rPts.map(function(p){ return {x:p.x+_rJit, y:p.y}; });
+    var rr=cgCalcRegression(_rPts, rType, _regrGlobalXRange); // ov.1.1.0: estende até as bordas, se ativo
     if(!rr||!rr.points) continue;
     var rColEl=document.getElementById('cgColor_'+ri);
     var rCol=rColEl?rColEl.value:'#fbbf24';
-    var rSeriesName=rNameEl?rNameEl.value:('Série '+ri);
+    var rSeriesName=rName;
     var rTypeName=regrTypeNames[rType]||('Ajuste '+rType);
-    var rLabel=rTypeName+': '+rSeriesName;
+    // ov.1.1.1: o rótulo diz sobre qual coluna/conjunto o ajuste foi feito
+    var rLabel=rTypeName+': '+rSeriesName+(_rTgtLabel?(' ('+_rTgtLabel+')'):'');
     // v10.0.7 (item 1): opção de anexar a EQUAÇÃO da regressão ao rótulo mostrado na legenda.
     // rLabel permanece a base (usado no texto de resultado abaixo); só o rótulo do DATASET
     // recebe a equação quando a opção está ligada — assim aparece em todas as legendas.
@@ -61912,6 +62022,7 @@ function _cgBuildConfigObject(includeData){
     regrLineStyle: gv('cgRegrLineStyle'), regrLineWidth: gv('cgRegrLineWidth'), // item 2
     regrShowEq: gv('cgRegrShowEq'), // v10.0.7 item 1
     regrHideLegend: gv('cgRegrHideLegend'), // ov.1.1.0
+    regrIgnoreJitter: gv('cgRegrIgnoreJitter'), // ov.1.1.1
     regrExtendInf: gv('cgRegrExtendInf'), // ov.1.1.0
     wbParamsBgColor: gv('cgWbParamsBgColor'), wbParamsBgOpacity: gv('cgWbParamsBgOpacity'), // Weibull item 2
     wbParamsBorder: gv('cgWbParamsBorder'), wbParamsBorderColor: gv('cgWbParamsBorderColor'),
@@ -61981,6 +62092,16 @@ function _cgBuildConfigObject(includeData){
       for(var _ecI=0;_ecI<tas.length;_ecI++){ out[tas[_ecI].getAttribute('data-series')]=tas[_ecI].value; }
       return out;
     })(),
+    // ov.1.1.1 FIX: valores de "Personalizado com valor superior e inferior"
+    // (#cgErrBoundsPerSeries). Essas textareas também não têm "id" — só "data-series" — então
+    // o snapshot genérico de controles nunca as capturava e os valores se perdiam ao trocar de
+    // aba ou exportar o .json. Mesmo mecanismo já usado por errColsBySeries.
+    errBoundsBySeries: (function(){
+      var out={};
+      var tas=document.querySelectorAll('#cgErrBoundsPerSeries textarea[data-series]');
+      for(var _ebI=0;_ebI<tas.length;_ebI++){ out[tas[_ebI].getAttribute('data-series')]=tas[_ebI].value; }
+      return out;
+    })(),
     // ov.1.1.1: valores colados por série no gráfico de BARRAS → "Barras de Erro" →
     // "Personalizado por colunas" (#cgErrColsPerSeriesBar). Mesmo mecanismo do bloco acima
     // (errColsBySeries, usado pela Dispersão XY), que ainda não cobria as Barras — por isso
@@ -62014,6 +62135,7 @@ function _cgBuildConfigObject(includeData){
       colData:   gv('cgColData_'+i),
       texture:   gv('cgTexture_'+i), // v9.12.5
       regrType:  gv('cgRegrType_'+i), // v8.10.1: per-series regression (was missing)
+      regrTarget: gv('cgRegrTarget_'+i), // ov.1.1.1: coluna/conjunto alvo do ajuste
       visible:   _cgSeriesVisible[i]
     };
     if(includeData){
@@ -62372,6 +62494,7 @@ function cgApplyConfigObject(cfg, opts){
         }
         // v8.10.1: per-series regression type (was previously not restored at all)
         sv('cgRegrType_'+k, s.regrType);
+        sv('cgRegrTarget_'+k, s.regrTarget);   // ov.1.1.1: alvo do ajuste
       });
 
       // v7.0.14: restore Heatmap's two fixed data textareas + names, when present
@@ -62441,6 +62564,7 @@ function cgApplyConfigObject(cfg, opts){
       sv('cgRegrLineWidth', cfg.regrLineWidth); updateSpan('cgRegrLineWidthVal', cfg.regrLineWidth||2);
       sv('cgRegrShowEq', cfg.regrShowEq); // v10.0.7 item 1
       sv('cgRegrHideLegend', cfg.regrHideLegend); // ov.1.1.0
+      sv('cgRegrIgnoreJitter', cfg.regrIgnoreJitter); // ov.1.1.1
       sv('cgRegrExtendInf', cfg.regrExtendInf); // ov.1.1.0
       sv('cgWbParamsBgColor', cfg.wbParamsBgColor);
       sv('cgWbParamsBgOpacity', cfg.wbParamsBgOpacity); updateSpan('cgWbParamsBgOpacityVal', cfg.wbParamsBgOpacity||45);
@@ -62595,6 +62719,16 @@ function cgApplyConfigObject(cfg, opts){
           if(_ta) _ta.value=cfg.errColsBySeries[_si];
         });
       }
+      // ov.1.1.1 FIX: idem para "Personalizado com valor superior e inferior". Reconstruímos as
+      // textareas antes de preencher, porque cgToggleErrorOptions() só as monta quando o tipo
+      // ativo é "bounds" — e a config pode estar sendo aplicada com outro tipo selecionado.
+      if(cfg.errBoundsBySeries && typeof cfg.errBoundsBySeries==='object'){
+        try{ if(typeof cgRebuildErrBoundsFields==='function') cgRebuildErrBoundsFields(); }catch(e){}
+        Object.keys(cfg.errBoundsBySeries).forEach(function(_sb){
+          var _tb=document.querySelector('#cgErrBoundsPerSeries textarea[data-series="'+_sb+'"]');
+          if(_tb) _tb.value=cfg.errBoundsBySeries[_sb];
+        });
+      }
       cgUpdateSecondaryAxisFields();
       var dlOpts=document.getElementById('cgDataLabelOptions');
       if(dlOpts) dlOpts.style.display=cfg.showDataLabels?'block':'none';
@@ -62679,6 +62813,8 @@ function cgApplyConfigObject(cfg, opts){
       try{ if(typeof cgRenderFilterModeButtons==='function') cgRenderFilterModeButtons(); }catch(e){}
       try{ if(typeof cgRenderFilterMenu==='function') cgRenderFilterMenu(); }catch(e){}
 
+      // ov.1.1.1: o seletor de alvo do ajuste some quando o tipo é "Nenhum"/"Média".
+      try{ for(var _rg=1;_rg<=_cgSeriesCount;_rg++) cgSyncRegrTargetVis(_rg); }catch(e){}
       // ov.1.1.1: reexibe os botões do jitter individual conforme os checkboxes restaurados.
       try{ for(var _ji=1;_ji<=_cgSeriesCount;_ji++) cgToggleIndJitter(_ji); }catch(e){}
       // ov.1.1.1: reabre os sub-painéis do Boxplot/Violino conforme os checkboxes restaurados,
