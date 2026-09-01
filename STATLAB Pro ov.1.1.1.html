@@ -43566,6 +43566,8 @@ function cgGoHome(ev){
                     <option id="cgErrTypePct10Opt" value="pct10">±10% — Percentual fixo</option>
                     <option id="cgErrTypeCustomOpt" value="custom">Valor fixo personalizado</option>
                     <option id="cgErrTypeColsOpt" value="cols">Personalizado em colunas</option>
+                    <!-- ov.1.1.1: limites ABSOLUTOS (o usuário digita o valor do limite, não a amplitude) -->
+                    <option id="cgErrTypeBoundsOpt" value="bounds">Personalizado com valor superior e inferior</option>
                   </select>
                 </div>
                 <div class="cg-field" id="cgErrCustomField" style="display:none">
@@ -43582,9 +43584,20 @@ function cgGoHome(ev){
                     <input type="number" id="cgErrAsymLo" value="1" min="0" step="any" oninput="cgUpdateChart()" style="background:var(--bg3);border:1px solid rgba(248,113,113,.3);border-radius:4px;color:var(--text);padding:4px 6px;font-size:11px">
                   </div>
                 </div>
+                <!-- ov.1.1.1: limites ABSOLUTOS por PONTO — uma caixa por série, no mesmo
+                     formato de "Personalizado em colunas" (uma linha por ponto). -->
+                <div id="cgErrBoundsFields" style="display:none;margin-top:4px">
+                  <div style="font-size:10.5px;color:var(--text4);margin-bottom:6px" id="cgErrBoundsHint">Cole 2 colunas: mínimo e máximo — uma linha por ponto, na mesma ordem dos dados da série. São os VALORES dos limites, não a amplitude. Ex.: ponto 35 com "33, 37" → braço de 2 para cada lado.</div>
+                  <div id="cgErrBoundsPerSeries"></div>
+                </div>
                 <div id="cgErrColsFields" style="display:none;margin-top:4px">
                   <div style="font-size:10.5px;color:var(--text4);margin-bottom:6px" id="cgErrColsHint">Cole 2 colunas: valor1 e valor2 — uma linha por ponto XY, na mesma ordem dos dados da série. A barra fica centrada no ponto: limite inferior = valor do ponto − valor1; limite superior = valor do ponto + valor2.</div>
                   <div id="cgErrColsPerSeries"></div>
+                </div>
+                <!-- ov.1.1.1: liga/desliga por série + coluna de referência (quando há vários Y) -->
+                <div id="cgErrPerSeriesBox" style="margin-top:8px;padding:8px;background:rgba(236,72,153,.05);border:1px solid rgba(236,72,153,.15);border-radius:6px">
+                  <div style="font-size:10.5px;color:var(--text4);margin-bottom:6px" id="cgErrPerSeriesHint">Escolha em quais séries as barras aparecem. Séries com várias colunas Y precisam de uma coluna de referência.</div>
+                  <div id="cgErrPerSeriesList"></div>
                 </div>
                 <div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-top:8px">
                   <label id="cgLblErrRegion" style="flex:1">Região de Erro</label>
@@ -43600,6 +43613,11 @@ function cgGoHome(ev){
                   <div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-top:4px">
                     <label id="cgLblErrRegionShowPoints" style="flex:1">Mostrar Pontos dos Erros</label>
                     <input type="checkbox" id="cgErrRegionShowPoints" checked onchange="cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899">
+                  </div>
+                  <!-- ov.1.1.1: usa o marcador da série nos pontos-limite da região -->
+                  <div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                    <label id="cgLblErrRegionMatchMarker" style="flex:1">Pontos de erros têm marcador igual da série</label>
+                    <input type="checkbox" id="cgErrRegionMatchMarker" onchange="cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899">
                   </div>
                 </div>
               </div>
@@ -44726,6 +44744,22 @@ function cgGoHome(ev){
     </div>
   </div>
 
+  <!-- ov.1.1.1: 🎚️ Jitter individual dos pontos — um slider por ponto da série -->
+  <div id="cgIndJitterOverlay" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.55);align-items:center;justify-content:center" onclick="if(event.target===this)cgCloseIndJitterModal()">
+    <div style="background:var(--bg2);border:1px solid rgba(236,72,153,.4);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5);width:min(600px,94vw);max-height:86vh;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--border2)">
+        <span style="font-size:15px;font-weight:700;color:#ec4899;flex:1">🎚️ <span id="cgIndJitterTitle">Jitter individual dos pontos</span></span>
+        <button onclick="cgCloseIndJitterModal()" style="padding:4px 9px;background:var(--bg3);border:1px solid var(--border2);color:var(--text3);border-radius:6px;cursor:pointer;font-size:13px">✕</button>
+      </div>
+      <div style="padding:8px 18px;font-size:11.5px;color:var(--text4);border-bottom:1px solid var(--border2)" id="cgIndJitterHint">Ajuste o deslocamento horizontal de cada ponto. O valor é somado ao X apenas visualmente — os dados originais não mudam.</div>
+      <div id="cgIndJitterBody" style="padding:14px 18px;overflow-y:auto;flex:1"></div>
+      <div style="display:flex;gap:8px;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border2)">
+        <button onclick="cgResetIndJitter()" style="padding:7px 16px;background:var(--bg3);border:1px solid rgba(248,113,113,.4);color:#f87171;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer" id="cgIndJitterReset">Zerar todos</button>
+        <button onclick="cgCloseIndJitterModal()" style="padding:7px 16px;background:#ec4899;border:none;color:#fff;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer" id="cgIndJitterClose">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- v9.13: 📊 Gráfico Simplificado — assistente de tabela para Barras -->
   <div id="cgSimpleBarOverlay" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.55);align-items:center;justify-content:center" onclick="if(event.target===this)cgCloseSimpleBarModal()">
     <div style="background:var(--bg2);border:1px solid rgba(236,72,153,.4);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5);width:min(820px,96vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
@@ -45390,8 +45424,11 @@ function cgSwitchDataPanel(){
     bpFields.forEach(function(f){f.style.display=(ct==='boxplot'||ct==='violin')?'':'none';});
     // v10.4.2: "Jitter de dados" (cgXJitter) — só para Dispersão XY, Linha, Dispersão lado a
     // lado, Weibull e FDA. (Radar/Barras/Histograma/Boxplot/Violino/Pareto/Heatmap não usam.)
-    var xjF=row.querySelector('.cg-xjitter-field');
-    if(xjF) xjF.style.display=(ct==='scatter'||ct==='line'||ct==='sideby'||ct==='weibull'||ct==='fda')?'':'none';
+    // ov.1.1.1 FIX: agora existem DOIS blocos com a classe .cg-xjitter-field (o slider global e
+    // o "Jitter individual dos pontos"). querySelector devolvia só o PRIMEIRO, então o bloco do
+    // jitter individual ficava permanentemente com display:none e o checkbox nunca aparecia.
+    var _xjVis=(ct==='scatter'||ct==='line'||ct==='sideby'||ct==='weibull'||ct==='fda')?'':'none';
+    row.querySelectorAll('.cg-xjitter-field').forEach(function(f){ f.style.display=_xjVis; });
     // v9.12.5: campo de textura só para Barras e Boxplot
     var texF=row.querySelector('.cg-texture-field');
     if(texF) texF.style.display=(ct==='bar'||ct==='boxplot')?'':'none';
@@ -46057,7 +46094,7 @@ function _cgSwapSeries(rowA, rowB){
       color:gv('cgColor_'),name:gv('cgSeriesName_'),marker:gv('cgMarker_'),
       lineStyle:gv('cgLineStyle_'),ptSize:gv('cgPtSize_'),opacity:gv('cgOpacity_'),
       lineWidth:gv('cgLineWidth_'),axis:gv('cgAxis_'),data:gv('cgData_'),
-      jitter:gv('cgJitter_'),xjitter:gv('cgXJitter_'),hShift:gv('cgHShift_'),colNames:gv('cgColNames_'),colData:gv('cgColData_'),texture:gv('cgTexture_'),
+      jitter:gv('cgJitter_'),xjitter:gv('cgXJitter_'),xjitterInd:gvchk('cgXJitterInd_'),hShift:gv('cgHShift_'),colNames:gv('cgColNames_'),colData:gv('cgColData_'),texture:gv('cgTexture_'),
       visible:_cgSeriesVisible[sid]
     };
   }
@@ -46070,7 +46107,7 @@ function _cgSwapSeries(rowA, rowB){
     sv('cgColor_',s.color);sv('cgSeriesName_',s.name);sv('cgMarker_',s.marker);
     sv('cgLineStyle_',s.lineStyle);sv('cgPtSize_',s.ptSize);sv('cgOpacity_',s.opacity);
     sv('cgLineWidth_',s.lineWidth);sv('cgAxis_',s.axis);sv('cgData_',s.data);
-    sv('cgJitter_',s.jitter);sv('cgXJitter_',s.xjitter);sv('cgHShift_',s.hShift);sv('cgColNames_',s.colNames);sv('cgColData_',s.colData);sv('cgTexture_',s.texture);
+    sv('cgJitter_',s.jitter);sv('cgXJitter_',s.xjitter);(function(){var _e=document.getElementById('cgXJitterInd_'+newId); if(_e) _e.checked=(s.xjitterInd!==false);})();sv('cgHShift_',s.hShift);sv('cgColNames_',s.colNames);sv('cgColData_',s.colData);sv('cgTexture_',s.texture);
     var colorEl=document.getElementById('cgColor_'+newId);
     if(colorEl&&s.color) colorEl.value=s.color;
     _cgSeriesVisible[newId]=(s.visible!==false);
@@ -46095,6 +46132,42 @@ function _cgSwapSeries(rowA, rowB){
 }
 
 // ── v7.0.1: Boxplot display mode toggle (mutual exclusion) ───────────────────
+// ══ ov.1.1.1: MARCADOR DA SÉRIE (usado nos pontos-limite da Região de Erro) ═════════════════
+// Reproduz no canvas os mesmos pointStyle do Chart.js, para que a região use o marcador que o
+// usuário escolheu na janela 📊 Informações.
+function _cgDrawSeriesMarker(ctx,cx,cy,s,color,style){
+  ctx.save();
+  ctx.fillStyle=color; ctx.strokeStyle=color; ctx.lineWidth=1.6;
+  ctx.lineCap='round'; ctx.lineJoin='round'; ctx.setLineDash([]);
+  switch(style){
+    case 'rect':      ctx.fillRect(cx-s,cy-s,s*2,s*2); break;
+    case 'rectRot':
+      ctx.beginPath(); ctx.moveTo(cx,cy-s*1.3); ctx.lineTo(cx+s*1.3,cy);
+      ctx.lineTo(cx,cy+s*1.3); ctx.lineTo(cx-s*1.3,cy); ctx.closePath(); ctx.fill(); break;
+    case 'triangle':
+      ctx.beginPath(); ctx.moveTo(cx,cy-s*1.2); ctx.lineTo(cx+s*1.1,cy+s*0.9);
+      ctx.lineTo(cx-s*1.1,cy+s*0.9); ctx.closePath(); ctx.fill(); break;
+    case 'cross':
+      ctx.beginPath(); ctx.moveTo(cx-s,cy); ctx.lineTo(cx+s,cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx,cy-s); ctx.lineTo(cx,cy+s); ctx.stroke(); break;
+    case 'crossRot':
+      ctx.beginPath(); ctx.moveTo(cx-s,cy-s); ctx.lineTo(cx+s,cy+s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+s,cy-s); ctx.lineTo(cx-s,cy+s); ctx.stroke(); break;
+    case 'star':
+      ctx.beginPath(); ctx.moveTo(cx-s,cy); ctx.lineTo(cx+s,cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx,cy-s); ctx.lineTo(cx,cy+s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx-s*0.7,cy-s*0.7); ctx.lineTo(cx+s*0.7,cy+s*0.7); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+s*0.7,cy-s*0.7); ctx.lineTo(cx-s*0.7,cy+s*0.7); ctx.stroke(); break;
+    case 'dash':
+      ctx.lineWidth=Math.max(1.6,s*0.6);
+      ctx.beginPath(); ctx.moveTo(cx-s,cy); ctx.lineTo(cx+s,cy); ctx.stroke(); break;
+    case 'line':
+      ctx.beginPath(); ctx.moveTo(cx-s,cy); ctx.lineTo(cx+s,cy); ctx.stroke(); break;
+    default:  // 'circle'
+      ctx.beginPath(); ctx.arc(cx,cy,s,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
 // ══ ov.1.1.1: MARCADOR DA MÉDIA (Boxplot/Violino) ═══════════════════════════════════════════
 // Desenha o ícone escolhido pelo usuário centrado em (cx,cy). Um único desenhador serve os dois
 // tipos de gráfico, então a aparência fica idêntica entre eles.
@@ -46152,6 +46225,12 @@ function _cgDrawMeanMarker(ctx, cx, cy, size, color, icon, lineW){
 var _cgBpMedianOffsets={};
 // Caixas do texto da mediana desenhadas no último quadro — usadas pelo duplo-clique/arraste.
 var _cgBpMedianRects=[];
+// ov.1.1.1: valores de mediana ocultos por 1 clique — chave "s<índice>". Voltam ao desmarcar e
+// marcar de novo "Mostrar valor da Mediana" (ver cgToggleMedianValPanel).
+var _cgBpMedianHidden={};
+var _cgMedianClickTimer=null;   // ov.1.1.1: adia a ocultação para não brigar com o duplo-clique
+// ov.1.1.1: ignora o `click` que o navegador dispara ao soltar o valor arrastado da mediana.
+var _cgSuppressNextMedianClick=false;
 var _cgDragMedianKey=null;    // série cujo valor da mediana está sendo arrastado
 var _cgDragMedianBase=null;   // posição padrão do valor, para calcular o deslocamento
 function cgToggleBpDisplayMode(mode){
@@ -46184,6 +46263,8 @@ function cgToggleMedianValPanel(){
   var cb=document.getElementById('cgBoxShowMedianVal');
   var panel=document.getElementById('cgMedianValPosPanel');
   if(panel) panel.style.display=(cb&&cb.checked)?'block':'none';
+  // ov.1.1.1: alternar a opção é o caminho para trazer de volta os valores ocultados por clique.
+  _cgBpMedianHidden={};
   // ov.1.1.1: a dica de arrastar só faz sentido no modo "personalizado"
   var pos=(document.getElementById('cgBoxMedianPos')||{}).value||'top';
   var hint=document.getElementById('cgBoxMedianCustomHint');
@@ -47138,9 +47219,65 @@ function cgToggleErrorOptions(){
   if(customField) customField.style.display=(errTypeVal==='custom')?'block':'none';
   if(asymFields) asymFields.style.display=(errTypeVal==='asymmetric')?'block':'none';
   if(colsFields) colsFields.style.display=(errTypeVal==='cols')?'block':'none';
+  // ov.1.1.1: campos do tipo "valor superior e inferior"
+  var boundsFields=document.getElementById('cgErrBoundsFields');
+  if(boundsFields) boundsFields.style.display=(errTypeVal==='bounds')?'block':'none';
+  if(errTypeVal==='bounds') cgRebuildErrBoundsFields();   // ov.1.1.1
   if(errTypeVal==='cols') cgRebuildErrColsFields();
+  // ov.1.1.1: lista por série (liga/desliga + coluna de referência)
+  try{ cgRebuildErrPerSeries(); }catch(e){}
   cgToggleErrRegionOptions();
   cgUpdateChart();
+}
+// ══ ov.1.1.1: LISTA DE SÉRIES DAS BARRAS DE ERRO ════════════════════════════════════════════
+// Uma linha por série ATIVA, com:
+//   • checkbox liga/desliga (item 4) — barras de erro só naquelas que o usuário quiser;
+//   • seletor da coluna Y de referência (item 3) — aparece só quando a série tem vários Y,
+//     porque com uma coluna só a escolha não faria sentido.
+// Os valores digitados são preservados entre reconstruções.
+function cgRebuildErrPerSeries(){
+  var box=document.getElementById('cgErrPerSeriesBox');
+  var list=document.getElementById('cgErrPerSeriesList');
+  if(!box||!list) return;
+  var ct=(document.getElementById('cgChartType')||{}).value||'scatter';
+  // só faz sentido nos tipos que usam este painel de erro
+  if(ct!=='scatter'&&ct!=='line'&&ct!=='sideby'){ box.style.display='none'; return; }
+  // preserva o que já estava marcado/selecionado
+  var prevOn={}, prevRef={};
+  list.querySelectorAll('input[type=checkbox][data-si]').forEach(function(el){ prevOn[el.getAttribute('data-si')]=el.checked; });
+  list.querySelectorAll('select[data-si]').forEach(function(el){ prevRef[el.getAttribute('data-si')]=el.value; });
+  var html='', any=false;
+  for(var si=1; si<=_cgSeriesCount; si++){
+    if(_cgSeriesVisible[si]===false) continue;
+    var ta=document.getElementById('cgData_'+si);
+    if(!ta||!(ta.value||'').trim()) continue;
+    var nm=(document.getElementById('cgSeriesName_'+si)||{}).value||(cgT('series')+' '+si);
+    var cl=(document.getElementById('cgColor_'+si)||{}).value||'#ec4899';
+    var info=(typeof cgParseDataMultiY==='function')?cgParseDataMultiY(ta.value||''):{nCols:1};
+    var nY=Math.max(1,info.nCols||1);
+    any=true;
+    var on=(prevOn[si]!==undefined)?prevOn[si]:true;
+    html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">'
+      +'<input type="checkbox" data-si="'+si+'" id="cgErrSeriesOn_'+si+'" '+(on?'checked':'')
+      +' onchange="cgUpdateChart()" style="width:14px;height:14px;accent-color:#ec4899;flex-shrink:0">'
+      +'<span style="width:9px;height:9px;border-radius:50%;background:'+cl+';flex-shrink:0"></span>'
+      +'<span style="font-size:11px;color:var(--text2);flex:1;min-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+      +String(nm).replace(/</g,'&lt;')+'</span>';
+    if(nY>1){
+      var sel=(prevRef[si]!==undefined)?prevRef[si]:'0';
+      html+='<select data-si="'+si+'" id="cgErrRefCol_'+si+'" onchange="cgUpdateChart()"'
+        +' style="font-size:10.5px;padding:2px 4px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text);max-width:110px">';
+      for(var c2=0;c2<nY;c2++){
+        html+='<option value="'+c2+'"'+(String(c2)===String(sel)?' selected':'')+'>'
+          +(typeof cgYColName==='function'?cgYColName(si,c2,'Y',nY).replace(/^Y — /,''):('Y'+(c2+1)))+'</option>';
+      }
+      html+='<option value="-1"'+(String(sel)==='-1'?' selected':'')+'>'+cgT('errAllCols')+'</option>';
+      html+='</select>';
+    }
+    html+='</div>';
+  }
+  list.innerHTML=any?html:('<div style="font-size:11px;color:var(--text4)">'+cgT('errNoSeries')+'</div>');
+  box.style.display='block';
 }
 
 // v7.1.4: Show/hide the "Região de Erro" sub-options (fill opacity + show/hide error points)
@@ -47614,6 +47751,34 @@ function cgSetupDataLabelClick(){
   canvas.addEventListener('click',function(e){
     if(_cgSuppressNextLabelClick){ _cgSuppressNextLabelClick=false; return; } // v9.8: drop-click from a free-label drag, not a toggle click
     if(_cgHlDragArmed) return; // Região Destaque drag-select takes priority over label clicks
+    // ── ov.1.1.1: 1 CLIQUE oculta o valor da mediana (Boxplot/Violino) ────────────────────
+    // O 2º clique de um duplo-clique também chega aqui, então agendamos a ocultação num timer
+    // curto: se um dblclick vier logo em seguida (para arrastar), ele cancela o timer — assim
+    // "1 clique = ocultar" e "2 cliques = mover" convivem sem conflito.
+    // ov.1.1.1: clique que apenas ENCERRA um arraste não deve ocultar o valor.
+    if(_cgSuppressNextMedianClick){ _cgSuppressNextMedianClick=false; return; }
+    var _ctM=(document.getElementById('cgChartType')||{}).value||'scatter';
+    if((_ctM==='boxplot'||_ctM==='violin')
+       && (document.getElementById('cgBoxShowMedianVal')||{}).checked===true
+       && typeof _cgBpMedianRects!=='undefined' && _cgBpMedianRects.length){
+      var _rM=canvas.getBoundingClientRect();
+      var _mxM=e.clientX-_rM.left, _myM=e.clientY-_rM.top;
+      var _hitM=null;
+      for(var _i=_cgBpMedianRects.length-1;_i>=0;_i--){
+        var _rr=_cgBpMedianRects[_i];
+        if(_mxM>=_rr.x&&_mxM<=_rr.x+_rr.w&&_myM>=_rr.y&&_myM<=_rr.y+_rr.h){ _hitM=_rr; break; }
+      }
+      if(_hitM){
+        if(_cgMedianClickTimer){ clearTimeout(_cgMedianClickTimer); _cgMedianClickTimer=null; }
+        var _kM=_hitM.key;
+        _cgMedianClickTimer=setTimeout(function(){
+          _cgMedianClickTimer=null;
+          _cgBpMedianHidden[_kM]=true;
+          cgUpdateChart();
+        },260);
+        return;
+      }
+    }
     var showDL=(document.getElementById('cgShowDataLabels')||{}).checked===true;
     if(!showDL) return;
     var ct=(document.getElementById('cgChartType')||{}).value||'scatter';
@@ -47742,6 +47907,190 @@ function cgRebuildErrColsFields(){
     var ta=wrap.querySelector('textarea');
     if(preserved[si]!==undefined) ta.value=preserved[si];
   }
+}
+// ── ov.1.1.1: caixas "mínimo, máximo" por série do tipo "valor superior e inferior" ────────
+// Mesma experiência do "Personalizado em colunas": uma textarea por série, uma linha por ponto.
+// A diferença é semântica — aqui os dois números são os VALORES dos limites (absolutos), não
+// as amplitudes; a conversão para braço é feita no desenho.
+
+// ══════════════════════════════════════════════════════════════════════════════════════════
+// ov.1.1.1 — JITTER INDIVIDUAL DOS PONTOS (Dispersão / Linha)
+// ------------------------------------------------------------------------------------------
+// O "Jitter de dados" existente desloca a série INTEIRA na horizontal. Aqui o usuário abre um
+// pop-up e ajusta ponto a ponto, com um slider por ponto — útil para separar pontos que se
+// sobrepõem sem mexer nos demais.
+//
+// Os deslocamentos ficam em _cgIndJitter, com chave "s<série>_<índice do ponto>". Guardamos o
+// deslocamento (não a coordenada final), então os valores continuam válidos quando os dados
+// mudam de escala. É puramente VISUAL: os dados colados nunca são alterados.
+// ══════════════════════════════════════════════════════════════════════════════════════════
+var _cgIndJitter = {};        // {"s1_0": 0.25, ...}  → deslocamento por PONTO
+// ov.1.1.1: deslocamento por COLUNA Y — chave "sc<série>_<coluna>". Útil quando a série tem
+// vários Y: em vez de mexer ponto a ponto, afasta a coluna inteira para separar curvas que se
+// sobrepõem. Os dois se somam ao jitter global da série.
+var _cgIndJitterCol = {};     // {"sc1_0": -0.4, ...}
+var _cgIndJitterSeries = 0;   // série aberta no pop-up
+// ov.1.1.1: limite pedido para o jitter individual — o slider vai de −2 a +2.
+var _CG_INDJIT_MAX = 2;
+
+function cgIndJitterKey(si, pi){ return 's'+si+'_'+pi; }
+function cgIndJitterGet(si, pi){
+  var v=_cgIndJitter[cgIndJitterKey(si,pi)];
+  return (typeof v==='number' && isFinite(v)) ? v : 0;
+}
+function cgIndJitterColKey(si, ci){ return 'sc'+si+'_'+ci; }
+function cgIndJitterColGet(si, ci){
+  var v=_cgIndJitterCol[cgIndJitterColKey(si,ci)];
+  return (typeof v==='number' && isFinite(v)) ? v : 0;
+}
+// Liga/desliga o modo individual desta série (mostra o botão do pop-up).
+function cgToggleIndJitter(si){
+  var cb=document.getElementById('cgXJitterInd_'+si);
+  var btn=document.getElementById('cgXJitterIndBtn_'+si);
+  var on=!!(cb&&cb.checked);
+  if(btn) btn.style.display=on?'block':'none';
+  cgUpdateChart();
+}
+// ov.1.1.1: a amplitude do slider é FIXA em ±2 (pedido do usuário). Antes ela se adaptava ao
+// espaçamento dos dados, o que tornava o valor imprevisível entre séries de escalas diferentes.
+function _cgIndJitterRange(){ return _CG_INDJIT_MAX; }
+function cgOpenIndJitterModal(si){
+  var ov=document.getElementById('cgIndJitterOverlay');
+  var body=document.getElementById('cgIndJitterBody');
+  if(!ov||!body) return;
+  _cgIndJitterSeries=si;
+  var ta=document.getElementById('cgData_'+si);
+  var raw=ta?ta.value:'';
+  var pts=(typeof cgParseData==='function')?cgParseData(raw):[];
+  // ov.1.1.1: a série pode ter várias colunas Y — nesse caso oferecemos também o ajuste por coluna.
+  var multi=(typeof cgParseDataMultiY==='function')?cgParseDataMultiY(raw):{cols:[],nCols:1};
+  var nY=Math.max(1, multi.nCols||1);
+  var nm=(document.getElementById('cgSeriesName_'+si)||{}).value||(cgT('series')+' '+si);
+  var cl=(document.getElementById('cgColor_'+si)||{}).value||'#ec4899';
+  var t=document.getElementById('cgIndJitterTitle');
+  if(t) t.textContent=cgT('xjitterIndTitle')+' — '+nm;
+  if(!pts.length){
+    body.innerHTML='<div style="font-size:12px;color:var(--text4);padding:8px 0">'+cgT('cgCustomLabelsNoData')+'</div>';
+  } else {
+    var rng=_cgIndJitterRange();
+    var step=rng/200;   // passo fino: 0.01 com amplitude ±2
+    var html='<div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">'
+      +'<span style="width:11px;height:11px;border-radius:50%;background:'+cl+';flex-shrink:0"></span>'
+      +'<span style="font-size:12px;font-weight:700;color:var(--text2)">'+String(nm).replace(/</g,'&lt;')+'</span>'
+      +'<span style="font-size:10.5px;color:var(--text4)">('+pts.length+' '+cgT('cgCustomLabelsPointsWord')
+      +(nY>1?(' · '+nY+' Y'):'')+')</span></div>';
+
+    // ── ov.1.1.1: JITTER POR COLUNA (só quando há mais de uma coluna Y) ──────────────────
+    // Desloca a coluna inteira de uma vez; some quando a série tem um Y só, porque aí ele
+    // seria idêntico ao "Jitter de dados" da série e só confundiria.
+    if(nY>1){
+      html+='<div style="margin:0 0 12px;padding:9px;background:rgba(236,72,153,.07);border:1px solid rgba(236,72,153,.22);border-radius:7px">'
+        +'<div style="font-size:11px;font-weight:700;color:#ec4899;margin-bottom:3px">📊 '+cgT('xjitterColTitle')+'</div>'
+        +'<div style="font-size:10.5px;color:var(--text4);line-height:1.5;margin-bottom:8px">'+cgT('xjitterColHint')+'</div>';
+      for(var ci=0; ci<nY; ci++){
+        var curC=cgIndJitterColGet(si,ci);
+        var cname=(typeof cgYColName==='function')?cgYColName(si,ci,nm,nY):(nm+' — Y'+(ci+1));
+        // mostra só o sufixo da coluna, o nome da série já está no cabeçalho acima
+        var shortName=String(cname).indexOf(' — ')>=0 ? String(cname).split(' — ').slice(1).join(' — ') : ('Y'+(ci+1));
+        html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+          +'<span style="font-size:10.5px;color:var(--text3);width:96px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+String(shortName).replace(/"/g,'&quot;')+'">'
+            +String(shortName).replace(/</g,'&lt;')+'</span>'
+          +'<input type="range" min="'+(-rng)+'" max="'+rng+'" step="'+step+'" value="'+curC+'"'
+            +' oninput="cgSetIndJitterCol('+si+','+ci+',this.value)"'
+            +' ondblclick="cgSetIndJitterCol('+si+','+ci+',0);this.value=0;"'
+            +' title="'+cgT('bpDblClickReset')+'"'
+            +' style="flex:1;accent-color:'+cl+'">'
+          +'<span id="cgIndJitColVal_'+si+'_'+ci+'" style="font-size:10.5px;color:'+cl+';font-weight:700;width:58px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums">'
+            +curC.toFixed(2)+'</span>'
+          +'</div>';
+      }
+      html+='</div>';
+      html+='<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">📍 '+cgT('xjitterPointTitle')+'</div>';
+    }
+
+    pts.forEach(function(p,pi){
+      var cur=cgIndJitterGet(si,pi);
+      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">'
+        +'<span style="font-size:10.5px;color:var(--text4);width:96px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+          +'#'+(pi+1)+'  ('+(''+p.x).slice(0,7)+', '+(''+p.y).slice(0,7)+')</span>'
+        +'<input type="range" min="'+(-rng)+'" max="'+rng+'" step="'+step+'" value="'+cur+'"'
+          +' oninput="cgSetIndJitter('+si+','+pi+',this.value)"'
+          +' ondblclick="cgSetIndJitter('+si+','+pi+',0);this.value=0;"'
+          +' title="'+cgT('bpDblClickReset')+'"'
+          +' style="flex:1;accent-color:'+cl+'">'
+        +'<span id="cgIndJitVal_'+si+'_'+pi+'" style="font-size:10.5px;color:'+cl+';font-weight:700;width:58px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums">'
+          +cur.toFixed(2)+'</span>'
+        +'</div>';
+    });
+    body.innerHTML=html;
+  }
+  ov.style.display='flex';
+}
+// ov.1.1.1: grava o deslocamento de uma COLUNA inteira.
+function cgSetIndJitterCol(si, ci, val){
+  var v=parseFloat(val); if(!isFinite(v)) v=0;
+  v=Math.max(-_CG_INDJIT_MAX, Math.min(_CG_INDJIT_MAX, v));
+  var k=cgIndJitterColKey(si,ci);
+  if(v===0) delete _cgIndJitterCol[k]; else _cgIndJitterCol[k]=v;
+  var lbl=document.getElementById('cgIndJitColVal_'+si+'_'+ci);
+  if(lbl) lbl.textContent=v.toFixed(2);
+  cgUpdateChart();
+}
+function cgCloseIndJitterModal(){
+  var ov=document.getElementById('cgIndJitterOverlay');
+  if(ov) ov.style.display='none';
+}
+function cgSetIndJitter(si, pi, val){
+  var v=parseFloat(val); if(!isFinite(v)) v=0;
+  v=Math.max(-_CG_INDJIT_MAX, Math.min(_CG_INDJIT_MAX, v));   // ov.1.1.1: limite ±2
+  var k=cgIndJitterKey(si,pi);
+  if(v===0) delete _cgIndJitter[k]; else _cgIndJitter[k]=v;
+  var lbl=document.getElementById('cgIndJitVal_'+si+'_'+pi);
+  if(lbl) lbl.textContent=v.toFixed(2);
+  cgUpdateChart();
+}
+function cgResetIndJitter(){
+  var si=_cgIndJitterSeries;
+  Object.keys(_cgIndJitter).forEach(function(k){
+    if(k.indexOf('s'+si+'_')===0) delete _cgIndJitter[k];
+  });
+  // ov.1.1.1: zera também os deslocamentos por coluna desta série
+  Object.keys(_cgIndJitterCol).forEach(function(k){
+    if(k.indexOf('sc'+si+'_')===0) delete _cgIndJitterCol[k];
+  });
+  cgOpenIndJitterModal(si);   // redesenha os sliders zerados
+  cgUpdateChart();
+}
+
+function cgRebuildErrBoundsFields(){
+  var container=document.getElementById('cgErrBoundsPerSeries');
+  if(!container) return;
+  var preserved={};
+  container.querySelectorAll('textarea[data-series]').forEach(function(ta){
+    preserved[ta.getAttribute('data-series')] = ta.value;
+  });
+  container.innerHTML='';
+  for(var si=1; si<=_cgSeriesCount; si++){
+    if(_cgSeriesVisible[si]===false) continue;
+    var nameEl=document.getElementById('cgSeriesName_'+si);
+    var colorEl=document.getElementById('cgColor_'+si);
+    var sName=nameEl?nameEl.value:(cgT('series')+' '+si);
+    var sColor=colorEl?colorEl.value:_cgPalette[(si-1)%_cgPalette.length];
+    var wrap=document.createElement('div');
+    wrap.style.marginBottom='8px';
+    wrap.innerHTML='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+      +'<span style="width:10px;height:10px;border-radius:50%;background:'+sColor+';flex-shrink:0"></span>'
+      +'<span style="font-size:11px;color:var(--text2);font-weight:600">'+String(sName).replace(/</g,'&lt;')+'</span>'
+      +'</div>'
+      +'<textarea data-series="'+si+'" rows="3" placeholder="33, 37&#10;28, 32&#10;41, 46" oninput="cgUpdateChart()" style="width:100%;font-family:monospace;font-size:11px;resize:vertical;background:var(--bg);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:6px"></textarea>';
+    container.appendChild(wrap);
+    var ta=wrap.querySelector('textarea');
+    if(preserved[si]!==undefined) ta.value=preserved[si];
+  }
+}
+function cgRebuildErrBoundsFieldsIfActive(){
+  var typeEl=document.getElementById('cgErrType');
+  if(typeEl && typeEl.value==='bounds') cgRebuildErrBoundsFields();
 }
 // Only rebuild when the "cols" error type is actually selected — cheap no-op otherwise
 function cgRebuildErrColsFieldsIfActive(){
@@ -48295,6 +48644,8 @@ function cgInit(){
   cgApplyTheme();
   cgRebuildRegrList();
   cgRebuildErrColsFieldsIfActive();
+  try{ cgRebuildErrBoundsFieldsIfActive(); }catch(e){} // ov.1.1.1
+  try{ cgRebuildErrPerSeries(); }catch(e){} // ov.1.1.1: lista de séries das barras de erro
   try{ cgRebuildErrColsFieldsBarIfActive(); }catch(e){} // ov.1.1.1: mesmo p/ Barras
   cgSetupCanvasDblClick();
   cgSetupHlRegionDrag();
@@ -49032,11 +49383,19 @@ function cgAddSeries(){
     // v10.4.2: "Jitter de dados" — desloca levemente os pontos na direcao X (apenas visual).
     // So aparece para Dispersao XY, Linha, Dispersao lado a lado, Weibull e FDA. Range -1..1.
     +'<div class="cg-xjitter-field cg-field" style="display:none;margin-bottom:6px"><label id="cgLblXJitter_'+i+'" style="font-size:10px;color:var(--text4)" title="'+cgT('xjitterHint')+'">'+cgT('xjitterLabel')+' <span id="cgXJitter_val_'+i+'" ondblclick="cgInlineNumEdit(event,\'cgXJitter_'+i+'\',\'cgXJitter_val_'+i+'\',2)" title="'+cgT('bpDblClickType')+'" style="color:#ec4899;cursor:text;text-decoration:underline dotted;text-underline-offset:2px">0.00</span></label><input type="range" id="cgXJitter_'+i+'" min="-1" max="1" step="0.01" value="0" oninput="document.getElementById(\'cgXJitter_val_'+i+'\').textContent=parseFloat(this.value).toFixed(2);cgUpdateChart()" ondblclick="this.value=0;document.getElementById(\'cgXJitter_val_'+i+'\').textContent=\'0.00\';cgUpdateChart()" title="'+cgT('bpDblClickReset')+'" style="width:100%;accent-color:#ec4899"></div>'
+    // ov.1.1.1: jitter INDIVIDUAL — desloca cada ponto separadamente, via pop-up com sliders.
+    +'<div class="cg-xjitter-field cg-field" style="display:none;margin-bottom:6px">'
+      +'<label style="display:flex;align-items:center;gap:7px;font-size:10px;color:var(--text4);cursor:pointer">'
+        +'<input type="checkbox" id="cgXJitterInd_'+i+'" onchange="cgToggleIndJitter('+i+')" style="width:13px;height:13px;accent-color:#ec4899;flex-shrink:0">'
+        +'<span id="cgLblXJitterInd_'+i+'" style="flex:1">'+cgT('xjitterIndLabel')+'</span>'
+      +'</label>'
+      +'<button type="button" id="cgXJitterIndBtn_'+i+'" onclick="cgOpenIndJitterModal('+i+')" style="display:none;width:100%;margin-top:5px;padding:5px;background:rgba(236,72,153,.12);border:1px solid rgba(236,72,153,.4);color:#ec4899;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit">🎚️ <span id="cgXJitterIndBtnLbl_'+i+'">'+cgT('xjitterIndBtn')+'</span></button>'
+    +'</div>'
     // v9.12.5: textura interna da série (só Barras e Boxplot). Preenche a barra/caixa com uma
     // hachura repetida, num tom derivado da cor da série.
     +'<div class="cg-texture-field cg-field" style="display:none;margin-bottom:6px"><label id="cgLblTexture_'+i+'">'+cgT('cgTextureLabel')+'</label><select id="cgTexture_'+i+'" onchange="cgUpdateChart()" style="font-size:11px;padding:3px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text)"><option value="none">'+cgT('cgTexNone')+'</option><option value="diagonal">'+cgT('cgTexDiagonal')+' ╱</option><option value="diagonal2">'+cgT('cgTexDiagonal2')+' ╲</option><option value="horizontal">'+cgT('cgTexHorizontal')+' ═</option><option value="vertical">'+cgT('cgTexVertical')+' ║</option><option value="grid">'+cgT('cgTexGrid')+' ▦</option><option value="crosshatch">'+cgT('cgTexCrosshatch')+' ╳</option><option value="dots">'+cgT('cgTexDots')+' ⁙</option></select></div>'
     +'<div style="display:flex;gap:4px;margin-bottom:4px"><button onclick="cgFileImport('+i+')" style="flex:1;padding:4px;background:rgba(236,72,153,.08);border:1px dashed rgba(236,72,153,.35);color:#ec4899;border-radius:5px;font-size:10px;cursor:pointer">&#x1F4C2; '+cgT('importFile')+'</button><input type="file" id="cgFileInput_'+i+'" accept=".csv,.xlsx,.xls,.txt" style="display:none" onchange="cgHandleFileImport('+i+',this)"></div>'
-    +'<textarea id="cgData_'+i+'" rows="5" placeholder="'+cgT('pastePlaceholder')+'" oninput="cgBpAutoDetect('+i+');cgUpdateChart()" ondragover="cgTextareaDragOver(event)" ondragleave="cgTextareaDragLeave(event)" ondrop="cgHandleTextareaDrop('+i+',event)" style="width:100%;font-family:monospace;font-size:11px;resize:vertical;background:var(--bg);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:6px"></textarea>';
+    +'<textarea id="cgData_'+i+'" rows="5" placeholder="'+cgT('pastePlaceholder')+'" oninput="cgBpAutoDetect('+i+');cgOnSeriesDataInput('+i+');cgUpdateChart()" ondragover="cgTextareaDragOver(event)" ondragleave="cgTextareaDragLeave(event)" ondrop="cgHandleTextareaDrop('+i+',event)" style="width:100%;font-family:monospace;font-size:11px;resize:vertical;background:var(--bg);border:1px solid var(--border2);border-radius:6px;color:var(--text);padding:6px"></textarea>';
   container.appendChild(div);
   // v7.0.1: hide Marker/Line row immediately for any non-scatter/line chart type
   var _ctNow=(document.getElementById('cgChartType')||{}).value||'scatter';
@@ -49056,8 +49415,9 @@ function cgAddSeries(){
   var _texF=div.querySelector('.cg-texture-field');
   if(_texF) _texF.style.display=(_ctNow==='bar'||_ctNow==='boxplot')?'':'none';
   // v10.4.2: "Jitter de dados" só p/ Dispersão XY, Linha, Dispersão lado a lado, Weibull e FDA
-  var _xjF=div.querySelector('.cg-xjitter-field');
-  if(_xjF) _xjF.style.display=(_ctNow==='scatter'||_ctNow==='line'||_ctNow==='sideby'||_ctNow==='weibull'||_ctNow==='fda')?'':'none';
+  // ov.1.1.1 FIX: mesmo caso do bloco acima — são DOIS elementos com essa classe.
+  var _xjVis2=(_ctNow==='scatter'||_ctNow==='line'||_ctNow==='sideby'||_ctNow==='weibull'||_ctNow==='fda')?'':'none';
+  div.querySelectorAll('.cg-xjitter-field').forEach(function(f){ f.style.display=_xjVis2; });
   // v7.0: new series default to a connected line when chart type is "Linha"
   if(_ctNow==='line'){
     var _lsEl=div.querySelector('#cgLineStyle_'+i);
@@ -49091,6 +49451,8 @@ function cgAddSeries(){
   cgUpdateSeriesRemoveBtns();
   cgRebuildRegrList(); // v6.3.1: rebuild per-series regression selects
   cgRebuildErrColsFieldsIfActive();
+  try{ cgRebuildErrBoundsFieldsIfActive(); }catch(e){} // ov.1.1.1
+  try{ cgRebuildErrPerSeries(); }catch(e){} // ov.1.1.1: lista de séries das barras de erro
   try{ cgRebuildErrColsFieldsBarIfActive(); }catch(e){} // ov.1.1.1: mesmo p/ Barras
   // v8.8.14: keep sideby-only per-series panels (individual Y axes, annotation target) in sync
   if(((document.getElementById('cgChartType')||{}).value)==='sideby'){
@@ -49195,6 +49557,8 @@ function cgRemoveSeriesById(i){
   cgUpdateSeriesRemoveBtns();
   cgRebuildRegrList();
   cgRebuildErrColsFieldsIfActive();
+  try{ cgRebuildErrBoundsFieldsIfActive(); }catch(e){} // ov.1.1.1
+  try{ cgRebuildErrPerSeries(); }catch(e){} // ov.1.1.1: lista de séries das barras de erro
   try{ cgRebuildErrColsFieldsBarIfActive(); }catch(e){} // ov.1.1.1: mesmo p/ Barras
   try{cgApplyLang();}catch(e){}
   if(((document.getElementById('cgChartType')||{}).value)==='sideby'){
@@ -49222,6 +49586,8 @@ function cgRemoveSeries(){
   cgUpdateSeriesRemoveBtns();
   cgRebuildRegrList();
   cgRebuildErrColsFieldsIfActive();
+  try{ cgRebuildErrBoundsFieldsIfActive(); }catch(e){} // ov.1.1.1
+  try{ cgRebuildErrPerSeries(); }catch(e){} // ov.1.1.1: lista de séries das barras de erro
   try{ cgRebuildErrColsFieldsBarIfActive(); }catch(e){} // ov.1.1.1: mesmo p/ Barras
   if(((document.getElementById('cgChartType')||{}).value)==='sideby'){
     try{ cgOnSidebyIndivYToggle(); }catch(e){}
@@ -49232,6 +49598,17 @@ function cgRemoveSeries(){
 }
 
 // v6.3.1: Rebuild per-series regression selects
+// ov.1.1.1: ao editar os dados de uma série, o número de colunas Y pode mudar — e com ele a
+// disponibilidade da regressão "Média" e os sliders de jitter por coluna. Reconstruímos as
+// listas que dependem disso, senão a opção só apareceria ao trocar de aba.
+function cgOnSeriesDataInput(si){
+  try{ if(typeof cgRebuildRegrList==='function') cgRebuildRegrList(); }catch(e){}
+  try{
+    var ov=document.getElementById('cgIndJitterOverlay');
+    if(ov && ov.style.display==='flex' && _cgIndJitterSeries===si) cgOpenIndJitterModal(si);
+  }catch(e){}
+  try{ if(typeof cgRebuildErrPerSeries==='function') cgRebuildErrPerSeries(); }catch(e){}
+}
 function cgRebuildRegrList(){
   var c=document.getElementById('cgRegrSeriesList'); if(!c) return;
   // Preserve existing selections
@@ -49247,11 +49624,17 @@ function cgRebuildRegrList(){
     var colEl=document.getElementById('cgColor_'+i);
     var nm=nameEl?nameEl.value:'Série '+i;
     var col=colEl?colEl.value:'#ec4899';
+    // ov.1.1.1: "Média" só faz sentido quando a série tem MAIS DE UM Y — é a média por linha
+    // entre as colunas. Com um Y só ela devolveria a própria série, então nem é oferecida.
+    var _taR=document.getElementById('cgData_'+i);
+    var _nYR=1;
+    try{ if(_taR && typeof cgParseDataMultiY==='function') _nYR=Math.max(1,(cgParseDataMultiY(_taR.value||'').nCols)||1); }catch(e){}
+    var optsI = opts + ((_nYR>1) ? ('<option value="mean">'+cgT('regrMean')+'</option>') : '');
     var row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:5px';
     row.innerHTML='<span style="width:8px;height:8px;border-radius:50%;background:'+col+';flex-shrink:0;display:inline-block"></span>'
       +'<span style="flex:1;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+nm+'</span>'
-      +'<select id="cgRegrType_'+i+'" onchange="cgUpdateChart()" style="font-size:11px;padding:2px 4px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'+opts+'</select>';
+      +'<select id="cgRegrType_'+i+'" onchange="cgUpdateChart()" style="font-size:11px;padding:2px 4px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'+optsI+'</select>';
     c.appendChild(row);
     // Restore prior selection
     var newSel=document.getElementById('cgRegrType_'+i);
@@ -49339,7 +49722,7 @@ var _cgI18N={
     multiPasteBtn:'Aplicar',multiPasteCancel:'Cancelar',
     minorGrid:'Grade Menor',exportNote:'A imagem sai exatamente em Largura\u00d7Altura (px). A Resolu\u00e7\u00e3o (DPI) s\u00f3 aumenta a nitidez, sem mudar o tamanho. \u00b7 Full HD: 1920\u00d71080 \u00b7 Coluna IEEE/ABNT: \u2248325 px',
     cgTabWord:'Gr\u00e1fico',cgTabNewTitle:'Novo gr\u00e1fico (nova aba)',cgTabColorHint:'Mudar cor da aba',cgTabRenameHint:'Duplo clique para renomear',cgTabDeleteHint:'Excluir aba',cgTabRenamePrompt:'Nome da aba:',cgTabDeleteConfirm:'Excluir a aba',cgTabDeleteLastAlert:'N\u00e3o \u00e9 poss\u00edvel excluir a \u00fanica aba.',
-    addSeries:'+ S\u00e9rie',removeSeries:'\u2212',axis:'Eixo',cgTitle:'T\u00edtulo do Gr\u00e1fico',cgSubtitle:'Subt\u00edtulo',cgTheme:'Tema',cgLegend:'Legenda',cgGrid:'Grade',cgMinorGrid:'Grade Menor',cgCustomMajorGrid:'Personalizar Grade Maior',cgMajorGridColor:'Cor da Grade Maior',cgMajorGridOpacity:'Opacidade da Grade Maior',cgCustomMinorGrid:'Personalizar Grade Menor',cgMinorGridColor:'Cor da Grade Menor',cgMinorGridOpacity:'Opacidade da Grade Menor',cgErrorBars:'Barras de Erro (\u00b11\u03c3)',cgXLabel:'R\u00f3tulo Eixo X',cgYLabel:'R\u00f3tulo Eixo Y',showX2:'Eixo X2 (topo)',showY2:'Eixo Y2 (direita)',cgDefault:'Padr\u00e3o',cgTop:'topo',cgRight:'dir.',cgLegendSec:'Legenda',cgLegendPos:'Posi\u00e7\u00e3o',cgLegendBottom:'Inferior',cgLegendTop:'Superior',cgLegendRight:'Lateral direita',cgLegendLeft:'Lateral esquerda',cgLegendInsideTop:'Dentro superior',cgLegendInsideBottom:'Dentro inferior',cgLegendCustom:'Personalizado (arraste no gráfico)',cgLegendCustomHint:'⟵ Dê 2 cliques na legenda dentro do gráfico e arraste para reposicioná-la',cgLegendHide:'Ocultar',cgLegendTextColor:'Cor do Texto da Legenda',cgLegendFontSize:'Tamanho da Legenda',cgLegendBgColor:'Cor do Fundo da Legenda',cgLegendBgOpacity:'Opacidade do Fundo',cgLegendBgWidth:'Largura extra do Fundo',cgLegendBold:'Texto da Legenda em Negrito',cgLegendShadow:'Sombreamento do Fundo',cgLegendShadowNone:'Nenhum',cgLegendShadowBR:'Externa \u2014 inferior direita',cgLegendShadowBottom:'Externa \u2014 inferior',cgLegendShadowBL:'Externa \u2014 inferior esquerda',cgLegendShadowRight:'Externa \u2014 direita',cgLegendShadowLeft:'Externa \u2014 esquerda',cgLegendShadowTR:'Externa \u2014 superior direita',cgLegendShadowTop:'Externa \u2014 superior',cgLegendShadowTL:'Externa \u2014 superior esquerda',cgLegendShadowCenter:'Externa \u2014 centralizada',cgLegendBgOpacityHint:'Para legendas exibidas dentro da área do gráfico ("Dentro superior/inferior"), um fundo semi-transparente é aplicado automaticamente quando a opacidade aqui está em 0%, para manter o texto legível sobre os dados.',cgCustomLegend:'Legenda totalmente personalizada',cgBtnAddCustomLegendItem:'+ Item da Legenda',cgXScale:'Escala X',cgYScale:'Escala Y',cgRegrNone:'Nenhum',cgRegrLinear:'Linear',cgRegrPoly2:'Polinomial Grau 2',cgRegrPoly3:'Polinomial Grau 3',cgRegrExp:'Exponencial',cgRegrLog:'Logar\u00edtmico',cgRegrPower:'Pot\u00eancia',cgRegName_linear:'Reg. Linear',cgRegName_poly2:'Reg. Polinomial (G2)',cgRegName_poly3:'Reg. Polinomial (G3)',cgRegName_exp:'Reg. Exponencial',cgRegName_log:'Reg. Logar\u00edtmica',cgRegName_power:'Reg. Pot\u00eancia',cgRegName_fourier:'S\u00e9rie de Fourier',cgRegName_spline:'Spline',cgRegName_moving:'M\u00e9dia M\u00f3vel',cgRegName_expsmooth:'Suaviza\u00e7\u00e3o Exp.',cgRegrLineStyleLbl:'Estilo da Linha',cgRegrLineWidthLbl:'Espessura',cgRegrStyleSolid:'Cont\u00ednua',cgRegrStyleDash:'Tracejada',cgRegrStyleDot:'Pontilhada',cgRegrStyleDashdot:'Tra\u00e7o-ponto',cgRegrShowEqLbl:'Mostrar equa\u00e7\u00e3o da regress\u00e3o na legenda',cgRegrHideLegendLbl:'Esconder regress\u00e3o na legenda',cgRegrExtendInfLbl:'Linha de regress\u00e3o se estende infinitamente',cgEtStageNamePh:'Nome da etapa',cgEtStatN:'n',cgEtStatStages:'Etapas',cgEtHint:'Cole 1 categoria por linha: nome e um valor por etapa, separados por v\u00edrgula (ex: Produto A, 48, 72). Configure a quantidade e os nomes das etapas na janela 📊 Informa\u00e7\u00f5es.',cgLblEtData:'Dados',cgLblEtPointSize:'Tamanho dos Pontos',cgLblEtLineWidth:'Espessura da Linha Conectora',cgLblEtLineColor:'Cor da Linha Conectora',cgLblEtStageCount:'Qtd. de Etapas',cgLblEtColorMode:'Modo de Cor dos Pontos',cgEtColorModeManualOpt:'Manual (por etapa)',cgEtColorModePaletteOpt:'Paleta pr\u00e9-definida',cgLblEtPalette:'Paleta',cgEtPalColdHotOpt:'Do Frio ao Quente',cgEtPalWhiteRedOpt:'Do Branco ao Vermelho',cgEtPalWhiteBlueOpt:'Do Branco ao Azul',cgEtPalGreenRedOpt:'Do Verde ao Vermelho',cgChartTypeEtapasOpt:'Etapas',cgWbParamsLegendTitle:'Legenda dos Par\u00e2metros (Weibull)',cgWbParamsBgColor:'Cor do Fundo',cgWbParamsBgOpacity:'Opacidade do Fundo',cgWbParamsBorder:'Contorno',cgWbParamsBorderColor:'Cor do Contorno',cgRefHint:'Adicione linhas horizontais ou verticais.',cgBtnAddRef:'+ Linha de Refer\u00eancia',cgAnnotHint:'Duplo-clique para arrastar anota\u00e7\u00f5es.',cgBtnAddAnnot:'+ Anota\u00e7\u00e3o',cgSaveConfig:'Salvar (.json)',cgLoadConfig:'Carregar',cgTitlePh:'ex: Curva de Tra\u00e7\u00e3o',cgSubtitlePh:'opcional',cgXTitlePh:'ex: Temperatura (\u00b0C)',cgYTitlePh:'ex: Resist\u00eancia (MPa)',cgX2Off:'Desligado',cgX2Linear:'Linear',cgX2Log:'Logar\u00edtmico',cgTitlesSection:'T\u00edtulos',cgDataSection:'Dados',cgShowLegend:'Mostrar Legenda',cgErrorBarsLabel:'Barras de Erro',cgErrType:'Tipo de Erro',cgErrCustom:'Valor do Erro',cgEditTitlePrompt:'Editar título do gráfico:',cgEditSubtitlePrompt:'Editar subtítulo:',cgEditXTitlePrompt:'Editar rótulo do Eixo X:',cgEditYTitlePrompt:'Editar rótulo do Eixo Y:',
+    addSeries:'+ S\u00e9rie',removeSeries:'\u2212',axis:'Eixo',cgTitle:'T\u00edtulo do Gr\u00e1fico',cgSubtitle:'Subt\u00edtulo',cgTheme:'Tema',cgLegend:'Legenda',cgGrid:'Grade',cgMinorGrid:'Grade Menor',cgCustomMajorGrid:'Personalizar Grade Maior',cgMajorGridColor:'Cor da Grade Maior',cgMajorGridOpacity:'Opacidade da Grade Maior',cgCustomMinorGrid:'Personalizar Grade Menor',cgMinorGridColor:'Cor da Grade Menor',cgMinorGridOpacity:'Opacidade da Grade Menor',cgErrorBars:'Barras de Erro (\u00b11\u03c3)',cgXLabel:'R\u00f3tulo Eixo X',cgYLabel:'R\u00f3tulo Eixo Y',showX2:'Eixo X2 (topo)',showY2:'Eixo Y2 (direita)',cgDefault:'Padr\u00e3o',cgTop:'topo',cgRight:'dir.',cgLegendSec:'Legenda',cgLegendPos:'Posi\u00e7\u00e3o',cgLegendBottom:'Inferior',cgLegendTop:'Superior',cgLegendRight:'Lateral direita',cgLegendLeft:'Lateral esquerda',cgLegendInsideTop:'Dentro superior',cgLegendInsideBottom:'Dentro inferior',cgLegendCustom:'Personalizado (arraste no gráfico)',cgLegendCustomHint:'⟵ Dê 2 cliques na legenda dentro do gráfico e arraste para reposicioná-la',cgLegendHide:'Ocultar',cgLegendTextColor:'Cor do Texto da Legenda',cgLegendFontSize:'Tamanho da Legenda',cgLegendBgColor:'Cor do Fundo da Legenda',cgLegendBgOpacity:'Opacidade do Fundo',cgLegendBgWidth:'Largura extra do Fundo',cgLegendBold:'Texto da Legenda em Negrito',cgLegendShadow:'Sombreamento do Fundo',cgLegendShadowNone:'Nenhum',cgLegendShadowBR:'Externa \u2014 inferior direita',cgLegendShadowBottom:'Externa \u2014 inferior',cgLegendShadowBL:'Externa \u2014 inferior esquerda',cgLegendShadowRight:'Externa \u2014 direita',cgLegendShadowLeft:'Externa \u2014 esquerda',cgLegendShadowTR:'Externa \u2014 superior direita',cgLegendShadowTop:'Externa \u2014 superior',cgLegendShadowTL:'Externa \u2014 superior esquerda',cgLegendShadowCenter:'Externa \u2014 centralizada',cgLegendBgOpacityHint:'Para legendas exibidas dentro da área do gráfico ("Dentro superior/inferior"), um fundo semi-transparente é aplicado automaticamente quando a opacidade aqui está em 0%, para manter o texto legível sobre os dados.',cgCustomLegend:'Legenda totalmente personalizada',cgBtnAddCustomLegendItem:'+ Item da Legenda',cgXScale:'Escala X',cgYScale:'Escala Y',cgRegrNone:'Nenhum',cgRegrLinear:'Linear',cgRegrPoly2:'Polinomial Grau 2',cgRegrPoly3:'Polinomial Grau 3',cgRegrExp:'Exponencial',cgRegrLog:'Logar\u00edtmico',cgRegrPower:'Pot\u00eancia',cgRegName_linear:'Reg. Linear',cgRegName_poly2:'Reg. Polinomial (G2)',cgRegName_poly3:'Reg. Polinomial (G3)',cgRegName_exp:'Reg. Exponencial',cgRegName_log:'Reg. Logar\u00edtmica',cgRegName_power:'Reg. Pot\u00eancia',cgRegName_fourier:'S\u00e9rie de Fourier',cgRegName_spline:'Spline',cgRegName_moving:'M\u00e9dia M\u00f3vel',cgRegName_expsmooth:'Suaviza\u00e7\u00e3o Exp.',cgRegName_mean:'M\u00e9dia dos Y',cgRegrLineStyleLbl:'Estilo da Linha',cgRegrLineWidthLbl:'Espessura',cgRegrStyleSolid:'Cont\u00ednua',cgRegrStyleDash:'Tracejada',cgRegrStyleDot:'Pontilhada',cgRegrStyleDashdot:'Tra\u00e7o-ponto',cgRegrShowEqLbl:'Mostrar equa\u00e7\u00e3o da regress\u00e3o na legenda',cgRegrHideLegendLbl:'Esconder regress\u00e3o na legenda',cgRegrExtendInfLbl:'Linha de regress\u00e3o se estende infinitamente',cgEtStageNamePh:'Nome da etapa',cgEtStatN:'n',cgEtStatStages:'Etapas',cgEtHint:'Cole 1 categoria por linha: nome e um valor por etapa, separados por v\u00edrgula (ex: Produto A, 48, 72). Configure a quantidade e os nomes das etapas na janela 📊 Informa\u00e7\u00f5es.',cgLblEtData:'Dados',cgLblEtPointSize:'Tamanho dos Pontos',cgLblEtLineWidth:'Espessura da Linha Conectora',cgLblEtLineColor:'Cor da Linha Conectora',cgLblEtStageCount:'Qtd. de Etapas',cgLblEtColorMode:'Modo de Cor dos Pontos',cgEtColorModeManualOpt:'Manual (por etapa)',cgEtColorModePaletteOpt:'Paleta pr\u00e9-definida',cgLblEtPalette:'Paleta',cgEtPalColdHotOpt:'Do Frio ao Quente',cgEtPalWhiteRedOpt:'Do Branco ao Vermelho',cgEtPalWhiteBlueOpt:'Do Branco ao Azul',cgEtPalGreenRedOpt:'Do Verde ao Vermelho',cgChartTypeEtapasOpt:'Etapas',cgWbParamsLegendTitle:'Legenda dos Par\u00e2metros (Weibull)',cgWbParamsBgColor:'Cor do Fundo',cgWbParamsBgOpacity:'Opacidade do Fundo',cgWbParamsBorder:'Contorno',cgWbParamsBorderColor:'Cor do Contorno',cgRefHint:'Adicione linhas horizontais ou verticais.',cgBtnAddRef:'+ Linha de Refer\u00eancia',cgAnnotHint:'Duplo-clique para arrastar anota\u00e7\u00f5es.',cgBtnAddAnnot:'+ Anota\u00e7\u00e3o',cgSaveConfig:'Salvar (.json)',cgLoadConfig:'Carregar',cgTitlePh:'ex: Curva de Tra\u00e7\u00e3o',cgSubtitlePh:'opcional',cgXTitlePh:'ex: Temperatura (\u00b0C)',cgYTitlePh:'ex: Resist\u00eancia (MPa)',cgX2Off:'Desligado',cgX2Linear:'Linear',cgX2Log:'Logar\u00edtmico',cgTitlesSection:'T\u00edtulos',cgDataSection:'Dados',cgShowLegend:'Mostrar Legenda',cgErrorBarsLabel:'Barras de Erro',cgErrType:'Tipo de Erro',cgErrCustom:'Valor do Erro',cgEditTitlePrompt:'Editar título do gráfico:',cgEditSubtitlePrompt:'Editar subtítulo:',cgEditXTitlePrompt:'Editar rótulo do Eixo X:',cgEditYTitlePrompt:'Editar rótulo do Eixo Y:',
     bpSpacing:'Espaçamento entre colunas',
     bpHShift:'Deslocar série horizontalmente',
     xjitterLabel:'Jitter de dados', xjitterHint:'Desloca levemente os pontos na direção X (apenas visual — não altera os dados).',
@@ -49388,6 +49771,11 @@ var _cgI18N={
     barConnActivate:'Ativar Ligação',barConnStyle:'Estilo da Linha',barConnThick:'Espessura',
     barConnSolid:'Contínua',barConnDash:'Tracejada',barConnDot:'Pontilhada',barConnDashdot:'Traço-ponto',
     barConnMarker:'Marcador nos topos',barConnSameColor:'Mesma cor da série',barConnColor:'Cor da linha',
+    regrMean:'Média das colunas Y (linha-guia)',
+    regrMeanInfo:'média por linha entre {n} colunas Y — linha-guia, não é um ajuste estatístico',
+    xjitterColTitle:'Jitter por coluna',
+    xjitterColHint:'Desloca a coluna Y inteira de uma vez — útil para separar curvas sobrepostas.',
+    xjitterPointTitle:'Jitter por ponto',
     regrNone:'Nenhum',regrLinear:'Linear',regrPoly2:'Polinomial Grau 2',regrPoly3:'Polinomial Grau 3',
     regrExp:'Exponencial',regrLog:'Logarítmico',regrPower:'Potência',
     refDragHint:'⟵ Arraste a linha no gráfico para reposicionar',
@@ -49434,6 +49822,16 @@ var _cgI18N={
     barErrCustomOpt:'Valor fixo',barErrCustomLbl:'Valor do Erro (±)',
     scatterDataLabel:'Etiqueta de Dados',
     dataLabelShow:'Mostrar',
+    xjitterIndLabel:'Jitter individual dos pontos',xjitterIndBtn:'Ajustar pontos',
+    xjitterIndTitle:'Jitter individual dos pontos',
+    xjitterIndHint:'Ajuste o deslocamento horizontal de cada ponto. O valor é somado ao X apenas visualmente — os dados originais não mudam.',
+    xjitterIndReset:'Zerar todos',xjitterIndClose:'Fechar',
+    errTypeBounds:'Personalizado com valor superior e inferior',
+    errBoundHi:'Valor do Limite Superior',errBoundLo:'Valor do Limite Inferior',
+    errBoundsHint:'Cole 2 colunas: mínimo e máximo — uma linha por ponto, na mesma ordem dos dados da série. São os VALORES dos limites, não a amplitude. Ex.: ponto 35 com "33, 37" → braço de 2 para cada lado.',
+    errPerSeriesHint:'Escolha em quais séries as barras aparecem. Séries com várias colunas Y precisam de uma coluna de referência.',
+    errRegionMatchMarker:'Pontos de erros têm marcador igual da série',
+    errAllCols:'Todas as colunas',errNoSeries:'Nenhuma série com dados.',
     dataLabelContentY:'Valor Y',dataLabelContentX:'Valor X',dataLabelContentXY:'X, Y',dataLabelContentName:'Nome da Série',
     dataLabelContentCustom:'Personalizado',cgBtnCustomLabels:'Personalização',cgCustomLabelsTitle:'Personalizar Etiquetas',cgCustomLabelsHint:'Informe a legenda de cada ponto. Deixe em branco para ocultar a etiqueta daquele ponto.',cgCustomLabelsCancel:'Cancelar',cgCustomLabelsApply:'Aplicar',cgCustomLabelsPointsWord:'pontos',cgCustomLabelsNoData:'Cole os dados da série na aba \u201CDados\u201D para personalizar as etiquetas.',
     dataLabelPos:'Posição da Etiqueta',
@@ -49610,7 +50008,7 @@ var _cgI18N={
     multiPasteBtn:'Apply',multiPasteCancel:'Cancel',
     minorGrid:'Minor Grid',exportNote:'The image is exported at exactly Width\u00d7Height (px). Resolution (DPI) only increases sharpness, without changing the size. \u00b7 Full HD: 1920\u00d71080 \u00b7 IEEE/ABNT column: \u2248325 px',
     cgTabWord:'Chart',cgTabNewTitle:'New chart (new tab)',cgTabColorHint:'Change tab color',cgTabRenameHint:'Double-click to rename',cgTabDeleteHint:'Delete tab',cgTabRenamePrompt:'Tab name:',cgTabDeleteConfirm:'Delete tab',cgTabDeleteLastAlert:'Cannot delete the only tab.',
-    addSeries:'+ Series',removeSeries:'\u2212',axis:'Axis',cgTitle:'Chart Title',cgSubtitle:'Subtitle',cgTheme:'Theme',cgLegend:'Legend',cgGrid:'Grid',cgMinorGrid:'Minor Grid',cgCustomMajorGrid:'Customize Major Grid',cgMajorGridColor:'Major Grid Color',cgMajorGridOpacity:'Major Grid Opacity',cgCustomMinorGrid:'Customize Minor Grid',cgMinorGridColor:'Minor Grid Color',cgMinorGridOpacity:'Minor Grid Opacity',cgErrorBars:'Error Bars (\u00b11\u03c3)',cgXLabel:'X Axis Label',cgYLabel:'Y Axis Label',showX2:'X2 Axis (top)',showY2:'Y2 Axis (right)',cgDefault:'Default',cgTop:'top',cgRight:'right',cgLegendSec:'Legend',cgLegendPos:'Position',cgLegendBottom:'Bottom',cgLegendTop:'Top',cgLegendRight:'Right',cgLegendLeft:'Left',cgLegendInsideTop:'Inside top',cgLegendInsideBottom:'Inside bottom',cgLegendCustom:'Custom (drag on chart)',cgLegendCustomHint:'⟵ Double-click the legend inside the chart and drag to reposition it',cgLegendHide:'Hide',cgLegendTextColor:'Legend Text Color',cgLegendFontSize:'Legend Size',cgLegendBgColor:'Legend Background Color',cgLegendBgOpacity:'Background Opacity',cgLegendBgWidth:'Extra Background Width',cgLegendBold:'Bold Legend Text',cgLegendShadow:'Background Shadow',cgLegendShadowNone:'None',cgLegendShadowBR:'Outer \u2014 bottom right',cgLegendShadowBottom:'Outer \u2014 bottom',cgLegendShadowBL:'Outer \u2014 bottom left',cgLegendShadowRight:'Outer \u2014 right',cgLegendShadowLeft:'Outer \u2014 left',cgLegendShadowTR:'Outer \u2014 top right',cgLegendShadowTop:'Outer \u2014 top',cgLegendShadowTL:'Outer \u2014 top left',cgLegendShadowCenter:'Outer \u2014 centered',cgLegendBgOpacityHint:'For legends displayed inside the chart area ("Inside top/bottom"), a semi-transparent background is automatically applied when opacity here is at 0%, to keep the text readable over the data.',cgCustomLegend:'Fully custom legend',cgBtnAddCustomLegendItem:'+ Legend Item',cgXScale:'X Scale',cgYScale:'Y Scale',cgRegrNone:'None',cgRegrLinear:'Linear',cgRegrPoly2:'Polynomial Deg 2',cgRegrPoly3:'Polynomial Deg 3',cgRegrExp:'Exponential',cgRegrLog:'Logarithmic',cgRegrPower:'Power',cgRegName_linear:'Linear Fit',cgRegName_poly2:'Poly Fit (D2)',cgRegName_poly3:'Poly Fit (D3)',cgRegName_exp:'Exp. Fit',cgRegName_log:'Log. Fit',cgRegName_power:'Power Fit',cgRegName_fourier:'Fourier Series',cgRegName_spline:'Spline',cgRegName_moving:'Moving Avg.',cgRegName_expsmooth:'Exp. Smoothing',cgRegrLineStyleLbl:'Line Style',cgRegrLineWidthLbl:'Thickness',cgRegrStyleSolid:'Solid',cgRegrStyleDash:'Dashed',cgRegrStyleDot:'Dotted',cgRegrStyleDashdot:'Dash-dot',cgRegrShowEqLbl:'Show regression equation in legend',cgRegrHideLegendLbl:'Hide regression from legend',cgRegrExtendInfLbl:'Regression line extends infinitely',cgEtStageNamePh:'Stage name',cgEtStatN:'n',cgEtStatStages:'Stages',cgEtHint:'Paste 1 category per line: name and one value per stage, separated by commas (e.g.: Product A, 48, 72). Set the stage count and names in the 📊 Info window.',cgLblEtData:'Data',cgLblEtPointSize:'Point Size',cgLblEtLineWidth:'Connector Line Thickness',cgLblEtLineColor:'Connector Line Color',cgLblEtStageCount:'Stage Count',cgLblEtColorMode:'Point Color Mode',cgEtColorModeManualOpt:'Manual (per stage)',cgEtColorModePaletteOpt:'Preset palette',cgLblEtPalette:'Palette',cgEtPalColdHotOpt:'Cold to Hot',cgEtPalWhiteRedOpt:'White to Red',cgEtPalWhiteBlueOpt:'White to Blue',cgEtPalGreenRedOpt:'Green to Red',cgChartTypeEtapasOpt:'Stages',cgWbParamsLegendTitle:'Parameters Legend (Weibull)',cgWbParamsBgColor:'Background Color',cgWbParamsBgOpacity:'Background Opacity',cgWbParamsBorder:'Border',cgWbParamsBorderColor:'Border Color',cgRefHint:'Add horizontal or vertical lines.',cgBtnAddRef:'+ Reference Line',cgAnnotHint:'Double-click to drag annotations.',cgBtnAddAnnot:'+ Annotation',cgSaveConfig:'Save (.json)',cgLoadConfig:'Load',cgTitlePh:'e.g.: Stress-Strain Curve',cgSubtitlePh:'optional',cgXTitlePh:'e.g.: Temperature (\u00b0C)',cgYTitlePh:'e.g.: Strength (MPa)',cgX2Off:'Off',cgX2Linear:'Linear',cgX2Log:'Logarithmic',cgTitlesSection:'Titles',cgDataSection:'Data',cgShowLegend:'Show Legend',cgErrorBarsLabel:'Error Bars',cgErrType:'Error Type',cgErrCustom:'Error Value',cgEditTitlePrompt:'Edit chart title:',cgEditSubtitlePrompt:'Edit subtitle:',cgEditXTitlePrompt:'Edit X axis label:',cgEditYTitlePrompt:'Edit Y axis label:',
+    addSeries:'+ Series',removeSeries:'\u2212',axis:'Axis',cgTitle:'Chart Title',cgSubtitle:'Subtitle',cgTheme:'Theme',cgLegend:'Legend',cgGrid:'Grid',cgMinorGrid:'Minor Grid',cgCustomMajorGrid:'Customize Major Grid',cgMajorGridColor:'Major Grid Color',cgMajorGridOpacity:'Major Grid Opacity',cgCustomMinorGrid:'Customize Minor Grid',cgMinorGridColor:'Minor Grid Color',cgMinorGridOpacity:'Minor Grid Opacity',cgErrorBars:'Error Bars (\u00b11\u03c3)',cgXLabel:'X Axis Label',cgYLabel:'Y Axis Label',showX2:'X2 Axis (top)',showY2:'Y2 Axis (right)',cgDefault:'Default',cgTop:'top',cgRight:'right',cgLegendSec:'Legend',cgLegendPos:'Position',cgLegendBottom:'Bottom',cgLegendTop:'Top',cgLegendRight:'Right',cgLegendLeft:'Left',cgLegendInsideTop:'Inside top',cgLegendInsideBottom:'Inside bottom',cgLegendCustom:'Custom (drag on chart)',cgLegendCustomHint:'⟵ Double-click the legend inside the chart and drag to reposition it',cgLegendHide:'Hide',cgLegendTextColor:'Legend Text Color',cgLegendFontSize:'Legend Size',cgLegendBgColor:'Legend Background Color',cgLegendBgOpacity:'Background Opacity',cgLegendBgWidth:'Extra Background Width',cgLegendBold:'Bold Legend Text',cgLegendShadow:'Background Shadow',cgLegendShadowNone:'None',cgLegendShadowBR:'Outer \u2014 bottom right',cgLegendShadowBottom:'Outer \u2014 bottom',cgLegendShadowBL:'Outer \u2014 bottom left',cgLegendShadowRight:'Outer \u2014 right',cgLegendShadowLeft:'Outer \u2014 left',cgLegendShadowTR:'Outer \u2014 top right',cgLegendShadowTop:'Outer \u2014 top',cgLegendShadowTL:'Outer \u2014 top left',cgLegendShadowCenter:'Outer \u2014 centered',cgLegendBgOpacityHint:'For legends displayed inside the chart area ("Inside top/bottom"), a semi-transparent background is automatically applied when opacity here is at 0%, to keep the text readable over the data.',cgCustomLegend:'Fully custom legend',cgBtnAddCustomLegendItem:'+ Legend Item',cgXScale:'X Scale',cgYScale:'Y Scale',cgRegrNone:'None',cgRegrLinear:'Linear',cgRegrPoly2:'Polynomial Deg 2',cgRegrPoly3:'Polynomial Deg 3',cgRegrExp:'Exponential',cgRegrLog:'Logarithmic',cgRegrPower:'Power',cgRegName_linear:'Linear Fit',cgRegName_poly2:'Poly Fit (D2)',cgRegName_poly3:'Poly Fit (D3)',cgRegName_exp:'Exp. Fit',cgRegName_log:'Log. Fit',cgRegName_power:'Power Fit',cgRegName_fourier:'Fourier Series',cgRegName_spline:'Spline',cgRegName_moving:'Moving Avg.',cgRegName_expsmooth:'Exp. Smoothing',cgRegName_mean:'Mean of Y',cgRegrLineStyleLbl:'Line Style',cgRegrLineWidthLbl:'Thickness',cgRegrStyleSolid:'Solid',cgRegrStyleDash:'Dashed',cgRegrStyleDot:'Dotted',cgRegrStyleDashdot:'Dash-dot',cgRegrShowEqLbl:'Show regression equation in legend',cgRegrHideLegendLbl:'Hide regression from legend',cgRegrExtendInfLbl:'Regression line extends infinitely',cgEtStageNamePh:'Stage name',cgEtStatN:'n',cgEtStatStages:'Stages',cgEtHint:'Paste 1 category per line: name and one value per stage, separated by commas (e.g.: Product A, 48, 72). Set the stage count and names in the 📊 Info window.',cgLblEtData:'Data',cgLblEtPointSize:'Point Size',cgLblEtLineWidth:'Connector Line Thickness',cgLblEtLineColor:'Connector Line Color',cgLblEtStageCount:'Stage Count',cgLblEtColorMode:'Point Color Mode',cgEtColorModeManualOpt:'Manual (per stage)',cgEtColorModePaletteOpt:'Preset palette',cgLblEtPalette:'Palette',cgEtPalColdHotOpt:'Cold to Hot',cgEtPalWhiteRedOpt:'White to Red',cgEtPalWhiteBlueOpt:'White to Blue',cgEtPalGreenRedOpt:'Green to Red',cgChartTypeEtapasOpt:'Stages',cgWbParamsLegendTitle:'Parameters Legend (Weibull)',cgWbParamsBgColor:'Background Color',cgWbParamsBgOpacity:'Background Opacity',cgWbParamsBorder:'Border',cgWbParamsBorderColor:'Border Color',cgRefHint:'Add horizontal or vertical lines.',cgBtnAddRef:'+ Reference Line',cgAnnotHint:'Double-click to drag annotations.',cgBtnAddAnnot:'+ Annotation',cgSaveConfig:'Save (.json)',cgLoadConfig:'Load',cgTitlePh:'e.g.: Stress-Strain Curve',cgSubtitlePh:'optional',cgXTitlePh:'e.g.: Temperature (\u00b0C)',cgYTitlePh:'e.g.: Strength (MPa)',cgX2Off:'Off',cgX2Linear:'Linear',cgX2Log:'Logarithmic',cgTitlesSection:'Titles',cgDataSection:'Data',cgShowLegend:'Show Legend',cgErrorBarsLabel:'Error Bars',cgErrType:'Error Type',cgErrCustom:'Error Value',cgEditTitlePrompt:'Edit chart title:',cgEditSubtitlePrompt:'Edit subtitle:',cgEditXTitlePrompt:'Edit X axis label:',cgEditYTitlePrompt:'Edit Y axis label:',
     bpSpacing:'Column spacing',
     bpHShift:'Shift series horizontally',
     xjitterLabel:'Data jitter', xjitterHint:'Slightly shifts the points along X (visual only — does not change the data).',
@@ -49684,6 +50082,11 @@ var _cgI18N={
     barConnActivate:'Enable Connection',barConnStyle:'Line Style',barConnThick:'Thickness',
     barConnSolid:'Solid',barConnDash:'Dashed',barConnDot:'Dotted',barConnDashdot:'Dash-dot',
     barConnMarker:'Marker on tops',barConnSameColor:'Same series color',barConnColor:'Line color',
+    regrMean:'Mean of Y columns (guide line)',
+    regrMeanInfo:'row-wise mean across {n} Y columns — guide line, not a statistical fit',
+    xjitterColTitle:'Jitter per column',
+    xjitterColHint:'Shifts the whole Y column at once — handy to separate overlapping curves.',
+    xjitterPointTitle:'Jitter per point',
     regrNone:'None',regrLinear:'Linear',regrPoly2:'Polynomial Deg 2',regrPoly3:'Polynomial Deg 3',
     regrExp:'Exponential',regrLog:'Logarithmic',regrPower:'Power',
     refDragHint:'⟵ Drag line on chart to reposition',
@@ -49705,6 +50108,16 @@ var _cgI18N={
     barErrCustomOpt:'Fixed value',barErrCustomLbl:'Error Value (±)',
     scatterDataLabel:'Data Labels',
     dataLabelShow:'Show',
+    xjitterIndLabel:'Individual point jitter',xjitterIndBtn:'Adjust points',
+    xjitterIndTitle:'Individual point jitter',
+    xjitterIndHint:'Adjust each point\u2019s horizontal offset. The value is added to X visually only — the original data is unchanged.',
+    xjitterIndReset:'Reset all',xjitterIndClose:'Close',
+    errTypeBounds:'Custom with upper and lower value',
+    errBoundHi:'Upper Bound Value',errBoundLo:'Lower Bound Value',
+    errBoundsHint:'Paste 2 columns: minimum and maximum — one row per point, in the same order as the series data. These are the bound VALUES, not the amplitude. E.g.: point 35 with "33, 37" → arm of 2 on each side.',
+    errPerSeriesHint:'Choose which series show the bars. Series with several Y columns need a reference column.',
+    errRegionMatchMarker:'Error points use the series marker',
+    errAllCols:'All columns',errNoSeries:'No series with data.',
     dataLabelContentY:'Y Value',dataLabelContentX:'X Value',dataLabelContentXY:'X, Y',dataLabelContentName:'Series Name',
     dataLabelContentCustom:'Custom',cgBtnCustomLabels:'Customize',cgCustomLabelsTitle:'Customize Labels',cgCustomLabelsHint:'Enter a label for each point. Leave blank to hide that point\u2019s label.',cgCustomLabelsCancel:'Cancel',cgCustomLabelsApply:'Apply',cgCustomLabelsPointsWord:'points',cgCustomLabelsNoData:'Paste the series data in the \u201CData\u201D tab to customize labels.',
     dataLabelPos:'Label Position',
@@ -50316,6 +50729,28 @@ function cgApplyLang(){
   var errRegOp=document.getElementById('cgLblErrRegionOpacity');
   if(errRegOp){var fcErrOp=errRegOp.firstChild;if(fcErrOp&&fcErrOp.nodeType===3)fcErrOp.nodeValue=cgT('errRegionOpacity')+' ';}
   el=document.getElementById('cgLblErrRegionShowPoints');if(el)el.textContent=cgT('errRegionShowPoints');
+  // ov.1.1.1: novos rótulos das barras de erro
+  el=document.getElementById('cgErrTypeBoundsOpt');if(el)el.textContent=cgT('errTypeBounds');
+  el=document.getElementById('cgLblErrBoundHi');if(el)el.textContent=cgT('errBoundHi');
+  el=document.getElementById('cgLblErrBoundLo');if(el)el.textContent=cgT('errBoundLo');
+  el=document.getElementById('cgErrBoundsHint');if(el)el.textContent=cgT('errBoundsHint');
+  // ov.1.1.1: pop-up do jitter individual
+  el=document.getElementById('cgIndJitterTitle');if(el)el.textContent=cgT('xjitterIndTitle');
+  el=document.getElementById('cgIndJitterHint');if(el)el.textContent=cgT('xjitterIndHint');
+  // ov.1.1.1: se o pop-up estiver aberto, reconstrói para aplicar o novo idioma nos rótulos
+  try{
+    var _ovJ=document.getElementById('cgIndJitterOverlay');
+    if(_ovJ && _ovJ.style.display==='flex' && _cgIndJitterSeries) cgOpenIndJitterModal(_cgIndJitterSeries);
+  }catch(e){}
+  el=document.getElementById('cgIndJitterReset');if(el)el.textContent=cgT('xjitterIndReset');
+  el=document.getElementById('cgIndJitterClose');if(el)el.textContent=cgT('xjitterIndClose');
+  for(var _ij=1;_ij<=_cgSeriesCount;_ij++){
+    var _l1=document.getElementById('cgLblXJitterInd_'+_ij); if(_l1) _l1.textContent=cgT('xjitterIndLabel');
+    var _l2=document.getElementById('cgXJitterIndBtnLbl_'+_ij); if(_l2) _l2.textContent=cgT('xjitterIndBtn');
+  }
+  el=document.getElementById('cgErrPerSeriesHint');if(el)el.textContent=cgT('errPerSeriesHint');
+  el=document.getElementById('cgLblErrRegionMatchMarker');if(el)el.textContent=cgT('errRegionMatchMarker');
+  try{ if(typeof cgRebuildErrPerSeries==='function') cgRebuildErrPerSeries(); }catch(e){}
   el=document.getElementById('cgLblShowX2');if(el)el.textContent=cgT('showX2');
   el=document.getElementById('cgLblShowY2');if(el)el.textContent=cgT('showY2');
   var otherLabels={'cgSecRef':'refLines','cgSecAnnot':'annotations','cgSecShapes':'cgShapesSec','cgSecExport':'exportSection','cgLblDPI':'dpi','cgLblW':'width','cgLblH':'height'};
@@ -51018,6 +51453,59 @@ function cgParseData(text){
     }
   });
   return pts;
+}
+// ══ ov.1.1.1: DISPERSÃO/LINHA COM VÁRIAS COLUNAS Y ═══════════════════════════════════════════
+// Regra pedida: 1ª coluna = X; TODAS as demais = séries Y independentes.
+//   1 coluna   → Y (X vira o índice da linha), igual ao comportamento antigo
+//   2 colunas  → X, Y                          (idêntico ao cgParseData)
+//   N colunas  → X, Y1, Y2, ... Y(N-1)
+// Devolve {cols:[[{x,y}...], ...], nCols:N-1} — cada elemento de `cols` vira um dataset.
+// Mantemos cgParseData intacto para não afetar os outros tipos de gráfico que dependem dele.
+function cgParseDataMultiY(text){
+  var lines=String(text||'').trim().split(/\n/);
+  var cols=[], nY=0;
+  lines.forEach(function(line){
+    var raw=line.trim(); if(!raw) return;
+    // ov.1.1.1: a vírgula é ambígua — pode separar colunas OU ser o decimal (pt-BR).
+    // Regra: se a linha tem TAB ou ponto-e-vírgula, esses são os separadores e a vírgula fica
+    // sendo decimal. Sem eles, a vírgula separa. Sem isso, colar do Excel em pt-BR quebraria
+    // "5,5" em duas colunas e inventaria séries que não existem.
+    var _strong=/[\t;]/.test(raw);
+    var parts=(_strong ? raw.split(/[\t;]+/) : raw.split(/[,\s]+/)).filter(function(s){return s.length>0;});
+    if(!parts.length) return;
+    if(parts.length===1){
+      var y0=parseFloat(parts[0].replace(',','.'));
+      if(!isFinite(y0)) return;
+      if(!cols[0]) cols[0]=[];
+      cols[0].push({x:cols[0].length+1, y:y0});
+      nY=Math.max(nY,1);
+      return;
+    }
+    var x=parseFloat(parts[0].replace(',','.'));
+    if(!isFinite(x)) return;
+    for(var k=1;k<parts.length;k++){
+      var y=parseFloat(parts[k].replace(',','.'));
+      if(!isFinite(y)) continue;            // célula vazia/inválida: ignora só ela
+      if(!cols[k-1]) cols[k-1]=[];
+      cols[k-1].push({x:x,y:y});
+      nY=Math.max(nY,k);
+    }
+  });
+  for(var c=0;c<nY;c++) if(!cols[c]) cols[c]=[];
+  return {cols:cols.slice(0,nY), nCols:nY};
+}
+// Nome de cada coluna Y: usa o cabeçalho salvo em cgColName_<série> (JSON) quando existir,
+// senão numera. Com uma coluna só, o nome da série é usado tal como antes.
+function cgYColName(seriesIdx, colIdx, baseName, nCols){
+  if(nCols<=1) return baseName;
+  try{
+    var raw=(document.getElementById('cgColName_'+seriesIdx)||{}).value;
+    if(raw){
+      var arr=JSON.parse(raw);
+      if(Array.isArray(arr)&&arr[colIdx+1]) return baseName+' — '+arr[colIdx+1];
+    }
+  }catch(e){}
+  return baseName+' — Y'+(colIdx+1);
 }
 
 // ── Reference lines ───────────────────────────────────────────────────────────
@@ -52689,7 +53177,31 @@ function cgUpdateChart(){
   var errRegion    = (document.getElementById('cgErrRegion')||{}).checked===true;
   var errRegionOpacity    = (parseInt((document.getElementById('cgErrRegionOpacity')||{}).value)||20)/100;
   var errRegionShowPoints = (document.getElementById('cgErrRegionShowPoints')||{checked:true}).checked!==false;
+  // ov.1.1.1: novos controles das barras de erro
+  var errBoundHi = parseFloat((document.getElementById('cgErrBoundHi')||{}).value); if(!isFinite(errBoundHi)) errBoundHi=0;
+  var errBoundLo = parseFloat((document.getElementById('cgErrBoundLo')||{}).value); if(!isFinite(errBoundLo)) errBoundLo=0;
+  var errRegionMatchMarker = (document.getElementById('cgErrRegionMatchMarker')||{}).checked===true;
   // v7.0.1: "Personalizado em colunas" — 2 columns (lower, upper) per point, ONE TEXTAREA PER SERIES
+  // ov.1.1.1: lê "mínimo, máximo" por ponto (VALORES absolutos) do tipo "bounds".
+  function cgParseErrBoundsForSeries(si){
+    var lo=[], hi=[];
+    var ta=document.querySelector('#cgErrBoundsPerSeries textarea[data-series="'+si+'"]');
+    if(!ta) return {lo:lo, hi:hi};
+    (ta.value||'').split('\n').forEach(function(line){
+      line=line.trim(); if(!line) return;
+      // Separadores: se houver TAB ou ';', a vírgula é decimal (mesma regra do parser de dados).
+      var _strong=/[\t;]/.test(line);
+      var parts=(_strong?line.split(/[\t;]+/):line.split(/[,\s]+/))
+                  .map(function(s){return s.trim();}).filter(function(s){return s.length>0;});
+      if(parts.length<2) return;
+      var l=parseFloat(parts[0].replace(',','.'));
+      var hgh=parseFloat(parts[1].replace(',','.'));
+      if(isNaN(l)||isNaN(hgh)) return;
+      // tolera inversão (o usuário pode digitar máximo primeiro)
+      lo.push(Math.min(l,hgh)); hi.push(Math.max(l,hgh));
+    });
+    return {lo:lo, hi:hi};
+  }
   function cgParseErrColsForSeries(si){
     var lo=[], hi=[];
     var ta=document.querySelector('#cgErrColsPerSeries textarea[data-series="'+si+'"]');
@@ -53154,8 +53666,13 @@ function cgUpdateChart(){
     var opacEl     = document.getElementById('cgOpacity_'+i);
     var lineWidthEl= document.getElementById('cgLineWidth_'+i);
     if(!txtEl) continue;
-    var pts = cgParseData(txtEl.value||'');
-    if(pts.length===0) continue;
+    // ov.1.1.1: uma série pode trazer VÁRIAS colunas Y (1ª coluna = X). Cada coluna Y vira um
+    // dataset próprio, herdando cor/marcador/estilo da série e recebendo um sufixo no nome.
+    var _multi = cgParseDataMultiY(txtEl.value||'');
+    var _nY = Math.max(1, _multi.nCols||1);
+    var _yCols = (_nY>1) ? _multi.cols : [cgParseData(txtEl.value||'')];
+    var pts = _yCols[0]||[];
+    if(pts.length===0 && _nY<=1) continue;
     if(!firstPts) firstPts=pts;
     var col     = colorEl?colorEl.value:'#ec4899';
     var name    = nameEl?nameEl.value:('Série '+i);
@@ -53177,8 +53694,30 @@ function cgUpdateChart(){
     // (o sideby reaproveita estes allDatasets já com o deslocamento aplicado).
     var jitterEl = document.getElementById('cgXJitter_'+i);
     var jitterX = jitterEl ? (parseFloat(jitterEl.value)||0) : 0;
+
+    // ov.1.1.1: percorre cada coluna Y desta série. Com 1 coluna o laço roda uma vez só e o
+    // comportamento é idêntico ao anterior.
+    for(var _yc=0; _yc<_yCols.length; _yc++){
+    var ptsCol = _yCols[_yc]||[];
+    if(ptsCol.length===0) continue;
+    pts = ptsCol;
+    var nameCol = cgYColName(i, _yc, name, _nY);
     // Apply jitter: offset all X values by jitterX (keeps original data, just shifts visually)
-    var ptsJittered = jitterX !== 0 ? pts.map(function(p){return {x: p.x + jitterX, y: p.y};}) : pts;
+    // ov.1.1.1: além do jitter da SÉRIE, cada ponto pode ter seu próprio deslocamento
+    // (pop-up "Jitter individual dos pontos"). Os dois se somam — o global desloca o conjunto,
+    // o individual afina ponto a ponto.
+    var _indOn = (document.getElementById('cgXJitterInd_'+i)||{}).checked===true;
+    // ov.1.1.1: deslocamento da COLUNA inteira (soma-se ao global e ao individual do ponto).
+    var _colOff = _indOn ? cgIndJitterColGet(i,_yc) : 0;
+    var ptsJittered;
+    if(jitterX!==0 || _indOn){
+      ptsJittered = pts.map(function(p,_pi){
+        var _off = jitterX + _colOff + (_indOn ? cgIndJitterGet(i,_pi) : 0);
+        return _off!==0 ? {x:p.x+_off, y:p.y} : p;
+      });
+    } else {
+      ptsJittered = pts;
+    }
     // v10.0.6 (item 1): o losango (rectRot) SAIU da lista de marcadores "de traço". Antes ele
     // ficava sempre com interior transparente; agora é PREENCHIDO como os demais (triângulo,
     // quadrado, círculo), respeitando a cor da série. O interior só fica translúcido quando o
@@ -53188,7 +53727,7 @@ function cgUpdateChart(){
     var isStroke=strokeMarkers.indexOf(marker)>=0;
     var ptFill=isStroke?'transparent':(col+(Math.round(opacity*255).toString(16).padStart(2,'0')));
     var ds = {
-      label:name,
+      label:nameCol,
       data:ptsJittered,
       backgroundColor: ptFill,
       borderColor: col,
@@ -53209,11 +53748,13 @@ function cgUpdateChart(){
     if(axisVal==='y2') ds.yAxisID='y2';
     ds._labelPos = labelPos; // v6.3.1: per-series label position
     ds._cgSeriesIdx = i; // v9.12: índice da série (1-based) — usado pelas etiquetas "Personalizado"
+    ds._cgYCol = _yc;    // ov.1.1.1: qual coluna Y desta série (0-based)
+    ds._cgNY   = _nY;    // ov.1.1.1: total de colunas Y da série
     ds._cgMarker = marker; // v10.0.8 (item 1): marcador escolhido — usado no ícone da legenda
     // ov.1.0.0: guarda os X ORIGINAIS (pré-jitter) quando há jitter aplicado. O jitter é apenas
     // um deslocamento VISUAL do ponto; assim, no modo "Valores Informados" da escala X, os ticks
     // continuam nos valores informados (originais), não nos valores deslocados pelo jitter.
-    if(jitterX !== 0) ds._cgValuesX = pts.map(function(p){return p.x;});
+    if(jitterX !== 0 || _indOn) ds._cgValuesX = pts.map(function(p){return p.x;});
     allDatasets.push(ds);
 
     // Double-line: flag for afterDraw parallel offset rendering
@@ -53233,10 +53774,18 @@ function cgUpdateChart(){
       var yVals=pts.map(function(p){return p.y;});
       var mean=yVals.reduce(function(a,b){return a+b;},0)/yVals.length;
       var std=Math.sqrt(yVals.reduce(function(s,v){return s+(v-mean)*(v-mean);},0)/Math.max(1,yVals.length-1));
-      statsText.push('<span style="color:'+col+';font-weight:600">'+name+'</span>: n='+pts.length+' μ='+mean.toFixed(3)+' σ='+std.toFixed(3));
+      statsText.push('<span style="color:'+col+';font-weight:600">'+nameCol+'</span>: n='+pts.length+' μ='+mean.toFixed(3)+' σ='+std.toFixed(3));
 
       // Error bars drawn via afterDraw plugin
-      if(showError&&pts.length>1){
+      // ov.1.1.1 (item 4): a série pode ter as barras de erro desligadas individualmente.
+      var _errOnForSeries = (document.getElementById('cgErrSeriesOn_'+i)||{checked:true}).checked!==false;
+      // ov.1.1.1 (item 3): com várias colunas Y, o usuário escolhe QUAL coluna serve de
+      // referência para o cálculo. As demais colunas não recebem barras — senão o gráfico
+      // ficaria ilegível e a estatística perderia sentido.
+      var _errRefCol = parseInt((document.getElementById('cgErrRefCol_'+i)||{value:'0'}).value);
+      if(!isFinite(_errRefCol)) _errRefCol=0;
+      var _errColOk = (_nY<=1) || (_errRefCol===-1) || (_yc===_errRefCol);
+      if(showError&&pts.length>1&&_errOnForSeries&&_errColOk){
         var yVals2=pts.map(function(p){return p.y;});
         var n2=yVals2.length;
         var errHi=std, errLo=std; // default ±1σ
@@ -53249,6 +53798,18 @@ function cgUpdateChart(){
         else if(errType==='pct10'){errHi=errLo=Math.abs(mean)*0.10;}
         else if(errType==='custom'){errHi=errLo=errCustomVal;}
         else if(errType==='asymmetric'){errHi=errAsymHi; errLo=errAsymLo;}
+        else if(errType==='bounds'){
+          // ov.1.1.1: limites ABSOLUTOS por PONTO — o usuário cola "mínimo, máximo" numa linha
+          // por ponto. Guardamos os valores brutos; a conversão para braço (|limite − y|) é
+          // feita no desenho, porque cada ponto tem seu próprio afastamento.
+          var _bnd = cgParseErrBoundsForSeries(i);
+          if(_bnd.lo.length>0 && _bnd.hi.length>0){
+            ds._errorBoundsLo = _bnd.lo;
+            ds._errorBoundsHi = _bnd.hi;
+          }
+          // fallback exibido enquanto o usuário ainda não colou nada: sem braço.
+          errHi = 0; errLo = 0;
+        }
         else if(errType==='iqr'){
           // IQR asymmetric: upper arm = Q3 − mean, lower arm = mean − Q1
           var yS2=yVals2.slice().sort(function(a,b){return a-b;});
@@ -53277,8 +53838,13 @@ function cgUpdateChart(){
         ds._errRegion = errRegion; // v7.0: draw as connected region instead of bars
         ds._errRegionOpacity = errRegionOpacity; // v7.1.4: user-adjustable fill opacity
         ds._errRegionShowPoints = errRegionShowPoints; // v7.1.4: toggle bound-point markers
+        // ov.1.1.1 (item 6): os pontos-limite da região podem usar o MESMO marcador da série,
+        // em vez do círculo fixo — assim a região fica visualmente ligada à sua série.
+        ds._errRegionMatchMarker = errRegionMatchMarker;
+        ds._errRegionMarker = marker;
       }
     }
+    }   // ov.1.1.1: fim do laço por coluna Y
   }
 
   // Per-series regression curves — v6.3.1
@@ -53321,6 +53887,60 @@ function cgUpdateChart(){
     var rgrSel=document.getElementById('cgRegrType_'+ri);
     var rType=rgrSel?rgrSel.value:'none';
     if(rType==='none') continue;
+
+    // ── ov.1.1.1: "Média" — linha-guia que liga a MÉDIA dos Y de cada linha ────────────────
+    // Não é um ajuste estatístico: para cada X, calcula a média entre as colunas Y daquela
+    // linha e conecta os pontos. Serve para enxergar a tendência central quando a série traz
+    // várias medições do mesmo ensaio. Tratado antes do bloco genérico porque não passa por
+    // cgCalcRegression (não há modelo a ajustar) e porque, com vários Y, os datasets têm nome
+    // com sufixo ("Série — Y1"), então a busca por nome exato do bloco abaixo não os acharia.
+    if(rType==='mean'){
+      var _mTa=document.getElementById('cgData_'+ri);
+      var _mMulti=(typeof cgParseDataMultiY==='function')?cgParseDataMultiY(_mTa?_mTa.value:''):{cols:[],nCols:0};
+      var _mCols=_mMulti.cols||[];
+      if(_mCols.length<2) continue;   // com um Y só a média seria a própria série
+      // agrupa por X: cada coluna contribui com um Y para aquele X
+      var _mMap={}, _mOrder=[];
+      _mCols.forEach(function(colPts){
+        (colPts||[]).forEach(function(p){
+          var k=String(p.x);
+          if(!_mMap[k]){ _mMap[k]={x:p.x, sum:0, n:0}; _mOrder.push(k); }
+          if(isFinite(p.y)){ _mMap[k].sum+=p.y; _mMap[k].n++; }
+        });
+      });
+      var _mPts=_mOrder.map(function(k){ return _mMap[k]; })
+        .filter(function(o){ return o.n>0; })
+        .map(function(o){ return {x:o.x, y:o.sum/o.n}; })
+        .sort(function(a,b){ return a.x-b.x; });
+      if(_mPts.length<2) continue;
+      // acompanha o jitter da série, senão a linha ficaria deslocada dos próprios pontos
+      var _mJitEl=document.getElementById('cgXJitter_'+ri);
+      var _mJit=_mJitEl?(parseFloat(_mJitEl.value)||0):0;
+      if(_mJit!==0) _mPts=_mPts.map(function(p){ return {x:p.x+_mJit, y:p.y}; });
+      var _mColEl=document.getElementById('cgColor_'+ri);
+      var _mCol=_mColEl?_mColEl.value:'#fbbf24';
+      var _mNameEl=document.getElementById('cgSeriesName_'+ri);
+      var _mName=_mNameEl?_mNameEl.value:('Série '+ri);
+      var _mLabel=cgT('cgRegName_mean')+': '+_mName;
+      allDatasets.push({
+        label:_mLabel,
+        data:_mPts,
+        borderColor:_mCol,
+        borderWidth:_regrLineWidth,
+        borderDash:_regrDash,
+        pointRadius:0,
+        showLine:true,
+        fill:false,
+        tension:0.1,
+        type:'scatter',
+        _isRegr:true,
+        _regrType:'mean',
+        _regrSrcIdx:ri
+      });
+      regrInfoLines.push(_mLabel+': '+cgT('regrMeanInfo').replace('{n}',String(_mCols.length)));
+      continue;
+    }
+
     // find dataset for this series
     var rDs=null;
     for(var rdi=0;rdi<allDatasets.length;rdi++){
@@ -56910,11 +57530,14 @@ function cgUpdateChart(){
           ctx2.textAlign=medAlign;
           ctx2.textBaseline=medBaseline;
           var _medTxt=String(parseFloat(s.med.toFixed(3)));
-          ctx2.fillText(_medTxt,medLabelX,medLabelY);
-          // publica a caixa do texto para o duplo-clique/arraste encontrá-la
-          if(boxMedianPos==='custom'){
+          // ov.1.1.1: 1 clique oculta este valor — aqui simplesmente não o desenhamos.
+          if(!_cgBpMedianHidden['s'+idx]){
+            ctx2.fillText(_medTxt,medLabelX,medLabelY);
+            // ov.1.1.1: a caixa do texto é publicada em TODAS as posições (não só em
+            // "personalizado"), porque o clique-para-ocultar precisa do hit-test sempre.
             var _mw=ctx2.measureText(_medTxt).width, _mh=boxMedianSz;
-            var _mx0=medLabelX-_mw/2, _my0=medLabelY-_mh/2;
+            var _mx0=(medAlign==='center')?(medLabelX-_mw/2):(medAlign==='right'?(medLabelX-_mw):medLabelX);
+            var _my0=(medBaseline==='middle')?(medLabelY-_mh/2):(medBaseline==='bottom'?(medLabelY-_mh):medLabelY);
             _cgBpMedianRects.push({key:'s'+idx, x:_mx0-5, y:_my0-5, w:_mw+10, h:_mh+10,
                                    baseX:cx, baseY:yMed});
           }
@@ -57562,10 +58185,12 @@ function cgUpdateChart(){
             }
             ctx.textAlign=vAl; ctx.textBaseline=vBl;
             var _vTxt=String(parseFloat(s.med.toFixed(3)));
-            ctx.fillText(_vTxt,vLx,vLy);
-            if(boxMedianPos==='custom'){
+            if(!_cgBpMedianHidden['s'+idx]){   // ov.1.1.1: oculto por 1 clique
+              ctx.fillText(_vTxt,vLx,vLy);
               var _vw=ctx.measureText(_vTxt).width, _vh=boxMedianSz;
-              _cgBpMedianRects.push({key:'s'+idx, x:vLx-_vw/2-5, y:vLy-_vh/2-5,
+              var _vx0=(vAl==='center')?(vLx-_vw/2):(vAl==='right'?(vLx-_vw):vLx);
+              var _vy0=(vBl==='middle')?(vLy-_vh/2):(vBl==='bottom'?(vLy-_vh):vLy);
+              _cgBpMedianRects.push({key:'s'+idx, x:_vx0-5, y:_vy0-5,
                                      w:_vw+10, h:_vh+10, baseX:cx, baseY:yMed});
             }
             ctx.restore();
@@ -58434,7 +59059,11 @@ function cgUpdateChart(){
         var errHi=ds._errorHi!==undefined?ds._errorHi:(ds._errorStd||0);
         var errLo=ds._errorLo!==undefined?ds._errorLo:(ds._errorStd||0);
         var hasCols = ds._errorColsLo && ds._errorColsHi && ds._errorColsLo.length>0;
-        if(!hasCols && errHi===0 && errLo===0) return;
+        // ov.1.1.1 FIX: o tipo "valor superior e inferior" define os limites POR PONTO e deixa
+        // errHi/errLo em 0 (o braço é calculado ponto a ponto). Esta guarda não conhecia esse
+        // caso e abortava o desenho — nem as barras nem a região de erro apareciam.
+        var hasBnds = ds._errorBoundsLo && ds._errorBoundsHi && ds._errorBoundsLo.length>0;
+        if(!hasCols && !hasBnds && errHi===0 && errLo===0) return;
         ctx.save();
         ctx.strokeStyle=ds.borderColor||'#ec4899';
         ctx.lineWidth=1.5;
@@ -58442,7 +59071,12 @@ function cgUpdateChart(){
         var capW=6;
 
         // Compute the top/bottom Y value for a given point index
+        // ov.1.1.1: nos limites absolutos os números SÃO as coordenadas Y, então usamos direto
+        // — o braço vira |limite − y| naturalmente. (hasBnds é calculado acima, junto da guarda.)
         function getBounds(pt, idx){
+          if(hasBnds && idx<ds._errorBoundsLo.length){
+            return {top: ds._errorBoundsHi[idx], bot: ds._errorBoundsLo[idx]};
+          }
           if(hasCols && idx<ds._errorColsLo.length){
             // v9.12.1 FIX: "Personalizado em colunas" agora aplica os 2 valores como OFFSETS
             // relativos ao valor do ponto (média): limite inferior = y − valor1, limite
@@ -58507,10 +59141,19 @@ function cgUpdateChart(){
           ctx.restore();
           // v7.1.4: markers at each bound point — only drawn when "Mostrar Pontos dos Erros" is enabled
           if(ds._errRegionShowPoints!==false){
-            ctx.fillStyle=ds.borderColor||'#ec4899';
-            topPts.concat(botPts).forEach(function(p){
-              ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill();
-            });
+            var _erCol=ds.borderColor||'#ec4899';
+            ctx.fillStyle=_erCol;
+            // ov.1.1.1 (item 6): opcionalmente usa o MESMO marcador da série (definido na janela
+            // 📊 Informações) em vez do círculo fixo, ligando visualmente a região à sua série.
+            if(ds._errRegionMatchMarker && ds._errRegionMarker && ds._errRegionMarker!=='false'){
+              topPts.concat(botPts).forEach(function(p){
+                _cgDrawSeriesMarker(ctx,p.x,p.y,3.4,_erCol,ds._errRegionMarker);
+              });
+            } else {
+              topPts.concat(botPts).forEach(function(p){
+                ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill();
+              });
+            }
           }
         } else {
           ds._errorPts.forEach(function(pt,idx){
@@ -59916,11 +60559,13 @@ function cgUpdateChart(){
           if(showError && mds._errorPts && mds._errorPts.length){
             var _ehi=(mds._errorHi!==undefined)?mds._errorHi:(mds._errorStd||0);
             var _elo=(mds._errorLo!==undefined)?mds._errorLo:(mds._errorStd||0);
+            var _ebnds=(mds._errorBoundsLo&&mds._errorBoundsHi&&mds._errorBoundsLo.length>0); // ov.1.1.1
             var _ecols=(mds._errorColsLo&&mds._errorColsHi&&mds._errorColsLo.length>0);
-            if(_ecols || _ehi!==0 || _elo!==0){
+            if(_ecols || _ebnds || _ehi!==0 || _elo!==0){   // ov.1.1.1 FIX: idem ao render principal
               var _ebColor = mds.borderColor || col;
               var _ebBounds=function(pt,idx){
                 // v9.12.1 FIX: offsets relativos ao ponto (y − valor1 … y + valor2), igual ao render principal.
+                if(_ebnds && idx<mds._errorBoundsLo.length) return {top:mds._errorBoundsHi[idx], bot:mds._errorBoundsLo[idx]}; // ov.1.1.1
                 if(_ecols && idx<mds._errorColsLo.length) return {top:pt.y + mds._errorColsHi[idx], bot:pt.y - mds._errorColsLo[idx]};
                 return {top:pt.y+_ehi, bot:pt.y-_elo};
               };
@@ -61327,6 +61972,8 @@ function _cgBuildConfigObject(includeData){
     // gráfico)" — chave "seriesIdx_pointIdx".
     freeLabelOffsets: _cgFreeLabelOffsets,
     bpMedianOffsets: _cgBpMedianOffsets,   // ov.1.1.1: posição personalizada do valor da mediana
+    indJitter: _cgIndJitter,               // ov.1.1.1: jitter individual dos pontos
+    indJitterCol: _cgIndJitterCol,         // ov.1.1.1: jitter por coluna Y
     // v9.12.9: valores colados por série em "Barras de Erro" → "Personalizado em colunas".
     errColsBySeries: (function(){
       var out={};
@@ -61931,6 +62578,8 @@ function cgApplyConfigObject(cfg, opts){
       // v9.12.9: posições livres de etiquetas (arraste no gráfico)
       _cgFreeLabelOffsets=(cfg.freeLabelOffsets&&typeof cfg.freeLabelOffsets==='object')?cfg.freeLabelOffsets:{};
       _cgBpMedianOffsets=(cfg.bpMedianOffsets&&typeof cfg.bpMedianOffsets==='object')?cfg.bpMedianOffsets:{};   // ov.1.1.1
+      _cgIndJitter=(cfg.indJitter&&typeof cfg.indJitter==='object')?cfg.indJitter:{};   // ov.1.1.1
+      _cgIndJitterCol=(cfg.indJitterCol&&typeof cfg.indJitterCol==='object')?cfg.indJitterCol:{};   // ov.1.1.1
       cgRenderRefLines(); cgRenderAnnotations(); cgRenderHlRegions(); cgRenderZoomInsets(); cgRenderShapes();
 
       // Apply theme and sync UI visibility
@@ -62030,6 +62679,8 @@ function cgApplyConfigObject(cfg, opts){
       try{ if(typeof cgRenderFilterModeButtons==='function') cgRenderFilterModeButtons(); }catch(e){}
       try{ if(typeof cgRenderFilterMenu==='function') cgRenderFilterMenu(); }catch(e){}
 
+      // ov.1.1.1: reexibe os botões do jitter individual conforme os checkboxes restaurados.
+      try{ for(var _ji=1;_ji<=_cgSeriesCount;_ji++) cgToggleIndJitter(_ji); }catch(e){}
       // ov.1.1.1: reabre os sub-painéis do Boxplot/Violino conforme os checkboxes restaurados,
       // senão eles ficariam escondidos mesmo com a opção marcada.
       try{ if(typeof cgToggleMeanPanel==='function') cgToggleMeanPanel(); }catch(e){}
@@ -63768,6 +64419,8 @@ var _cgSuppressNextLabelClick = false;
     // v8.10.4: a double-click always means "reposition", never "hide" — kill any pending
     // single-click hide-toggle scheduled by the two preceding `click` events.
     cgCancelPendingLabelClick();
+    // ov.1.1.1: um duplo-clique significa "mover", nunca "ocultar" — cancela a ocultação agendada.
+    if(_cgMedianClickTimer){ clearTimeout(_cgMedianClickTimer); _cgMedianClickTimer=null; }
     // ── v8.8.14: sideby — double-click a FREE data label to drag it, else an annotation ──
     if(_cgIsSideby()){
       _cgSidebyDragRect=null; // cancel any tiny zoom-rect from the double-click's mousedowns
@@ -63858,9 +64511,14 @@ var _cgSuppressNextLabelClick = false;
       _cgDragMode=false;
       var wasAnnot=_cgDragAnnotIdx>=0;
       var wasLabelDrag=!!_cgDragLabelKey; // v9.8: see _cgSuppressNextLabelClick above
+      // ov.1.1.1 FIX: ao SOLTAR o valor da mediana, o navegador ainda dispara um `click` sobre
+      // o texto — que caía no "1 clique = ocultar" e fazia o valor sumir logo após ser
+      // reposicionado. Marcamos a supressão desse clique, como já era feito para as etiquetas.
+      var wasMedianDrag=!!_cgDragMedianKey;
       _cgDragMedianKey=null; _cgDragMedianBase=null;   // ov.1.1.1
       _cgDragAnnotIdx=-1; _cgDragRefIdx=-1; _cgDragLegend=false; _cgDragLabelKey=null;
       if(wasLabelDrag) _cgSuppressNextLabelClick=true;
+      if(wasMedianDrag) _cgSuppressNextMedianClick=true;
       canvas.style.cursor='';
       if(_cgChart&&_cgChart.options&&_cgChart.options.plugins&&_cgChart.options.plugins.zoom&&_cgChart.options.plugins.zoom.zoom){
         _cgChart.options.plugins.zoom.zoom.drag.enabled=true;
