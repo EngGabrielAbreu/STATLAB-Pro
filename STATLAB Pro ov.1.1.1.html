@@ -48809,9 +48809,13 @@ function cgSetupCanvasDblClick(){
   });
 }
 
-// ── v11.1: Inverter X-Y — troca os dados de cada série (X↔Y) e os rótulos dos eixos ────────
+// ── v11.1 / ov.1.1.1 FIX: Inverter X-Y — TRANSPÕE a grade de dados de cada série (todas as
+// colunas, não só as 2 primeiras) e troca os rótulos dos eixos ────────────────────────────
 // Disponível para Dispersão XY, Linha e Dispersão lado a lado (as 3 têm eixos X/Y numéricos
-// livres por série). Séries de coluna única (X implícito = índice da linha) viram [Y, índice].
+// livres por série). Se uma série tem X linhas e Y colunas, o resultado passa a ter Y linhas
+// e X colunas — cada coluna (X, Y, e quaisquer colunas extras) participa da inversão.
+// Séries de coluna única (X implícito = índice da linha) continuam virando [Y, índice],
+// já que nesse caso não há uma transposição retangular que faça sentido para pontos X-Y.
 function cgInvertXYSwap(){
   var isPT=getCurrentLang()!=='en';
   var ct=(document.getElementById('cgChartType')||{}).value||'scatter';
@@ -48820,27 +48824,28 @@ function cgInvertXYSwap(){
   for(var i=1;i<=_cgSeriesCount;i++){
     var ta=document.getElementById('cgData_'+i);
     if(!ta || !(ta.value||'').trim()) continue;
-    var lines=(ta.value||'').split('\n');
-    var newLines=lines.map(function(line, lineIdx){
-      var trimmed=line.trim(); if(!trimmed) return line;
-      var m=_cgBulkSplit ? _cgBulkSplit(trimmed) : null;
-      var parts=trimmed.split(/[\t;,\s]+/).filter(function(s){return s.length;});
-      if(parts.length>=2 && m){
-        var xTok=m[2], sep=m[3], rest=m[4];
-        var rm=rest.match(/^(\s*)([^\t;,\s]+)(.*)$/);
-        if(rm){
-          var yTok=rm[2], yRest=rm[3];
-          // novo X = antigo Y, novo Y = antigo X; preserva colunas extras que sobrarem em yRest
-          return (m[1]||'')+yTok+sep+(rm[1]||'')+xTok+yRest;
-        }
-      }
-      if(parts.length===1){
-        // coluna única (X implícito = posição da linha) → novo X = valor antigo, novo Y = posição
-        return parts[0]+'\t'+(lineIdx+1);
-      }
-      return line;
-    });
-    ta.value=newLines.join('\n');
+    var rawLines=(ta.value||'').split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length>0; });
+    if(!rawLines.length) continue;
+    // detecta o separador usado (prioridade: tab > ; > , > espaço), igual ao resto do app
+    var sep = rawLines[0].indexOf('\t')>=0 ? '\t'
+            : rawLines[0].indexOf(';')>=0  ? ';'
+            : rawLines[0].indexOf(',')>=0  ? ',' : '\t';
+    var splitRe = sep==='\t' ? /\t+/ : sep===';' ? /;+/ : sep===',' ? /,+/ : /\s+/;
+    var grid=rawLines.map(function(l){ return l.split(splitRe).map(function(t){ return t.trim(); }); });
+    var nRows=grid.length, nCols=Math.max.apply(null, grid.map(function(r){ return r.length; }));
+    if(nCols<=1){
+      // coluna única (X implícito = posição da linha) → novo X = valor antigo, novo Y = posição
+      ta.value = grid.map(function(r,idx){ return (r[0]||'')+'\t'+(idx+1); }).join('\n');
+      touched++; continue;
+    }
+    // transposição completa: Y colunas → Y linhas, X linhas → X colunas
+    var transposed=[];
+    for(var c=0;c<nCols;c++){
+      var rowOut=[];
+      for(var r=0;r<nRows;r++) rowOut.push(grid[r][c]!==undefined ? grid[r][c] : '');
+      transposed.push(rowOut.join(sep));
+    }
+    ta.value=transposed.join('\n');
     touched++;
   }
   if(!touched){ notify(isPT?'Nenhuma série com dados para inverter.':'No series with data to swap.'); return; }
