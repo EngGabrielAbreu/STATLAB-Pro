@@ -3780,10 +3780,18 @@ if(typeof Chart!=='undefined'){
         if(typeof _cgHiddenMarkers==='undefined' || !_cgHiddenMarkers) return;
         (chart.data.datasets||[]).forEach(function(ds,di){
           var si=ds._cgSeriesIdx; if(si==null) return;
-          var hid=_cgHiddenMarkers[si]; if(!hid) return;
           var meta=chart.getDatasetMeta(di); if(!meta||!meta.data) return;
+          // ov.1.1.1: com várias colunas Y, cada coluna é um dataset próprio. A chave de
+          // ocultação passa a ser "<série>" (coluna 0 / série de 1 Y) ou "<série>c<coluna>",
+          // senão esconder o ponto #3 apagaria o #3 de TODAS as colunas.
+          var _yc=(ds._cgYCol!=null)?ds._cgYCol:0;
+          var _nY=(ds._cgNY!=null)?ds._cgNY:1;
+          var hid=(_nY>1) ? _cgHiddenMarkers[si+'c'+_yc] : _cgHiddenMarkers[si];
+          // ov.1.1.1: coluna Y inteira escondida ("Esconder valores de Y específicos")
+          var _colHidden = (_nY>1) && _cgHiddenYCols[si] && _cgHiddenYCols[si][_yc];
+          if(!hid && !_colHidden) return;
           meta.data.forEach(function(el,pi){
-            if(hid[pi] && el && el.options){ el.options.radius=0; el.options.hoverRadius=0; }
+            if((_colHidden || (hid&&hid[pi])) && el && el.options){ el.options.radius=0; el.options.hoverRadius=0; }
           });
         });
       }catch(e){}
@@ -42853,6 +42861,17 @@ function cgGoHome(ev){
             <!-- ── Controles globais de série (só Dispersão/Linha) ─────────── -->
             <div id="cgInfoPanel_scatter">
               <hr style="border-color:var(--border2);margin:8px 0">
+              <!-- ov.1.1.1 (item 6): escopo dos controles de marcador/linha.
+                   "Total" = os sliders abaixo valem para TODAS as séries (comportamento antigo).
+                   "Por série" = cada série ganha os próprios controles dentro do seu bloco. -->
+              <div class="cg-field">
+                <label id="cgLblMarkerScope">Alterar marcadores e linhas</label>
+                <select id="cgMarkerScope" onchange="cgSetMarkerScope(this.value)">
+                  <option value="all" id="cgMarkerScopeAllOpt">Total</option>
+                  <option value="series" id="cgMarkerScopeSeriesOpt">Por série</option>
+                </select>
+              </div>
+              <div id="cgGlobalMarkerControls">
               <div class="cg-field">
                 <label id="cgLblPtSize">Tamanho do Marcador <span id="cgGlobalPtSizeVal" style="color:#ec4899">5</span>px</label>
                 <input type="range" id="cgGlobalPtSize" min="1" max="20" value="5"
@@ -42871,6 +42890,34 @@ function cgGoHome(ev){
                   oninput="document.getElementById('cgGlobalLineWidthVal').textContent=this.value;cgApplyGlobalSetting('linewidth',this.value)"
                   style="accent-color:#ec4899;width:100%">
               </div>
+              <!-- ov.1.1.1 (item 7): borda do marcador — cor, espessura e opacidade próprias -->
+              <div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-top:6px">
+                <label id="cgLblMarkerBorder" style="flex:1">Borda de marcador</label>
+                <input type="checkbox" id="cgMarkerBorder" onchange="cgToggleMarkerBorder()" style="width:16px;height:16px;accent-color:#ec4899">
+              </div>
+              <div id="cgMarkerBorderOptions" style="display:none;margin-top:6px;padding:8px;background:rgba(236,72,153,.07);border:1px solid rgba(236,72,153,.22);border-radius:6px">
+                <div class="cg-field" style="display:flex;align-items:center;gap:8px">
+                  <label id="cgLblMarkerBorderMatch" style="flex:1;font-size:10.5px;color:var(--text4)">Usar a cor da série</label>
+                  <input type="checkbox" id="cgMarkerBorderMatch" checked onchange="cgToggleMarkerBorder();cgUpdateChart()" style="width:15px;height:15px;accent-color:#ec4899">
+                </div>
+                <div class="cg-field" id="cgMarkerBorderColorRow" style="display:none;margin-top:5px">
+                  <label id="cgLblMarkerBorderColor" style="font-size:10.5px;color:var(--text4)">Cor da borda</label>
+                  <input type="color" id="cgMarkerBorderColor" value="#ffffff" oninput="cgUpdateChart()" style="width:100%;height:26px;padding:1px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;cursor:pointer">
+                </div>
+                <div class="cg-field" style="margin-top:5px">
+                  <label id="cgLblMarkerBorderWidth">Espessura <span id="cgMarkerBorderWidthVal" style="color:#ec4899">2</span>px</label>
+                  <input type="range" id="cgMarkerBorderWidth" min="0" max="8" step="0.5" value="2"
+                    oninput="document.getElementById('cgMarkerBorderWidthVal').textContent=this.value;cgUpdateChart()"
+                    style="accent-color:#ec4899;width:100%">
+                </div>
+                <div class="cg-field" style="margin-top:5px">
+                  <label id="cgLblMarkerBorderOpacity">Opacidade <span id="cgMarkerBorderOpacityVal" style="color:#ec4899">100</span>%</label>
+                  <input type="range" id="cgMarkerBorderOpacity" min="0" max="100" value="100"
+                    oninput="document.getElementById('cgMarkerBorderOpacityVal').textContent=this.value;cgUpdateChart()"
+                    style="accent-color:#ec4899;width:100%">
+                </div>
+              </div>
+              </div><!-- /cgGlobalMarkerControls -->
               <hr style="border-color:var(--border2);margin:8px 0">
             </div>
             <!-- ══ ETAPAS — ov.1.1.1: configuração das etapas (nomes/cores) e estilo dos pontos/linha ══ -->
@@ -44040,13 +44087,6 @@ function cgGoHome(ev){
                 <label id="cgLblWbShowParams" style="flex:1">Mostrar β e η no Gráfico</label>
                 <input type="checkbox" id="cgWbShowParams" checked onchange="cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899">
               </div>
-              <!-- v10.0.7 (item 5): Tamanho da Legenda (caixa de parâmetros β/η/R²) -->
-              <div class="cg-field">
-                <label id="cgLblWbLegendSize">Tamanho da Legenda <span id="cgWbLegendSizeVal" style="color:#ec4899">11</span>px</label>
-                <input type="range" id="cgWbLegendSize" min="8" max="30" value="11"
-                  oninput="document.getElementById('cgWbLegendSizeVal').textContent=this.value;cgUpdateChart()"
-                  style="accent-color:#ec4899">
-              </div>
               <!-- Tamanho do ponto -->
               <div class="cg-field">
                 <label id="cgLblWbPtSize">Tamanho do Ponto <span id="cgWbPtSizeVal" style="color:#ec4899">5</span>px</label>
@@ -44069,6 +44109,13 @@ function cgGoHome(ev){
                   <option id="cgWbLineDash" value="dash">Tracejada</option>
                   <option id="cgWbLineDot" value="dot">Pontilhada</option>
                 </select>
+              </div>
+              <!-- ov.1.1.1: estilo por COLUNA Y (Y2, Y3…) — montado dinamicamente conforme os
+                   dados colados, porque só então sabemos quantas colunas existem. -->
+              <div id="cgWbLineStyleYList"></div>
+              <!-- ov.1.1.1: esconder pontos específicos, igual à Dispersão XY / Linha -->
+              <div class="cg-field" style="margin-top:8px">
+                <button type="button" onclick="cgOpenHideMarkerModal()" style="width:100%;padding:7px 8px;background:rgba(236,72,153,.12);border:1px solid rgba(236,72,153,.4);color:#ec4899;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer">🚫 <span id="cgWbHideMarkerBtnLbl">Esconder marcador específico</span></button>
               </div>
             </div>
 
@@ -44425,6 +44472,15 @@ function cgGoHome(ev){
             <!-- v10.0.6 (Weibull item 2): fundo + contorno da caixa de PARÂMETROS do Weibull (β/η/R²) -->
             <div id="cgWbParamsLegendWrap" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border2)">
               <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px" id="cgWbParamsLegendTitle">Legenda dos Parâmetros (Weibull)</div>
+              <!-- ov.1.1.1: "Tamanho da legenda de Weibull" — movido da janela 📊 Informações
+                   para cá, junto das demais opções da caixa de parâmetros (β/η/R²), que é o
+                   lugar natural para procurá-lo. Mesmo controle, mesmo id, mesmo efeito. -->
+              <div class="cg-field" style="margin-bottom:6px">
+                <label id="cgLblWbLegendSize">Tamanho da legenda de Weibull <span id="cgWbLegendSizeVal" style="color:#ec4899">11</span>px</label>
+                <input type="range" id="cgWbLegendSize" min="8" max="30" value="11"
+                  oninput="document.getElementById('cgWbLegendSizeVal').textContent=this.value;cgUpdateChart()"
+                  style="accent-color:#ec4899;width:100%">
+              </div>
               <div class="cg-field" style="display:flex;align-items:center;gap:8px">
                 <label id="cgLblWbParamsBgColor" style="flex:1">Cor do Fundo</label>
                 <input type="color" id="cgWbParamsBgColor" value="#000000" onchange="cgUpdateChart()" style="width:32px;height:24px;border:none;background:none;cursor:pointer;padding:0">
@@ -45466,6 +45522,7 @@ function cgSwitchDataPanel(){
   if(bpPanel)   bpPanel.style.display=(ct==='boxplot')?'block':'none';
   // Rebuild regression list if scatter/line/sideby (v8.8.11)
   if(ct!=='bar'&&ct!=='boxplot'&&ct!=='violin'&&ct!=='histogram'&&ct!=='weibull'&&ct!=='pareto'&&ct!=='heatmap'&&ct!=='fda'&&ct!=='fdp'&&ct!=='controlchart') cgRebuildRegrList();
+  try{ if(typeof cgRebuildWbLineStyleY==='function') cgRebuildWbLineStyleY(); }catch(e){}   // ov.1.1.1
   // v7.0.1: "Valores reais de Y" X2 option is only meaningful for Weibull
   var x2RealYOpt=document.getElementById('cgX2RealYOpt');
   if(x2RealYOpt){
@@ -47406,6 +47463,9 @@ function _cgAdjustColorForContrast(hex, isDarkBg){
 // ── ov.1.0.1: "Esconder marcador específico" — mapa { seriesIdx(1-based): { pointIdx(0-based):true } }
 // Guarda quais MARCADORES de pontos estão ocultos por série. Serializado por aba (como refLines).
 var _cgHiddenMarkers = {};
+// ov.1.1.1: colunas Y inteiras escondidas — {série: {coluna: true}}. Usado pelo botão
+// "Esconder valores de Y específicos"; some a coluna toda sem mexer nos pontos individuais.
+var _cgHiddenYCols = {};
 
 // ── ov.1.1.1: COR INDIVIDUAL DE BARRA (tipo Barras) ────────────────────────────────────────
 // Dois cliques sobre uma barra abrem o seletor de cor daquela barra específica, permitindo
@@ -49264,6 +49324,229 @@ function _cgHideMarkerSupported(){
   var ct=(document.getElementById('cgChartType')||{}).value||'scatter';
   return (ct==='scatter'||ct==='line'||ct==='sideby'||ct==='weibull'||ct==='fda'||ct==='radar');
 }
+
+// ── ov.1.1.1: bloco do modal para séries com VÁRIAS colunas Y ───────────────────────────────
+// Um sub-bloco por coluna, cada um com seus pontos. No topo, o botão "Esconder valores de Y
+// específicos" abre uma faixa de chaves que somem com a coluna INTEIRA de uma vez — mais rápido
+// que desmarcar ponto a ponto quando o objetivo é tirar uma medição do gráfico.
+function _cgHideMarkerMultiBlock(si, name, color, multi, nY, isPT){
+  var html='';
+  var expanded=!!_cgHideYColsOpen[si];
+  html+='<div style="margin:10px 0 4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'
+    +'<span style="width:11px;height:11px;border-radius:50%;background:'+color+';flex-shrink:0"></span>'
+    +'<b style="font-size:12px;color:var(--text)">'+escapeHtml(name)+'</b>'
+    +'<span style="font-size:10.5px;color:var(--text4)">('+nY+' Y)</span>'
+    +'<button onclick="cgToggleHideYColsPanel('+si+')" style="margin-left:auto;background:'
+      +(expanded?'rgba(236,72,153,.18)':'none')+';border:1px solid '
+      +(expanded?'#ec4899':'var(--border2)')+';color:'+(expanded?'#ec4899':'var(--text4)')
+      +';border-radius:5px;font-size:10px;padding:2px 7px;cursor:pointer">'
+      +(isPT?'Esconder valores de Y específicos':'Hide specific Y values')+'</button>'
+    +'</div>';
+  // faixa de colunas (aparece só quando o botão está ativo)
+  if(expanded){
+    html+='<div style="display:flex;flex-wrap:wrap;gap:6px 14px;padding:7px 10px;margin:0 0 6px 18px;'
+      +'background:rgba(236,72,153,.07);border:1px solid rgba(236,72,153,.22);border-radius:6px">';
+    for(var c=0;c<nY;c++){
+      var cn=(typeof cgYColName==='function')?cgYColName(si,c,name,nY):(name+' — Y'+(c+1));
+      var short=String(cn).indexOf(' — ')>=0 ? String(cn).split(' — ').slice(1).join(' — ') : ('Y'+(c+1));
+      var colVis=!(_cgHiddenYCols[si]&&_cgHiddenYCols[si][c]);
+      html+='<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);cursor:pointer">'
+        +'<input type="checkbox" '+(colVis?'checked':'')+' onchange="cgToggleYColVisibility('+si+','+c+',this.checked)"'
+        +' style="width:14px;height:14px;accent-color:'+color+';cursor:pointer">'
+        +'<span>'+escapeHtml(short)+'</span></label>';
+    }
+    html+='</div>';
+  }
+  // um sub-bloco por coluna, com os pontos
+  for(var ci=0;ci<nY;ci++){
+    var pts=(multi.cols&&multi.cols[ci])?multi.cols[ci]:[];
+    if(!pts.length) continue;
+    var cname=(typeof cgYColName==='function')?cgYColName(si,ci,name,nY):(name+' — Y'+(ci+1));
+    var cshort=String(cname).indexOf(' — ')>=0 ? String(cname).split(' — ').slice(1).join(' — ') : ('Y'+(ci+1));
+    var colOff=!!(_cgHiddenYCols[si]&&_cgHiddenYCols[si][ci]);
+    var hid=_cgHiddenMarkers[si+'c'+ci]||{};
+    html+='<div style="margin:4px 0 2px 18px;display:flex;align-items:center;gap:6px'
+      +(colOff?';opacity:.45':'')+'">'
+      +'<span style="font-size:11px;font-weight:700;color:var(--text3)">'+escapeHtml(cshort)+'</span>'
+      +(colOff?('<span style="font-size:10px;color:#f87171">('+(isPT?'coluna oculta':'column hidden')+')</span>'):'')
+      +'<button onclick="cgHideMarkerToggleCol('+si+','+ci+',true)" style="margin-left:auto;background:none;border:1px solid var(--border2);color:var(--text4);border-radius:5px;font-size:10px;padding:2px 6px;cursor:pointer">'+(isPT?'ocultar todos':'hide all')+'</button>'
+      +'<button onclick="cgHideMarkerToggleCol('+si+','+ci+',false)" style="background:none;border:1px solid var(--border2);color:var(--text4);border-radius:5px;font-size:10px;padding:2px 6px;cursor:pointer">'+(isPT?'mostrar todos':'show all')+'</button>'
+      +'</div>';
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px 12px;padding:2px 0 6px 30px'
+      +(colOff?';opacity:.45':'')+'">';
+    pts.forEach(function(p,pi){
+      var vis=!hid[pi];
+      html+='<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);cursor:pointer;min-width:120px">'
+        +'<input type="checkbox" '+(vis?'checked':'')+(colOff?' disabled':'')
+        +' onchange="cgToggleMarkerVisibilityCol('+si+','+ci+','+pi+',this.checked)"'
+        +' style="width:14px;height:14px;accent-color:'+color+';cursor:pointer">'
+        +'<span>#'+(pi+1)+': '+escapeHtml(p&&p._wOnly?_cgEvalFmt(p.y):_cgHideMarkerFmt(p))+'</span></label>';
+    });
+    html+='</div>';
+  }
+  return html;
+}
+// estado de expansão do painel de colunas, por série
+var _cgHideYColsOpen = {};
+function cgToggleHideYColsPanel(si){
+  _cgHideYColsOpen[si]=!_cgHideYColsOpen[si];
+  cgRenderHideMarkerBody();
+}
+// esconde/mostra uma COLUNA Y inteira
+function cgToggleYColVisibility(si, ci, checked){
+  if(!_cgHiddenYCols[si]) _cgHiddenYCols[si]={};
+  if(checked){
+    delete _cgHiddenYCols[si][ci];
+    if(!Object.keys(_cgHiddenYCols[si]).length) delete _cgHiddenYCols[si];
+  } else {
+    _cgHiddenYCols[si][ci]=true;
+  }
+  cgRenderHideMarkerBody();
+  _cgWithZoomPreserved(cgUpdateChart);   // ov.1.1.1: mantém o zoom
+}
+// esconde/mostra um ponto de uma coluna específica
+function cgToggleMarkerVisibilityCol(si, ci, pi, checked){
+  var k=si+'c'+ci;
+  if(!_cgHiddenMarkers[k]) _cgHiddenMarkers[k]={};
+  if(checked){
+    delete _cgHiddenMarkers[k][pi];
+    if(!Object.keys(_cgHiddenMarkers[k]).length) delete _cgHiddenMarkers[k];
+  } else {
+    _cgHiddenMarkers[k][pi]=true;
+  }
+  _cgWithZoomPreserved(cgUpdateChart);   // ov.1.1.1: mantém o zoom
+}
+// ocultar/mostrar todos os pontos de uma coluna
+function cgHideMarkerToggleCol(si, ci, hideAll){
+  var ta=document.getElementById('cgData_'+si); if(!ta) return;
+  var multi=(typeof cgParseDataMultiY==='function')?cgParseDataMultiY(ta.value||''):{cols:[]};
+  var pts=(multi.cols&&multi.cols[ci])?multi.cols[ci]:[];
+  var k=si+'c'+ci;
+  if(hideAll){ _cgHiddenMarkers[k]={}; for(var j=0;j<pts.length;j++) _cgHiddenMarkers[k][j]=true; }
+  else delete _cgHiddenMarkers[k];
+  cgRenderHideMarkerBody();
+  _cgWithZoomPreserved(cgUpdateChart);   // ov.1.1.1: mantém o zoom
+}
+
+
+// ══ ov.1.1.1: ESCOPO DOS CONTROLES DE MARCADOR/LINHA + BORDA DE MARCADOR ═══════════════════
+// "Total"     → os sliders globais valem para todas as séries (comportamento histórico).
+// "Por série" → cada série mostra os próprios sliders; os globais somem para não confundir.
+// Os inputs por série sempre existiram (eram hidden), então trocar de modo não perde valores.
+// ── ov.1.1.1: seletores "Estilo da Linha de Ajuste Y2/Y3…" (Weibull) ───────────────────────
+// Um seletor por coluna Y ADICIONAL de cada série. A coluna 1 (Y1) continua usando o controle
+// "Estilo da Linha de Ajuste" já existente — só as extras ganham controle próprio, senão o
+// painel ficaria com dois controles fazendo a mesma coisa.
+function cgRebuildWbLineStyleY(){
+  var box=document.getElementById('cgWbLineStyleYList'); if(!box) return;
+  var ct=(document.getElementById('cgChartType')||{}).value||'scatter';
+  if(ct!=='weibull'){ box.innerHTML=''; return; }
+  // preserva as escolhas atuais
+  var prev={};
+  box.querySelectorAll('select[data-k]').forEach(function(s){ prev[s.getAttribute('data-k')]=s.value; });
+  var html='', any=false;
+  for(var si=1; si<=_cgSeriesCount; si++){
+    if(_cgSeriesVisible[si]===false) continue;
+    var ta=document.getElementById('cgData_'+si);
+    if(!ta || !(ta.value||'').trim()) continue;
+    var mm=(typeof cgParseDataMultiY==='function')?cgParseDataMultiY(ta.value||''):{nCols:1};
+    var nY=Math.max(1,mm.nCols||1);
+    if(nY<2) continue;
+    var nm=(document.getElementById('cgSeriesName_'+si)||{}).value||(cgT('series')+' '+si);
+    var cl=(document.getElementById('cgColor_'+si)||{}).value||'#ec4899';
+    any=true;
+    for(var c=1;c<nY;c++){
+      var k=si+'_'+c;
+      var cn=(typeof cgYColName==='function')?cgYColName(si,c,nm,nY):(nm+' — Y'+(c+1));
+      var shortN=String(cn).indexOf(' — ')>=0 ? String(cn).split(' — ').slice(1).join(' — ') : ('Y'+(c+1));
+      var cur=(prev[k]!==undefined)?prev[k]:'dash';
+      html+='<div class="cg-field" style="margin-top:6px">'
+        +'<label style="font-size:10.5px;color:var(--text4);display:flex;align-items:center;gap:6px">'
+        +'<span style="width:8px;height:8px;border-radius:50%;background:'+cl+';flex-shrink:0"></span>'
+        +cgT('cgWbLineStyleY')+' '+escapeHtml(shortN)+'</label>'
+        +'<select data-k="'+k+'" id="cgWbLineStyleY_'+k+'" onchange="cgUpdateChart()">'
+        +'<option value="solid"'+(cur==='solid'?' selected':'')+'>'+cgT('cgRegrStyleSolid')+'</option>'
+        +'<option value="dash"'+(cur==='dash'?' selected':'')+'>'+cgT('cgRegrStyleDash')+'</option>'
+        +'<option value="dot"'+(cur==='dot'?' selected':'')+'>'+cgT('cgRegrStyleDot')+'</option>'
+        +'<option value="dashdot"'+(cur==='dashdot'?' selected':'')+'>'+cgT('cgRegrStyleDashdot')+'</option>'
+        +'</select></div>';
+    }
+  }
+  box.innerHTML=any?html:'';
+}
+function cgSetMarkerScope(mode){
+  var perSeries=(mode==='series');
+  var g=document.getElementById('cgGlobalMarkerControls');
+  if(g) g.style.display=perSeries?'none':'';
+  document.querySelectorAll('.cg-perseries-field').forEach(function(el){
+    el.style.display=perSeries?'block':'none';
+  });
+  // sincroniza os rótulos numéricos com o valor atual de cada série
+  if(perSeries){
+    for(var i=1;i<=_cgSeriesCount;i++){
+      [['cgPtSize_','cgPtSize_val_'],['cgOpacity_','cgOpacity_val_'],['cgLineWidth_','cgLineWidth_val_'],
+       ['cgMkBorderW_','cgMkBorderW_val_'],['cgMkBorderO_','cgMkBorderO_val_']].forEach(function(p){
+        var inp=document.getElementById(p[0]+i), lbl=document.getElementById(p[1]+i);
+        if(inp&&lbl) lbl.textContent=inp.value;
+      });
+      try{ cgToggleMarkerBorderSeries(i); }catch(e){}
+    }
+  }
+  cgUpdateChart();
+}
+function cgMarkerScopeIsPerSeries(){
+  return ((document.getElementById('cgMarkerScope')||{}).value||'all')==='series';
+}
+// painel da borda — global
+function cgToggleMarkerBorder(){
+  var cb=document.getElementById('cgMarkerBorder');
+  var box=document.getElementById('cgMarkerBorderOptions');
+  if(box) box.style.display=(cb&&cb.checked)?'block':'none';
+  var match=document.getElementById('cgMarkerBorderMatch');
+  var row=document.getElementById('cgMarkerBorderColorRow');
+  if(row) row.style.display=(match&&match.checked)?'none':'block';
+  cgUpdateChart();
+}
+// painel da borda — por série
+function cgToggleMarkerBorderSeries(i){
+  var cb=document.getElementById('cgMkBorder_'+i);
+  var box=document.getElementById('cgMkBorderBox_'+i);
+  if(box) box.style.display=(cb&&cb.checked)?'block':'none';
+  var match=document.getElementById('cgMkBorderMatch_'+i);
+  var row=document.getElementById('cgMkBorderColorRow_'+i);
+  if(row) row.style.display=(match&&match.checked)?'none':'block';
+}
+// Resolve a borda EFETIVA de uma série, respeitando o escopo escolhido.
+// Devolve null quando não há borda personalizada (o desenho usa o padrão de sempre).
+function _cgMarkerBorderFor(i, seriesColor){
+  var perSeries=cgMarkerScopeIsPerSeries();
+  var on, matchEl, colEl, wEl, oEl;
+  if(perSeries){
+    on=(document.getElementById('cgMkBorder_'+i)||{}).checked===true;
+    matchEl=document.getElementById('cgMkBorderMatch_'+i);
+    colEl=document.getElementById('cgMkBorderColor_'+i);
+    wEl=document.getElementById('cgMkBorderW_'+i);
+    oEl=document.getElementById('cgMkBorderO_'+i);
+  } else {
+    on=(document.getElementById('cgMarkerBorder')||{}).checked===true;
+    matchEl=document.getElementById('cgMarkerBorderMatch');
+    colEl=document.getElementById('cgMarkerBorderColor');
+    wEl=document.getElementById('cgMarkerBorderWidth');
+    oEl=document.getElementById('cgMarkerBorderOpacity');
+  }
+  if(!on) return null;
+  var useSeriesColor=!matchEl || matchEl.checked;
+  var base=useSeriesColor ? seriesColor : ((colEl&&colEl.value)||'#ffffff');
+  var w=wEl?parseFloat(wEl.value):2; if(!isFinite(w)) w=2;
+  var op=oEl?parseInt(oEl.value):100; if(!isFinite(op)) op=100;
+  // aplica a opacidade como canal alpha do hex (#rrggbbaa)
+  var hex=String(base);
+  if(/^#[0-9a-fA-F]{6}$/.test(hex) && op<100){
+    hex=hex+Math.round(op*255/100).toString(16).padStart(2,'0');
+  }
+  return {color:hex, width:w};
+}
+
 function cgOpenHideMarkerModal(){
   var m=document.getElementById('cgHideMarkerModal'); if(!m) return;
   if(m.parentElement!==document.body){ try{ document.body.appendChild(m); }catch(e){} } // fixed → filho do body
@@ -49301,6 +49584,25 @@ function cgRenderHideMarkerBody(){
       var pts=(typeof cgParseData==='function')?cgParseData(ta.value):[];
       pts.forEach(function(p,pi){ labels.push('#'+(pi+1)+': '+_cgHideMarkerFmt(p)); });
     }
+    // ov.1.1.1: séries com VÁRIAS colunas Y ganham um bloco por coluna — antes só a 1ª
+    // aparecia, porque cgParseData devolve apenas o primeiro Y de cada linha.
+    var _multiHM=(typeof cgParseDataMultiY==='function')?cgParseDataMultiY(ta.value||''):{cols:[],nCols:1};
+    var _nYHM=Math.max(1,_multiHM.nCols||1);
+    if(_nYHM>1 && ct!=='radar'){
+      anySeries=true;
+      // ov.1.1.1: no Weibull/FDA os pontos são plotados ORDENADOS por valor, então a lista
+      // precisa refletir essa ordem — senão o índice do checkbox não casaria com o marcador.
+      var _mm=_multiHM;
+      if(ct==='weibull'||ct==='fda'){
+        _mm={nCols:_nYHM, cols:(_multiHM.cols||[]).map(function(cp){
+          return (cp||[]).filter(function(p){ return isFinite(p.y) && (ct!=='weibull'||p.y>0); })
+                         .slice().sort(function(a,b){ return a.y-b.y; })
+                         .map(function(p){ return {x:p.y, y:p.y, _wOnly:true}; });
+        })};
+      }
+      html+=_cgHideMarkerMultiBlock(i,name,color,_mm,_nYHM,isPT);
+      continue;
+    }
     if(!labels.length) continue;
     anySeries=true;
     var hid=_cgHiddenMarkers[i]||{};
@@ -49326,7 +49628,9 @@ function cgToggleMarkerVisibility(si, pi, checked){
   if(!_cgHiddenMarkers[si]) _cgHiddenMarkers[si]={};
   if(checked){ delete _cgHiddenMarkers[si][pi]; if(!Object.keys(_cgHiddenMarkers[si]).length) delete _cgHiddenMarkers[si]; }
   else { _cgHiddenMarkers[si][pi]=true; }
-  cgUpdateChart();
+  // ov.1.1.1: manter o zoom — o usuário costuma ampliar JUSTAMENTE para achar o ponto que
+  // quer esconder; perder o zoom a cada clique obrigava a reampliar toda vez.
+  _cgWithZoomPreserved(cgUpdateChart);
 }
 function cgHideMarkerToggleSeries(si, hideAll){
   var ta=document.getElementById('cgData_'+si); if(!ta) return;
@@ -49338,12 +49642,12 @@ function cgHideMarkerToggleSeries(si, hideAll){
   if(hideAll){ _cgHiddenMarkers[si]={}; for(var k=0;k<count;k++) _cgHiddenMarkers[si][k]=true; }
   else { delete _cgHiddenMarkers[si]; }
   cgRenderHideMarkerBody();
-  cgUpdateChart();
+  _cgWithZoomPreserved(cgUpdateChart);   // ov.1.1.1: mantém o zoom
 }
 function cgHideMarkerShowAll(){
   _cgHiddenMarkers={};
   cgRenderHideMarkerBody();
-  cgUpdateChart();
+  _cgWithZoomPreserved(cgUpdateChart);   // ov.1.1.1: mantém o zoom
 }
 
 // ── Series management ─────────────────────────────────────────────────────────
@@ -49380,10 +49684,30 @@ function cgAddSeries(){
     +'<div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-bottom:0"><label id="cgLblSbyJoin_'+i+'" style="flex:1">'+cgT('cgSbyJoinLbl')+'</label><input type="checkbox" id="cgSbyJoinOn_'+i+'" onchange="cgOnSbyJoinToggle('+i+');cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899"></div>'
     +'<div class="cg-field" id="cgSbyJoinBox_'+i+'" style="display:none;margin-top:6px;margin-bottom:0"><label id="cgLblSbyJoinTarget_'+i+'" style="font-size:10.5px;color:var(--text4)">'+cgT('cgSbyJoinTargetLbl')+'</label><select id="cgSbyJoinTarget_'+i+'" onchange="cgUpdateChart()"><option value="">'+cgT('cgSbyJoinOwn')+'</option></select></div>'
     +'</div>'
-    // Hidden controls
-    +'<input type="hidden" id="cgPtSize_'+i+'" value="5">'
-    +'<input type="hidden" id="cgOpacity_'+i+'" value="80">'
-    +'<input type="hidden" id="cgLineWidth_'+i+'" value="2">'
+    // ov.1.1.1 (itens 6 e 7): controles POR SÉRIE. Os inputs sempre existiram como "hidden"
+    // (o modo Total escrevia neles via cgApplyGlobalSetting); agora eles moram dentro de um
+    // bloco que fica VISÍVEL quando o escopo é "Por série". Assim o mesmo estado serve aos dois
+    // modos — não há valores duplicados para sincronizar.
+    +'<div class="cg-perseries-field" style="display:none;margin:4px 0 6px;padding:7px 8px;background:rgba(236,72,153,.05);border:1px solid rgba(236,72,153,.18);border-radius:6px">'
+      +'<div class="cg-field"><label style="font-size:10px;color:var(--text4)">'+cgT('cgLblPtSizeShort')+' <span id="cgPtSize_val_'+i+'" style="color:#ec4899">5</span>px</label>'
+      +'<input type="range" id="cgPtSize_'+i+'" min="1" max="20" value="5" oninput="document.getElementById(\'cgPtSize_val_'+i+'\').textContent=this.value;cgUpdateChart()" style="width:100%;accent-color:#ec4899"></div>'
+      +'<div class="cg-field" style="margin-top:4px"><label style="font-size:10px;color:var(--text4)">'+cgT('cgLblPtOpacityShort')+' <span id="cgOpacity_val_'+i+'" style="color:#ec4899">80</span>%</label>'
+      +'<input type="range" id="cgOpacity_'+i+'" min="10" max="100" value="80" oninput="document.getElementById(\'cgOpacity_val_'+i+'\').textContent=this.value;cgUpdateChart()" style="width:100%;accent-color:#ec4899"></div>'
+      +'<div class="cg-field" style="margin-top:4px"><label style="font-size:10px;color:var(--text4)">'+cgT('cgLblLineThickShort')+' <span id="cgLineWidth_val_'+i+'" style="color:#ec4899">2</span>px</label>'
+      +'<input type="range" id="cgLineWidth_'+i+'" min="1" max="10" value="2" oninput="document.getElementById(\'cgLineWidth_val_'+i+'\').textContent=this.value;cgUpdateChart()" style="width:100%;accent-color:#ec4899"></div>'
+      // borda do marcador, por série
+      +'<div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-top:6px"><label id="cgLblMkBorder_'+i+'" style="flex:1;font-size:10px;color:var(--text4)">'+cgT('cgLblMarkerBorder')+'</label>'
+      +'<input type="checkbox" id="cgMkBorder_'+i+'" onchange="cgToggleMarkerBorderSeries('+i+')" style="width:15px;height:15px;accent-color:#ec4899"></div>'
+      +'<div id="cgMkBorderBox_'+i+'" style="display:none;margin-top:5px">'
+        +'<div class="cg-field" style="display:flex;align-items:center;gap:8px"><label id="cgLblMkBorderMatch_'+i+'" style="flex:1;font-size:10px;color:var(--text4)">'+cgT('cgLblMarkerBorderMatch')+'</label>'
+        +'<input type="checkbox" id="cgMkBorderMatch_'+i+'" checked onchange="cgToggleMarkerBorderSeries('+i+');cgUpdateChart()" style="width:14px;height:14px;accent-color:#ec4899"></div>'
+        +'<div class="cg-field" id="cgMkBorderColorRow_'+i+'" style="display:none;margin-top:4px"><input type="color" id="cgMkBorderColor_'+i+'" value="#ffffff" oninput="cgUpdateChart()" style="width:100%;height:24px;padding:1px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;cursor:pointer"></div>'
+        +'<div class="cg-field" style="margin-top:4px"><label style="font-size:10px;color:var(--text4)">'+cgT('cgLblMarkerBorderWidth')+' <span id="cgMkBorderW_val_'+i+'" style="color:#ec4899">2</span>px</label>'
+        +'<input type="range" id="cgMkBorderW_'+i+'" min="0" max="8" step="0.5" value="2" oninput="document.getElementById(\'cgMkBorderW_val_'+i+'\').textContent=this.value;cgUpdateChart()" style="width:100%;accent-color:#ec4899"></div>'
+        +'<div class="cg-field" style="margin-top:4px"><label style="font-size:10px;color:var(--text4)">'+cgT('cgLblMarkerBorderOpacity')+' <span id="cgMkBorderO_val_'+i+'" style="color:#ec4899">100</span>%</label>'
+        +'<input type="range" id="cgMkBorderO_'+i+'" min="0" max="100" value="100" oninput="document.getElementById(\'cgMkBorderO_val_'+i+'\').textContent=this.value;cgUpdateChart()" style="width:100%;accent-color:#ec4899"></div>'
+      +'</div>'
+    +'</div>'
     +'<input type="hidden" id="cgColNames_'+i+'" value="">'
     +'<input type="hidden" id="cgColData_'+i+'" value="[]">'
     // Jitter — only visible for boxplot, controls spread between multi-col boxes
@@ -49432,6 +49756,11 @@ function cgAddSeries(){
   // ov.1.1.1 FIX: mesmo caso do bloco acima — são DOIS elementos com essa classe.
   var _xjVis2=(_ctNow==='scatter'||_ctNow==='line'||_ctNow==='sideby'||_ctNow==='weibull'||_ctNow==='fda')?'':'none';
   div.querySelectorAll('.cg-xjitter-field').forEach(function(f){ f.style.display=_xjVis2; });
+  // ov.1.1.1: a série nova precisa nascer no mesmo escopo de marcadores das demais
+  try{
+    var _psVis=(typeof cgMarkerScopeIsPerSeries==='function'&&cgMarkerScopeIsPerSeries())?'block':'none';
+    div.querySelectorAll('.cg-perseries-field').forEach(function(f){ f.style.display=_psVis; });
+  }catch(e){}
   // v7.0: new series default to a connected line when chart type is "Linha"
   if(_ctNow==='line'){
     var _lsEl=div.querySelector('#cgLineStyle_'+i);
@@ -49617,6 +49946,7 @@ function cgRemoveSeries(){
 // listas que dependem disso, senão a opção só apareceria ao trocar de aba.
 function cgOnSeriesDataInput(si){
   try{ if(typeof cgRebuildRegrList==='function') cgRebuildRegrList(); }catch(e){}
+  try{ if(typeof cgRebuildWbLineStyleY==='function') cgRebuildWbLineStyleY(); }catch(e){}   // ov.1.1.1
   try{
     var ov=document.getElementById('cgIndJitterOverlay');
     if(ov && ov.style.display==='flex' && _cgIndJitterSeries===si) cgOpenIndJitterModal(si);
@@ -49767,6 +50097,12 @@ var _cgI18N={
     yMin:'Y m\u00edn',yMax:'Y m\u00e1x',style:'Estilo',theme:'Tema',showLegend:'Mostrar Legenda',
     showGrid:'Mostrar Grade',showError:'Barras de Erro (\u00b11\u03c3)',chartTitle:'T\u00edtulo do Gr\u00e1fico',
     regression:'Regress\u00e3o',regressionBoxplot:'Liga\u00e7\u00e3o',refLines:'Linhas Refer\u00eancia',annotations:'Anota\u00e7\u00f5es',
+    cgLblMarkerScope:'Alterar marcadores e linhas',cgMarkerScopeAll:'Total',cgMarkerScopeSeries:'Por s\u00e9rie',
+    cgLblMarkerBorder:'Borda de marcador',cgLblMarkerBorderMatch:'Usar a cor da s\u00e9rie',
+    cgLblMarkerBorderColor:'Cor da borda',cgLblMarkerBorderWidth:'Espessura',cgLblMarkerBorderOpacity:'Opacidade',
+    cgLblPtSizeShort:'Tamanho do marcador',cgLblPtOpacityShort:'Opacidade do marcador',cgLblLineThickShort:'Espessura da linha',
+    cgHideYColsBtn:'Esconder valores de Y espec\u00edficos',
+    cgWbLineStyleY:'Estilo da Linha de Ajuste',cgWbLegendSizeLbl:'Tamanho da legenda de Weibull',
     exportSection:'Exporta\u00e7\u00e3o',dpi:'DPI',width:'Largura (px)',height:'Altura (px)',
     modeLabel:'Gerador de Gr\u00e1ficos',back:'In\u00edcio',noChart:'Nenhum gr\u00e1fico gerado ainda.',
     multiPasteTitle:'Colar Multi-dados',multiPasteDesc:'Cole os dados (TAB). 1\u00aa coluna = Eixo X, demais = S\u00e9ries Y.',
@@ -50055,6 +50391,12 @@ var _cgI18N={
     yMin:'Y Min',yMax:'Y Max',style:'Style',theme:'Theme',showLegend:'Show Legend',
     showGrid:'Show Grid',showError:'Error Bars (\u00b11\u03c3)',chartTitle:'Chart Title',
     regression:'Regression',regressionBoxplot:'Connection',refLines:'Reference Lines',annotations:'Annotations',
+    cgLblMarkerScope:'Change markers and lines',cgMarkerScopeAll:'All',cgMarkerScopeSeries:'Per series',
+    cgLblMarkerBorder:'Marker border',cgLblMarkerBorderMatch:'Use the series colour',
+    cgLblMarkerBorderColor:'Border colour',cgLblMarkerBorderWidth:'Thickness',cgLblMarkerBorderOpacity:'Opacity',
+    cgLblPtSizeShort:'Marker size',cgLblPtOpacityShort:'Marker opacity',cgLblLineThickShort:'Line thickness',
+    cgHideYColsBtn:'Hide specific Y values',
+    cgWbLineStyleY:'Fit Line Style',cgWbLegendSizeLbl:'Weibull legend size',
     exportSection:'Export',dpi:'DPI',width:'Width (px)',height:'Height (px)',
     modeLabel:'Chart Generator',back:'Home',noChart:'No chart generated yet.',
     multiPasteTitle:'Paste Multi-data',multiPasteDesc:'Paste data (TAB). 1st col = X Axis, rest = Y Series.',
@@ -50933,6 +51275,21 @@ function cgApplyLang(){
   var bEl=document.getElementById('cgLblBoldTitle'); if(bEl) bEl.textContent=cgT('boldTitle');
   var aEl=document.getElementById('cgLblBoldAxis');  if(aEl) aEl.textContent=cgT('boldAxis');
   // v7.0: Informações panel — marker/line globals (scatter/line)
+  // ov.1.1.1: escopo dos marcadores + borda de marcador
+  var _msL=document.getElementById('cgLblMarkerScope'); if(_msL) _msL.textContent=cgT('cgLblMarkerScope');
+  var _msA=document.getElementById('cgMarkerScopeAllOpt'); if(_msA) _msA.textContent=cgT('cgMarkerScopeAll');
+  var _msS=document.getElementById('cgMarkerScopeSeriesOpt'); if(_msS) _msS.textContent=cgT('cgMarkerScopeSeries');
+  var _mbL=document.getElementById('cgLblMarkerBorder'); if(_mbL) _mbL.textContent=cgT('cgLblMarkerBorder');
+  // ov.1.1.1: rótulo do tamanho da legenda Weibull (mantém o <span> do valor)
+  var _wls=document.getElementById('cgLblWbLegendSize');
+  if(_wls){ var _f3=_wls.firstChild; if(_f3&&_f3.nodeType===3) _f3.nodeValue=cgT('cgWbLegendSizeLbl')+' '; }
+  try{ if(typeof cgRebuildWbLineStyleY==='function') cgRebuildWbLineStyleY(); }catch(e){}
+  var _mbM=document.getElementById('cgLblMarkerBorderMatch'); if(_mbM) _mbM.textContent=cgT('cgLblMarkerBorderMatch');
+  var _mbC=document.getElementById('cgLblMarkerBorderColor'); if(_mbC) _mbC.textContent=cgT('cgLblMarkerBorderColor');
+  ['cgLblMarkerBorderWidth','cgLblMarkerBorderOpacity'].forEach(function(id){
+    var e2=document.getElementById(id);
+    if(e2){ var f2=e2.firstChild; if(f2&&f2.nodeType===3) f2.nodeValue=cgT(id)+' '; }
+  });
   var psEl=document.getElementById('cgLblPtSize');    if(psEl){var fc=psEl.firstChild;if(fc&&fc.nodeType===3)fc.nodeValue=cgT('ptSize')+' ';}
   var poEl=document.getElementById('cgLblPtOpacity'); if(poEl){var fc=poEl.firstChild;if(fc&&fc.nodeType===3)fc.nodeValue=cgT('ptOpacity')+' ';}
   var ltEl=document.getElementById('cgLblLineThick'); if(ltEl){var fc=ltEl.firstChild;if(fc&&fc.nodeType===3)fc.nodeValue=cgT('lineThick')+' ';}
@@ -52118,7 +52475,8 @@ function cgAddZoomInset(){
     // Default destination: top-right corner of chart area, 30% wide/tall
     posX:0.62, posY:0.05, width:0.33, height:0.33,
     // Style
-    bgColor:_cgZiDefaultBg(), bgAlpha:0.85,
+    bgColor:_cgZiDefaultBg(), bgAlpha:1,   // ov.1.1.1 FIX: nasce OPACO (era 0.85, deixando
+                                          // o gráfico principal aparecer por baixo do inset)
     border:true, borderColor:'#ec4899', borderWidth:1.5, borderAlpha:1,
     // v8.8.6: 3-way connector mode replaces v8.8.4's boolean showConnector.
     // "full" = source region rectangle + connector lines (previous default)
@@ -52460,7 +52818,8 @@ function cgSetupZoomInsetDrag(){
             y1:+Math.min(rawY1,rawY2).toFixed(4), y2:+Math.max(rawY1,rawY2).toFixed(4),
             panelIdx:newPanelIdx, // v9.12.9: which sideby panel/série this inset targets (ignored otherwise)
             posX:0.62, posY:0.05, width:0.33, height:0.33,
-            bgColor:_cgZiDefaultBg(), bgAlpha:0.85,
+            bgColor:_cgZiDefaultBg(), bgAlpha:1,   // ov.1.1.1 FIX: nasce OPACO (era 0.85, deixando
+                                          // o gráfico principal aparecer por baixo do inset)
             border:true, borderColor:'#ec4899', borderWidth:1.5, borderAlpha:1,
             connectorMode:'full',
             showConnector:true, connectorColor:'#ec4899', connectorAlpha:0.55, connectorDash:true,
@@ -53802,6 +54161,15 @@ function cgUpdateChart(){
     };
     if(axisVal==='x2') ds.xAxisID='x2';
     if(axisVal==='y2') ds.yAxisID='y2';
+    // ov.1.1.1 (item 7): borda personalizada do marcador. Quando desligada, mantém o
+    // comportamento anterior (borda = cor da série, 1px ou 2px nos marcadores de traço).
+    var _mkB=_cgMarkerBorderFor(i, col);
+    if(_mkB){
+      ds.pointBorderColor=_mkB.color;
+      ds.pointBorderWidth=_mkB.width;
+      // marcadores "de traço" (✚ ✖ ━) são desenhados pela borda: sem largura eles sumiriam
+      if(isStroke && _mkB.width<=0) ds.pointBorderWidth=0.5;
+    }
     ds._labelPos = labelPos; // v6.3.1: per-series label position
     ds._cgSeriesIdx = i; // v9.12: índice da série (1-based) — usado pelas etiquetas "Personalizado"
     ds._cgYCol = _yc;    // ov.1.1.1: qual coluna Y desta série (0-based)
@@ -56324,16 +56692,28 @@ function cgUpdateChart(){
       var wNameEl=document.getElementById('cgSeriesName_'+wsi);
       var wColorEl=document.getElementById('cgColor_'+wsi);
       if(!wTxtEl) continue;
-      var wPts0=cgParseData(wTxtEl.value||'');
-      if(wPts0.length===0) continue;
-      var wVals=wPts0.map(function(p){return p.y;}).filter(function(v){return v>0;}).sort(function(a,b){return a-b;});
-      if(wVals.length<2) continue;
-      wbSeriesList.push({
-        name: wNameEl?wNameEl.value:('Série '+wsi),
-        color: wColorEl?wColorEl.value:_cgPalette[(wsi-1)%_cgPalette.length],
-        vals: wVals,
-        srcIdx: wsi   // v10.0.6 (Weibull item 1): índice da série p/ ler o Marcador (cgMarker_N)
-      });
+      // ov.1.1.1: o Weibull passa a considerar TODAS as colunas Y. Antes usava cgParseData,
+      // que devolve só o primeiro Y de cada linha — então Y2, Y3… eram simplesmente ignorados.
+      // Cada coluna vira um ajuste próprio (β, η, R² independentes), pois são amostras distintas.
+      var _wMulti=(typeof cgParseDataMultiY==='function')?cgParseDataMultiY(wTxtEl.value||''):{cols:[],nCols:0};
+      var _wNY=Math.max(1,_wMulti.nCols||1);
+      var _wBaseName=wNameEl?wNameEl.value:('Série '+wsi);
+      var _wBaseCol=wColorEl?wColorEl.value:_cgPalette[(wsi-1)%_cgPalette.length];
+      var _wCols=(_wNY>1)?_wMulti.cols:[cgParseData(wTxtEl.value||'')];
+      for(var _wc=0;_wc<_wCols.length;_wc++){
+        var wPts0=_wCols[_wc]||[];
+        if(wPts0.length===0) continue;
+        var wVals=wPts0.map(function(p){return p.y;}).filter(function(v){return v>0;}).sort(function(a,b){return a-b;});
+        if(wVals.length<2) continue;
+        wbSeriesList.push({
+          name: (_wNY>1 && typeof cgYColName==='function') ? cgYColName(wsi,_wc,_wBaseName,_wNY) : _wBaseName,
+          color: _wBaseCol,
+          vals: wVals,
+          srcIdx: wsi,   // v10.0.6 (Weibull item 1): índice da série p/ ler o Marcador (cgMarker_N)
+          yCol: _wc,     // ov.1.1.1: qual coluna Y desta série
+          nY: _wNY       // ov.1.1.1: total de colunas Y
+        });
+      }
     }
     if(wbSeriesList.length===0){cgUpdateStats(statsText);cgClearChartCanvas();return;}
 
@@ -56399,7 +56779,9 @@ function cgUpdateChart(){
         pointBorderWidth: _wStroke?2:1,
         pointHoverRadius: wbPtSize+2,
         showLine:false,
-        _cgSeriesIdx: s.srcIdx // ov.1.0.1: p/ "Esconder marcador específico"
+        _cgSeriesIdx: s.srcIdx, // ov.1.0.1: p/ "Esconder marcador específico"
+        _cgYCol: (s.yCol!=null?s.yCol:0),  // ov.1.1.1: coluna Y (chave de ocultação)
+        _cgNY:   (s.nY!=null?s.nY:1)
       });
       wbStatsText.push('<span style="color:'+s.color+';font-weight:600">'+s.name+'</span>: n='+s.vals.length+' β='+wres.beta.toFixed(3)+' η='+wres.eta.toFixed(3)+' R²='+wres.r2.toFixed(4));
     });
@@ -56412,6 +56794,15 @@ function cgUpdateChart(){
         var lntMax=Math.max.apply(null,wres.pts.map(function(p){return p.lnt;}));
         var pad=(lntMax-lntMin)*0.08||0.1;
         var x0=lntMin-pad, x1=lntMax+pad;
+        // ov.1.1.1: cada coluna Y pode ter seu PRÓPRIO estilo de linha ("Estilo da Linha de
+        // Ajuste Y2/Y3…"). Sem isso as retas de todas as colunas ficariam idênticas, já que
+        // compartilham a cor da série. A coluna 0 continua usando o controle original.
+        var _wDash=wbDash;
+        if((s.yCol||0)>0){
+          var _wSel=document.getElementById('cgWbLineStyleY_'+s.srcIdx+'_'+s.yCol);
+          var _wv=_wSel?_wSel.value:'';
+          if(_wv) _wDash = _wv==='dash'?[6,4] : _wv==='dot'?[2,3] : _wv==='dashdot'?[8,4,2,4] : [];
+        }
         wbDatasets.push({
           label: s.name+' (ajuste)',
           type:'line',
@@ -56419,7 +56810,7 @@ function cgUpdateChart(){
           borderColor: s.color,
           backgroundColor:'transparent',
           borderWidth: wbLineThick,
-          borderDash: wbDash,
+          borderDash: _wDash,
           pointRadius:0,
           fill:false,
           order:-1
@@ -58229,7 +58620,13 @@ function cgUpdateChart(){
           }
         }
         // ── (2) Inset background ──
-        ctx.fillStyle=_cgZiHexToRgba(zi.bgColor||_cgZiDefaultBg(), zi.bgAlpha!==undefined?zi.bgAlpha:0.85);
+        // ov.1.1.1 FIX: o fundo do inset não definia globalAlpha, então herdava o valor
+        // residual deixado por outro desenho (a Região de Erro pinta com globalAlpha baixo).
+        // Resultado: mesmo com opacidade 100% o fundo saía translúcido e a região aparecia
+        // por baixo. Fixamos alpha=1 aqui — a transparência desejada já está embutida no
+        // rgba() devolvido por _cgZiHexToRgba(bgColor, bgAlpha).
+        ctx.globalAlpha=1;
+        ctx.fillStyle=_cgZiHexToRgba(zi.bgColor||_cgZiDefaultBg(), zi.bgAlpha!==undefined?zi.bgAlpha:1);
         ctx.fillRect(iL,iT,iW,iH);
         // ── (3) Grid (Y only — the X axis is categorical, so vertical gridlines at
         //     fractional "index" positions wouldn't mean anything to the user) ──
@@ -59180,6 +59577,16 @@ function cgUpdateChart(){
         var hasBnds = ds._errorBoundsLo && ds._errorBoundsHi && ds._errorBoundsLo.length>0;
         if(!hasCols && !hasBnds && errHi===0 && errLo===0) return;
         ctx.save();
+        // ov.1.1.1 FIX: recorta na área do gráfico. Sem isto, ao dar zoom a região/barras de
+        // erro extrapolavam a moldura e invadiam os eixos e as margens (o Chart.js recorta os
+        // próprios datasets, mas este desenho é manual no afterDraw e não herdava o clip).
+        try{
+          var _clipX=xAxis.left, _clipY=yAxis.top;
+          var _clipW=xAxis.right-xAxis.left, _clipH=yAxis.bottom-yAxis.top;
+          if(isFinite(_clipW)&&isFinite(_clipH)&&_clipW>0&&_clipH>0){
+            ctx.beginPath(); ctx.rect(_clipX,_clipY,_clipW,_clipH); ctx.clip();
+          }
+        }catch(_e){}
         ctx.strokeStyle=ds.borderColor||'#ec4899';
         ctx.lineWidth=1.5;
         ctx.setLineDash([]);
@@ -59599,7 +60006,13 @@ function cgUpdateChart(){
           }
         }
         // ── (2) Inset background ──
-        ctx.fillStyle=_cgZiHexToRgba(zi.bgColor||_cgZiDefaultBg(), zi.bgAlpha!==undefined?zi.bgAlpha:0.85);
+        // ov.1.1.1 FIX: o fundo do inset não definia globalAlpha, então herdava o valor
+        // residual deixado por outro desenho (a Região de Erro pinta com globalAlpha baixo).
+        // Resultado: mesmo com opacidade 100% o fundo saía translúcido e a região aparecia
+        // por baixo. Fixamos alpha=1 aqui — a transparência desejada já está embutida no
+        // rgba() devolvido por _cgZiHexToRgba(bgColor, bgAlpha).
+        ctx.globalAlpha=1;
+        ctx.fillStyle=_cgZiHexToRgba(zi.bgColor||_cgZiDefaultBg(), zi.bgAlpha!==undefined?zi.bgAlpha:1);
         ctx.fillRect(iL,iT,iW,iH);
         // ── (3) Grid inside the plot region ──
         var xTicks=_cgZiNiceTicks(sxMin,sxMax, zi.xTickCount>0?zi.xTickCount:5);
@@ -61445,7 +61858,8 @@ function cgUpdateChart(){
             }
           }
           // ── (2) Inset background ──
-          ctx.fillStyle=_cgZiHexToRgba(zi.bgColor||_cgZiDefaultBg(), zi.bgAlpha!==undefined?zi.bgAlpha:0.85);
+          ctx.globalAlpha=1;   // ov.1.1.1 FIX: idem aos outros renderizadores de inset
+          ctx.fillStyle=_cgZiHexToRgba(zi.bgColor||_cgZiDefaultBg(), zi.bgAlpha!==undefined?zi.bgAlpha:1);
           ctx.fillRect(iL,iT,iW,iH);
           // ── (3) Grid ──
           var xTicks=_cgZiNiceTicks(sxMin,sxMax, zi.xTickCount>0?zi.xTickCount:5);
@@ -62061,6 +62475,12 @@ function _cgBuildConfigObject(includeData){
     // ── Regression ──
     regrType: gv('cgRegrType'),
     // ── Export dimensions ──
+    // ov.1.1.1: escopo dos marcadores + borda (global)
+    markerScope: gv('cgMarkerScope'),
+    markerBorder: gv('cgMarkerBorder'), markerBorderMatch: gv('cgMarkerBorderMatch'),
+    markerBorderColor: gv('cgMarkerBorderColor'), markerBorderWidth: gv('cgMarkerBorderWidth'),
+    markerBorderOpacity: gv('cgMarkerBorderOpacity'),
+    hiddenYCols: _cgHiddenYCols,
     expW: gv('cgExpW'), expH: gv('cgExpH'), expDPI: gv('cgExpDPI'),
     // ── Reference lines and annotations ──
     refLines:    _cgRefLines,
@@ -62631,9 +63051,22 @@ function cgApplyConfigObject(cfg, opts){
       // ── Regression ──
       sv('cgRegrType', cfg.regrType);
 
+      // ov.1.1.1: escopo dos marcadores + borda (global) e colunas Y ocultas
+      sv('cgMarkerScope', cfg.markerScope);
+      sv('cgMarkerBorder', cfg.markerBorder);
+      sv('cgMarkerBorderMatch', cfg.markerBorderMatch);
+      sv('cgMarkerBorderColor', cfg.markerBorderColor);
+      sv('cgMarkerBorderWidth', cfg.markerBorderWidth);
+      sv('cgMarkerBorderOpacity', cfg.markerBorderOpacity);
+      _cgHiddenYCols=(cfg.hiddenYCols&&typeof cfg.hiddenYCols==='object')?cfg.hiddenYCols:{};
+      try{ cgToggleMarkerBorder(); }catch(e){}
+      try{ cgSetMarkerScope((document.getElementById('cgMarkerScope')||{}).value||'all'); }catch(e){}
       // ── Export dimensions ──
-      sv('cgExpW',   cfg.expW);
-      sv('cgExpH',   cfg.expH);
+      // ov.1.1.1: o padrão passa a ser 1920x1080 (Full HD). Configs/abas antigas guardavam
+      // outros valores; quando o campo vem vazio/ausente, cai no padrão em vez de ficar em
+      // branco. Se o usuário já definiu um tamanho próprio, ele é preservado.
+      sv('cgExpW',   (cfg.expW!==undefined&&cfg.expW!==null&&cfg.expW!=='')?cfg.expW:1920);
+      sv('cgExpH',   (cfg.expH!==undefined&&cfg.expH!==null&&cfg.expH!=='')?cfg.expH:1080);
       sv('cgExpDPI', cfg.expDPI);
 
       // ── Reference lines and annotations ──
@@ -62686,6 +63119,12 @@ function cgApplyConfigObject(cfg, opts){
       }
       _cgHighlightRegions=Array.isArray(cfg.highlightRegions)?cfg.highlightRegions:[];
       _cgZoomInsets=Array.isArray(cfg.zoomInsets)?cfg.zoomInsets:[]; // v9.12.9
+      // ov.1.1.1 FIX: insets criados antes desta versão guardaram bgAlpha=0.85 (o padrão antigo),
+      // então continuavam translúcidos mesmo após a correção. Só promovemos EXATAMENTE 0.85 —
+      // qualquer outro valor foi escolhido pelo usuário e é preservado.
+      _cgZoomInsets.forEach(function(_zi){
+        if(_zi && Math.abs((_zi.bgAlpha!==undefined?_zi.bgAlpha:0.85)-0.85)<1e-9) _zi.bgAlpha=1;
+      });
       if(typeof _cgRadarLabels!=='undefined') _cgRadarLabels=Array.isArray(cfg.radarLabels)?cfg.radarLabels.slice():[]; // v11.0.0: nomes das pontas do Radar
       // ov.1.1.1: restaura nomes/cores das etapas (Etapas) ANTES de cgSwitchDataPanel() ser
       // chamado logo abaixo — cgSwitchDataPanel() aciona cgEtRebuildStageFields() quando o tipo
