@@ -839,6 +839,9 @@ body.light-theme .btn-topbar.btn-topbar-treat-clear:hover{background:rgba(248,11
 .dev-box .dev-close{position:absolute;top:14px;right:16px;background:transparent;border:none;font-size:20px;color:var(--text4);cursor:pointer;line-height:1;padding:4px}
 .dev-box .dev-close:hover{color:var(--text)}
 .dev-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+/* ov.1.1.3: avatar do modal de Perfil — mesmo tamanho/layout do .dev-avatar, mas com fundo que
+   acompanha a cor de destaque do tema atual (inclusive o modo Daltônico), em vez do roxo fixo. */
+.prof-avatar{background:var(--accent);font-weight:800;color:#fff;font-size:26px;letter-spacing:0}
 .dev-name{font-size:20px;font-weight:800;color:var(--text);text-align:center;margin-bottom:4px}
 .dev-subtitle{font-size:13px;color:var(--text4);text-align:center;margin-bottom:24px;font-style:italic}
 .dev-links{display:flex;flex-direction:column;gap:12px}
@@ -2853,7 +2856,8 @@ body.light-theme .tec-overlay{--tec-hover:#000;--tec-hover-bg:rgba(0,0,0,.05)}
 .tec-card-f{margin-top:auto;font-size:10.5px;color:var(--text3);background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:4px 8px;line-height:1.4}
 .tec-card-badge{position:absolute;top:10px;right:10px;background:rgba(34,211,130,.16);color:#22d382;border:1px solid rgba(34,211,130,.4);border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:700}
 .tec-empty{grid-column:1/-1;text-align:center;color:var(--text4);padding:30px 10px;font-size:13px}
-.tec-foot{margin:20px auto 0;max-width:760px;text-align:center;font-size:11.5px;color:var(--text4);line-height:1.6}
+.tec-foot{margin:20px auto 0;max-width:920px;padding:0 8px;text-align:center;font-size:11.5px;color:var(--text4);line-height:1.6}
+.tec-foot span{display:block;text-wrap:balance}
 
 /* área de trabalho */
 .tec-fmt{font-size:12px;color:var(--text3);background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:12px;line-height:1.5}
@@ -2998,6 +3002,23 @@ body.light-theme .prof-hint::before{border-color:#d97706}
 @keyframes profHintIn{from{opacity:0;transform:translateY(-6px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes profHintFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 @media (prefers-reduced-motion:reduce){.prof-hint.show{animation:none}}
+
+/* Wiki × Técnicas de análise (ov.1.1.2) */
+.wiki-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:18px 0 4px;padding:12px 14px;border:1px dashed var(--border3);border-radius:10px;background:var(--bg3)}
+.wiki-actions-lbl{font-size:12px;color:var(--text4)}
+.wiki-run-btn{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:9px;padding:8px 15px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:filter .15s,transform .15s}
+.wiki-run-btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.wiki-tec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin:16px 0}
+.wiki-tec-card{display:flex;flex-direction:column;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px}
+.wiki-tec-card-h{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--text2)}
+.wiki-tec-ic{font-size:22px;line-height:1}
+.wiki-tec-card-d{font-size:12px;color:var(--text4);line-height:1.5}
+.wiki-tec-card-b{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:auto}
+.wiki-tec-link{font-size:12px;color:var(--accent);text-decoration:none}
+.wiki-tec-link:hover,.wiki-tec-extra a:hover{text-decoration:underline}
+.wiki-tec-extra{font-size:11.5px;color:var(--text4)}
+.wiki-tec-extra a{color:var(--accent);text-decoration:none;margin-right:8px}
+.wiki-p kbd{background:var(--bg4);border:1px solid var(--border2);border-bottom-width:2px;border-radius:5px;padding:1px 6px;font-size:11px;font-family:inherit;color:var(--text2)}
 </style>
 </head>
 <body>
@@ -3219,12 +3240,12 @@ body.light-theme .prof-hint::before{border-color:#d97706}
   <div class="dev-overlay" id="profModal" onclick="if(event.target===this)profCloseModal()">
     <div class="dev-box" style="text-align:left">
       <button class="dev-close" onclick="profCloseModal()">✕</button>
-      <div class="dev-avatar">👤</div>
+      <div class="dev-avatar prof-avatar" id="profModalAvatar">👤</div>
       <div class="dev-name" id="profModalTitle">Novo Perfil</div>
       <div class="dev-subtitle" id="profModalSubtitle">Suas preferências, salvas neste computador</div>
       <div class="prof-field">
         <label id="profLblName">Nome</label>
-        <input type="text" id="profFieldName" placeholder="Seu nome" maxlength="80">
+        <input type="text" id="profFieldName" placeholder="Seu nome" maxlength="80" oninput="profUpdateAvatarPreview()">
       </div>
       <div class="prof-field">
         <label id="profLblRole">Cargo / Função (opcional)</label>
@@ -22388,6 +22409,7 @@ function wikiApplyLang(){
     if(badgeEl) badgeEl.textContent=sData[i].badge;
     try{ sData[i].content(sec); }catch(e){ console.warn('wikiApplyLang section '+i,e); }
   });
+  try{ if(typeof wikiTecApplyLang==='function') wikiTecApplyLang(); }catch(e){ console.error('wiki tec lang', e); } // ov.1.1.2
   try{ wkApplySimStaticLabels(); wkApplySimLang(); }catch(e){ console.error('wiki sims lang', e); }
 }
 
@@ -24548,6 +24570,7 @@ function profOpenCreate(){
   document.getElementById('profModalTitle').textContent=profT('Novo Perfil','New Profile');
   document.getElementById('profModalSubtitle').textContent=profT('Suas preferências, salvas neste computador','Your preferences, saved on this computer');
   document.getElementById('profFieldName').value='';
+  profUpdateAvatarPreview();
   document.getElementById('profFieldRole').value='';
   document.getElementById('profChkSimple').checked=false;
   document.getElementById('profChkCompare').checked=false;
@@ -24575,6 +24598,7 @@ function profOpenView(){
   document.getElementById('profModalTitle').textContent=profT('Meu Perfil','My Profile');
   document.getElementById('profModalSubtitle').textContent=profT('Suas preferências, salvas neste computador','Your preferences, saved on this computer');
   document.getElementById('profFieldName').value=_userProfile.name||'';
+  profUpdateAvatarPreview();
   document.getElementById('profFieldRole').value=_userProfile.role||'';
   var f=_userProfile.saveFlags||{};
   document.getElementById('profChkSimple').checked=!!f.simple;
@@ -24598,6 +24622,14 @@ function profOpenView(){
 }
 
 function profCloseModal(){ document.getElementById('profModal').classList.remove('open'); }
+// ov.1.1.3: troca o avatar do modal entre 👤 (sem nome) e a 1ª letra do nome digitado (maiúscula) —
+// atualizado em tempo real (oninput no campo Nome) e também ao abrir o modal (criar/ver perfil).
+function profUpdateAvatarPreview(){
+  var av=document.getElementById('profModalAvatar'); if(!av) return;
+  var nameInp=document.getElementById('profFieldName');
+  var name=(nameInp&&nameInp.value||'').trim();
+  av.textContent = name ? name.charAt(0).toUpperCase() : '👤';
+}
 
 // ── modal "Criar perfil"/"Salvar alterações" button ──
 function profSaveFromModal(){
@@ -75407,7 +75439,7 @@ function tecRenderCatalog(){
       '<input type="search" id="tecSearch" class="tec-search" placeholder="'+_tEsc(_tL('Buscar técnica… (ex.: ANOVA, Weibull, outliers)','Search technique… (e.g. ANOVA, Weibull, outliers)'))+'" value="'+_tEsc(_tecQuery)+'" oninput="tecSearchInput(this.value)">'+
       '<div class="tec-chips">'+chips+'</div></div>'+
     '<div class="tec-grid" id="tecGrid"></div>'+
-    '<div class="tec-foot">'+_tL('💡 Cada técnica usa o mesmo motor estatístico da Análise Simples e da Comparativa. Dentro de cada uma você pode criar várias abas (um estudo por aba).','💡 Every technique uses the same statistical engine as the Simple and Comparative analyses. Inside each one you can create several tabs (one study per tab).')+'</div>';
+    '<div class="tec-foot"><span>'+_tL('💡 Cada técnica usa o mesmo motor estatístico da Análise Simples e da Comparativa.','💡 Every technique uses the same statistical engine as the Simple and Comparative analyses.')+'</span><span>'+_tL('Dentro de cada uma você pode criar várias abas (um estudo por aba).','Inside each one you can create several tabs (one study per tab).')+'</span></div>';
   tecRenderGrid();
 }
 function tecRenderGrid(){
@@ -77130,6 +77162,338 @@ tecBindEvents();
 tecApplyLang();
 tecApplyCursor();
 </script>
+
+<script>
+/* ═══ WIKI × TÉCNICAS DE ANÁLISE (ov.1.1.2) ═══
+   • Grupo novo no menu da Wiki ("Técnicas de análise"): visão geral com os 24 cards + 16 seções detalhadas
+     das técnicas que ainda não tinham explicação na Wiki. Tudo nasce desta estrutura de dados (PT/EN).
+   • As seções que já existiam (ANOVA, Weibull, Bootstrapping…) ganham, ao final, o botão "Realizar análise",
+     injetado por JS: a tradução posicional de wikiApplyLang() não é alterada.
+   • "Realizar análise" abre o pop-up 🧬 Técnicas de análise diretamente na técnica escolhida (a Wiki continua aberta por baixo).
+   • wikiApplyLang() chama wikiTecApplyLang() ao final; os textos são regenerados a cada troca de idioma. */
+
+function _wkL(pt,en){ return getCurrentLang()==='en'?en:pt; }
+
+/* seções existentes → técnicas que elas abrem */
+var WIKI_TEC_MAP={
+  'wiki-media':['desc'],'wiki-desvio':['desc'],'wiki-ic':['desc'],'wiki-outliers':['outliers','grubbs'],
+  'wiki-ttest':['ttest','onesample','paired'],'wiki-anova':['anova'],'wiki-cohen':['ttest'],'wiki-qq':['normal'],
+  'wiki-mtbf':['weibull'],'wiki-mc':['boot'],'wiki-weibull':['weibull','distfit'],'wiki-simpson':['simpson'],
+  'wiki-dffits':['regr'],'wiki-normalidade':['normal'],'wiki-cook':['regr'],'wiki-bootstrap':['boot'],
+  'wiki-mahalanobis':['mahal'],'wiki-naoparametrico':['mw','kw','paired'],'wiki-chiquadrado':['chi']
+};
+/* técnica → seção da Wiki onde ela é explicada ("Ver na Wiki") */
+var WIKI_TEC_WHERE={
+  desc:'wiki-media',outliers:'wiki-outliers',grubbs:'wiki-tec-grubbs',normal:'wiki-normalidade',pareto:'wiki-tec-pareto',
+  weibull:'wiki-weibull',distfit:'wiki-tec-distfit',overlay:'wiki-tec-overlay',ttest:'wiki-ttest',anova:'wiki-anova',
+  levene:'wiki-tec-levene',variation:'wiki-tec-variation',chi:'wiki-chiquadrado',mahal:'wiki-mahalanobis',simpson:'wiki-simpson',
+  diag:'wiki-tec-diag',paired:'wiki-tec-paired',mw:'wiki-tec-mw',kw:'wiki-tec-kw',onesample:'wiki-tec-onesample',boot:'wiki-bootstrap',
+  regr:'wiki-tec-regr',corrmat:'wiki-tec-corrmat',poly:'wiki-tec-poly'
+};
+/* seções extras ligadas a uma técnica que já tem seção própria */
+var WIKI_TEC_EXTRA={ anova:['wiki-tec-posthoc'], normal:['wiki-tec-normalext'] };
+
+/* dec: [classe (sig|nsig), condição, resultado] · f: [rótulo, fórmula] · tip: [tipo, html] */
+var WIKI_TEC_SECTIONS=[
+{sid:'wiki-tec-grubbs',tec:['grubbs'],icon:'🧷',
+ pt:{title:'Teste de Grubbs',badge:'Outliers',
+  intro:'O <strong>teste de Grubbs</strong> verifica formalmente se o valor mais extremo de uma amostra aproximadamente normal é um <em>outlier</em>, devolvendo um valor-p. No programa ele é <strong>iterativo</strong>: confirma o outlier, remove-o e testa de novo até não restar nenhum. Complementa o critério do IQR, que é apenas descritivo.',
+  f:[['Estatística de Grubbs','G = máx |xᵢ − x̄| / s'],['Valor crítico (bicaudal)','G<sub>crit</sub> = ((n − 1)/√n) · √( t² / (n − 2 + t²) ), &nbsp;t = t<sub>α/(2n), n−2</sub>']],
+  dec:[['sig','G &gt; G<sub>crit</sub> (p ≤ α)','✅ O valor mais extremo é outlier'],['nsig','G ≤ G<sub>crit</sub> (p &gt; α)','❌ Sem evidência de outlier']],
+  tip:['warning','⚠️ <strong>Premissa:</strong> dados aproximadamente normais (confira em Normalidade). O teste avalia um valor por vez; investigue a causa (digitação, medição, lote diferente) antes de remover qualquer ponto.']},
+ en:{title:'Grubbs Test',badge:'Outliers',
+  intro:'The <strong>Grubbs test</strong> formally checks whether the most extreme value of an approximately normal sample is an <em>outlier</em>, returning a p-value. In the program it is <strong>iterative</strong>: it confirms the outlier, removes it and tests again until none is left. It complements the IQR rule, which is only descriptive.',
+  f:[['Grubbs statistic','G = max |xᵢ − x̄| / s'],['Critical value (two-sided)','G<sub>crit</sub> = ((n − 1)/√n) · √( t² / (n − 2 + t²) ), &nbsp;t = t<sub>α/(2n), n−2</sub>']],
+  dec:[['sig','G &gt; G<sub>crit</sub> (p ≤ α)','✅ The most extreme value is an outlier'],['nsig','G ≤ G<sub>crit</sub> (p &gt; α)','❌ No evidence of an outlier']],
+  tip:['warning','⚠️ <strong>Assumption:</strong> approximately normal data (check Normality). The test evaluates one value at a time; investigate the cause (typo, measurement, different batch) before removing any point.']},
+ sum:{pt:{obj:'Detectar formalmente um outlier (de forma iterativa) em dados aproximadamente normais.',when:'Quando o IQR sinaliza pontos suspeitos e você quer um valor-p para decidir.',groups:'1 ou mais colunas (cada uma analisada separadamente), com n ≥ 3.',defaults:'α = 0,05.',apps:'Validar leituras suspeitas em ensaios e medições.',params:'G, G crítico, p-valor, linha do valor suspeito e lista de outliers confirmados.'},
+      en:{obj:'Formally detect an outlier (iteratively) in approximately normal data.',when:'When the IQR flags suspicious points and you want a p-value to decide.',groups:'1 or more columns (each analyzed separately), with n ≥ 3.',defaults:'α = 0.05.',apps:'Validating suspicious readings in tests and measurements.',params:'G, critical G, p-value, row of the suspect value and list of confirmed outliers.'}}},
+
+{sid:'wiki-tec-pareto',tec:['pareto'],icon:'📶',
+ pt:{title:'Pareto (frequência por faixa)',badge:'Descritiva',
+  intro:'O <strong>diagrama de Pareto</strong> agrupa os valores em faixas, ordena da faixa mais frequente para a menos frequente e acrescenta a curva de <em>% acumulado</em>. Mostra quais poucas faixas concentram a maior parte das ocorrências (regra 80/20).',
+  f:[['Frequência relativa da faixa k','pₖ = fₖ / N × 100'],['% acumulado','C<sub>k</sub> = Σ<sub>j≤k</sub> pⱼ']],
+  tip:['info','💡 Use para priorizar: concentre a análise nas faixas que somam cerca de 80 % das ocorrências.']},
+ en:{title:'Pareto (frequency by range)',badge:'Descriptive',
+  intro:'The <strong>Pareto chart</strong> groups the values into ranges, sorts from the most to the least frequent range and adds the <em>cumulative %</em> curve. It shows which few ranges concentrate most of the occurrences (80/20 rule).',
+  f:[['Relative frequency of range k','pₖ = fₖ / N × 100'],['Cumulative %','C<sub>k</sub> = Σ<sub>j≤k</sub> pⱼ']],
+  tip:['info','💡 Use it to prioritize: focus the analysis on the ranges that add up to about 80 % of the occurrences.']},
+ sum:{pt:{obj:'Identificar as faixas de valores que concentram a maioria das ocorrências.',when:'Para priorizar causas/faixas dominantes em um conjunto de medições.',groups:'1 ou mais colunas (cada uma analisada separadamente).',defaults:'Faixas definidas automaticamente.',apps:'Priorização de tempos de reparo, defeitos ou perdas.',params:'Faixas (centro), frequência, % e % acumulado.'},
+      en:{obj:'Identify the value ranges that concentrate most occurrences.',when:'To prioritize dominant causes/ranges in a set of measurements.',groups:'1 or more columns (each analyzed separately).',defaults:'Ranges defined automatically.',apps:'Prioritizing repair times, defects or losses.',params:'Ranges (center), frequency, % and cumulative %.'}}},
+
+{sid:'wiki-tec-normalext',tec:['normal'],icon:'🔔',
+ pt:{title:'Jarque-Bera e Anderson-Darling',badge:'Normalidade',
+  intro:'Testes de normalidade que complementam o Shapiro-Wilk: o <strong>Jarque-Bera</strong> avalia assimetria e curtose em conjunto; o <strong>Anderson-Darling</strong> dá mais peso às <em>caudas</em> da distribuição.',
+  f:[['Jarque-Bera','JB = (n/6) · ( S² + K²/4 ) &nbsp;~ χ²<sub>2</sub> &nbsp;(S = assimetria, K = curtose em excesso)'],['Anderson-Darling','A² = −n − (1/n) Σ (2i − 1)[ ln Φ(zᵢ) + ln(1 − Φ(z<sub>n+1−i</sub>)) ], &nbsp;A*² = A²(1 + 0,75/n + 2,25/n²)']],
+  dec:[['sig','p ≤ α','✅ Rejeita-se a normalidade'],['nsig','p &gt; α','❌ Sem evidência contra a normalidade']],
+  tip:['info','💡 O <strong>Shapiro-Wilk</strong> é o teste principal; Jarque-Bera e Anderson-Darling servem de confirmação. O p do Anderson-Darling usa a aproximação de D’Agostino-Stephens.']},
+ en:{title:'Jarque-Bera and Anderson-Darling',badge:'Normality',
+  intro:'Normality tests that complement Shapiro-Wilk: <strong>Jarque-Bera</strong> evaluates skewness and kurtosis together; <strong>Anderson-Darling</strong> gives more weight to the <em>tails</em> of the distribution.',
+  f:[['Jarque-Bera','JB = (n/6) · ( S² + K²/4 ) &nbsp;~ χ²<sub>2</sub> &nbsp;(S = skewness, K = excess kurtosis)'],['Anderson-Darling','A² = −n − (1/n) Σ (2i − 1)[ ln Φ(zᵢ) + ln(1 − Φ(z<sub>n+1−i</sub>)) ], &nbsp;A*² = A²(1 + 0.75/n + 2.25/n²)']],
+  dec:[['sig','p ≤ α','✅ Normality is rejected'],['nsig','p &gt; α','❌ No evidence against normality']],
+  tip:['info','💡 <strong>Shapiro-Wilk</strong> is the main test; Jarque-Bera and Anderson-Darling serve as confirmation. The Anderson-Darling p-value uses the D’Agostino-Stephens approximation.']},
+ sum:{pt:{obj:'Confirmar a normalidade com testes complementares ao Shapiro-Wilk.',when:'Quando o Shapiro-Wilk é duvidoso (n pequeno ou grande) ou você quer atenção às caudas.',groups:'1 ou mais colunas (cada uma analisada separadamente), com n ≥ 3.',defaults:'α = 0,05.',apps:'Verificar premissas de t, ANOVA e capabilidade.',params:'JB e p, A*² e p (junto com W e p do Shapiro-Wilk, assimetria e curtose).'},
+      en:{obj:'Confirm normality with tests complementary to Shapiro-Wilk.',when:'When Shapiro-Wilk is doubtful (small or large n) or you want attention on the tails.',groups:'1 or more columns (each analyzed separately), with n ≥ 3.',defaults:'α = 0.05.',apps:'Checking assumptions of t, ANOVA and capability.',params:'JB and p, A*² and p (along with Shapiro-Wilk W and p, skewness and kurtosis).'}}},
+
+{sid:'wiki-tec-distfit',tec:['distfit'],icon:'🧮',
+ pt:{title:'Ajuste de distribuições',badge:'Distribuições',
+  intro:'Ajusta as distribuições <strong>Normal, Log-normal, Weibull, Exponencial e Gama</strong> pelo método da máxima verossimilhança e as ranqueia por <strong>AIC</strong>, <strong>BIC</strong> e pela distância de <strong>Kolmogorov-Smirnov</strong>, ajudando a escolher o modelo que melhor descreve os dados (por exemplo, vida em fadiga ou tempos de falha).',
+  f:[['Critério de Akaike','AIC = 2k − 2 ln L'],['Critério bayesiano (Schwarz)','BIC = k ln n − 2 ln L'],['Distância de Kolmogorov-Smirnov','D = máx<sub>i</sub> |F<sub>n</sub>(xᵢ) − F(xᵢ)|']],
+  dec:[['sig','Menor AIC / BIC','✅ Melhor equilíbrio entre ajuste e simplicidade (ΔAIC &lt; 2 ≈ empate técnico)'],['nsig','D grande (p do KS pequeno)','❌ O modelo descreve mal os dados']],
+  tip:['warning','⚠️ O p do KS é <strong>aproximado</strong> (os parâmetros são estimados dos próprios dados e o valor tende a ser otimista). Log-normal, Weibull, Exponencial e Gama exigem valores &gt; 0 (localização 0). Confira sempre os gráficos de densidade e de FDA.']},
+ en:{title:'Distribution fitting',badge:'Distributions',
+  intro:'Fits the <strong>Normal, Lognormal, Weibull, Exponential and Gamma</strong> distributions by maximum likelihood and ranks them by <strong>AIC</strong>, <strong>BIC</strong> and the <strong>Kolmogorov-Smirnov</strong> distance, helping you choose the model that best describes the data (for example fatigue life or failure times).',
+  f:[['Akaike criterion','AIC = 2k − 2 ln L'],['Bayesian (Schwarz) criterion','BIC = k ln n − 2 ln L'],['Kolmogorov-Smirnov distance','D = max<sub>i</sub> |F<sub>n</sub>(xᵢ) − F(xᵢ)|']],
+  dec:[['sig','Lowest AIC / BIC','✅ Best balance between fit and simplicity (ΔAIC &lt; 2 ≈ technical tie)'],['nsig','Large D (small KS p-value)','❌ The model describes the data poorly']],
+  tip:['warning','⚠️ The KS p-value is <strong>approximate</strong> (parameters are estimated from the same data, so it tends to be optimistic). Lognormal, Weibull, Exponential and Gamma require values &gt; 0 (location 0). Always check the density and CDF plots.']},
+ sum:{pt:{obj:'Escolher a distribuição que melhor descreve os dados.',when:'Antes de modelar vida/tempos de falha ou simular, para saber qual modelo usar.',groups:'1 ou mais colunas (cada uma analisada separadamente), com n ≥ 5.',defaults:'Nenhum parâmetro configurável.',apps:'Confiabilidade, fadiga, simulação Monte Carlo.',params:'Parâmetros (MLE), log L, AIC, ΔAIC, BIC, D e p do KS de cada distribuição.'},
+      en:{obj:'Choose the distribution that best describes the data.',when:'Before modeling life/failure times or simulating, to know which model to use.',groups:'1 or more columns (each analyzed separately), with n ≥ 5.',defaults:'No configurable parameters.',apps:'Reliability, fatigue, Monte Carlo simulation.',params:'Parameters (MLE), log L, AIC, ΔAIC, BIC, KS D and p for each distribution.'}}},
+
+{sid:'wiki-tec-overlay',tec:['overlay'],icon:'🔀',
+ pt:{title:'Sobreposição de distribuições',badge:'Comparativo',
+  intro:'Sobrepõe, no mesmo gráfico, os <strong>histogramas, boxplots, FDP, FDA, Q-Q, dispersão e gráficos de Weibull</strong> de vários grupos — os mesmos da aba <em>Sobreposição</em> da Análise Comparativa — para comparar visualmente posição, dispersão e forma das distribuições.',
+  f:[['FDP normal ajustada','f(x) = 1/(σ√(2π)) · e<sup>−(x−μ)²/(2σ²)</sup>'],['Densidade por kernel (KDE)','f̂(x) = (1/n) Σ K((x − xᵢ)/h), &nbsp;h = 1,06 · s · n<sup>−1/5</sup>'],['FDA empírica','F<sub>n</sub>(x) = #{xᵢ ≤ x} / n']],
+  tip:['info','💡 É uma comparação <strong>visual</strong>. Para saber se as diferenças são estatisticamente significativas, use o Teste t, a ANOVA ou os testes não paramétricos.']},
+ en:{title:'Distribution overlay',badge:'Comparative',
+  intro:'Overlays, in the same chart, the <strong>histograms, boxplots, PDF, CDF, Q-Q, scatter and Weibull plots</strong> of several groups — the same ones as the <em>Overlay</em> tab of the Comparative Analysis — to visually compare position, spread and shape of the distributions.',
+  f:[['Fitted normal PDF','f(x) = 1/(σ√(2π)) · e<sup>−(x−μ)²/(2σ²)</sup>'],['Kernel density (KDE)','f̂(x) = (1/n) Σ K((x − xᵢ)/h), &nbsp;h = 1.06 · s · n<sup>−1/5</sup>'],['Empirical CDF','F<sub>n</sub>(x) = #{xᵢ ≤ x} / n']],
+  tip:['info','💡 This is a <strong>visual</strong> comparison. To know whether differences are statistically significant, use the t-test, ANOVA or the non-parametric tests.']},
+ sum:{pt:{obj:'Comparar visualmente a distribuição de vários grupos.',when:'Para enxergar diferenças de posição, dispersão e forma antes de testar.',groups:'2 ou mais grupos (colunas), cada um com ≥ 2 valores.',defaults:'FDP normal ajustada (ou KDE).',apps:'Comparar fornecedores, lotes, turnos ou máquinas.',params:'Histogramas, boxplots, FDP, FDA, Q-Q, dispersão e Weibull sobrepostos.'},
+      en:{obj:'Visually compare the distribution of several groups.',when:'To see differences in position, spread and shape before testing.',groups:'2 or more groups (columns), each with ≥ 2 values.',defaults:'Fitted normal PDF (or KDE).',apps:'Comparing suppliers, batches, shifts or machines.',params:'Overlaid histograms, boxplots, PDF, CDF, Q-Q, scatter and Weibull.'}}},
+
+{sid:'wiki-tec-variation',tec:['variation'],icon:'🔄',
+ pt:{title:'Variação entre grupos',badge:'Comparativo',
+  intro:'Constrói um <strong>mapa de calor</strong> com a diferença (percentual ou absoluta) de uma estatística — média, mediana, desvio-padrão, CV, mínimo ou máximo — entre todos os pares de grupos, no espírito da aba <em>Variação</em> da Análise Comparativa.',
+  f:[['Variação percentual (coluna em relação à linha)','Δ%<sub>ij</sub> = (v<sub>j</sub> − v<sub>i</sub>) / |v<sub>i</sub>| × 100'],['Variação absoluta','Δ<sub>ij</sub> = v<sub>j</sub> − v<sub>i</sub>']],
+  tip:['info','💡 É uma medida <strong>descritiva</strong> (não é teste de hipótese). Laranja = aumento, azul = redução; quanto mais intensa a cor, maior a variação.']},
+ en:{title:'Variation between groups',badge:'Comparative',
+  intro:'Builds a <strong>heatmap</strong> with the difference (percent or absolute) of a statistic — mean, median, standard deviation, CV, minimum or maximum — between all pairs of groups, in the spirit of the <em>Variation</em> tab of the Comparative Analysis.',
+  f:[['Percent variation (column relative to row)','Δ%<sub>ij</sub> = (v<sub>j</sub> − v<sub>i</sub>) / |v<sub>i</sub>| × 100'],['Absolute variation','Δ<sub>ij</sub> = v<sub>j</sub> − v<sub>i</sub>']],
+  tip:['info','💡 This is a <strong>descriptive</strong> measure (not a hypothesis test). Orange = increase, blue = decrease; the stronger the color, the larger the variation.']},
+ sum:{pt:{obj:'Quantificar quanto cada grupo varia em relação aos demais.',when:'Para comparar rapidamente médias, medianas ou dispersões entre estudos.',groups:'2 ou mais grupos (colunas).',defaults:'Estatística: média; diferença: percentual.',apps:'Comparar antes/depois, lotes ou anos.',params:'Tabela da estatística por grupo e mapa de calor das variações.'},
+      en:{obj:'Quantify how much each group varies relative to the others.',when:'To quickly compare means, medians or dispersion between studies.',groups:'2 or more groups (columns).',defaults:'Statistic: mean; difference: percent.',apps:'Comparing before/after, batches or years.',params:'Table of the statistic per group and heatmap of variations.'}}},
+
+{sid:'wiki-tec-diag',tec:['diag'],icon:'🫀',
+ pt:{title:'Diagnóstico automático',badge:'Comparativo',
+  intro:'Executa, de uma só vez, sete checagens sobre os grupos — diferença entre grupos (t de Welch ou ANOVA), <strong>normalidade</strong>, <strong>outliers</strong>, <strong>pontos influentes</strong> (Cook/DFFITS), <strong>homogeneidade de variâncias</strong>, <strong>χ²</strong> e <strong>Mahalanobis</strong> —, resume tudo em um índice de qualidade (🟢 🟡 🔴) e <strong>sugere a próxima análise</strong>: os botões enviam os mesmos dados para a técnica indicada.',
+  tip:['info','💡 A recomendação depende dos resultados: dados não normais, por exemplo, levam a Mann-Whitney/Kruskal-Wallis ou Bootstrap; variâncias diferentes levam ao teste de homogeneidade e ao Welch.']},
+ en:{title:'Automatic diagnosis',badge:'Comparative',
+  intro:'Runs, at once, seven checks on the groups — difference between groups (Welch t or ANOVA), <strong>normality</strong>, <strong>outliers</strong>, <strong>influential points</strong> (Cook/DFFITS), <strong>homogeneity of variances</strong>, <strong>χ²</strong> and <strong>Mahalanobis</strong> —, summarizes everything in a quality index (🟢 🟡 🔴) and <strong>suggests the next analysis</strong>: the buttons send the same data to the suggested technique.',
+  tip:['info','💡 The recommendation depends on the results: non-normal data, for example, lead to Mann-Whitney/Kruskal-Wallis or Bootstrap; different variances lead to the homogeneity test and Welch.']},
+ sum:{pt:{obj:'Avaliar a qualidade da comparação entre grupos e indicar o próximo passo.',when:'Como primeira olhada em um conjunto de grupos, antes de escolher o teste.',groups:'2 ou mais grupos (colunas), cada um com ≥ 3 valores.',defaults:'α = 0,05.',apps:'Triagem rápida de lotes, fornecedores ou tratamentos.',params:'Índice de qualidade, cartões por checagem e técnicas recomendadas.'},
+      en:{obj:'Assess the quality of the comparison between groups and indicate the next step.',when:'As a first look at a set of groups, before choosing the test.',groups:'2 or more groups (columns), each with ≥ 3 values.',defaults:'α = 0.05.',apps:'Quick screening of batches, suppliers or treatments.',params:'Quality index, cards per check and recommended techniques.'}}},
+
+{sid:'wiki-tec-levene',tec:['levene'],icon:'📏',
+ pt:{title:'Homogeneidade de variâncias',badge:'Premissas',
+  intro:'Testa se os grupos têm a <strong>mesma variabilidade</strong> (homocedasticidade), premissa da ANOVA e do teste t clássico. O programa aplica <strong>Levene</strong> (centro na média), <strong>Brown-Forsythe</strong> (centro na mediana), <strong>Bartlett</strong> e, para 2 grupos, o <strong>teste F</strong> de razão de variâncias.',
+  f:[['Levene / Brown-Forsythe','z<sub>ij</sub> = |x<sub>ij</sub> − c<sub>j</sub>| (c = média ou mediana) → ANOVA sobre os z<sub>ij</sub>'],['Bartlett','T = [ (N − k) ln s²<sub>p</sub> − Σ (nⱼ − 1) ln sⱼ² ] / C &nbsp;~ χ²<sub>k−1</sub>'],['Teste F (2 grupos)','F = s₁² / s₂² &nbsp;(gl = n₁ − 1, n₂ − 1)']],
+  dec:[['sig','p ≤ α','✅ Variâncias diferentes — prefira Welch ou Games-Howell'],['nsig','p &gt; α','❌ Variâncias compatíveis — ANOVA/Tukey são adequados']],
+  tip:['info','💡 O Brown-Forsythe é o mais recomendado por ser robusto à não normalidade; o Bartlett é mais potente, porém sensível a dados não normais.']},
+ en:{title:'Homogeneity of variances',badge:'Assumptions',
+  intro:'Tests whether the groups have the <strong>same variability</strong> (homoscedasticity), an assumption of ANOVA and the classic t-test. The program applies <strong>Levene</strong> (mean-centered), <strong>Brown-Forsythe</strong> (median-centered), <strong>Bartlett</strong> and, for 2 groups, the variance-ratio <strong>F-test</strong>.',
+  f:[['Levene / Brown-Forsythe','z<sub>ij</sub> = |x<sub>ij</sub> − c<sub>j</sub>| (c = mean or median) → ANOVA on the z<sub>ij</sub>'],['Bartlett','T = [ (N − k) ln s²<sub>p</sub> − Σ (nⱼ − 1) ln sⱼ² ] / C &nbsp;~ χ²<sub>k−1</sub>'],['F-test (2 groups)','F = s₁² / s₂² &nbsp;(df = n₁ − 1, n₂ − 1)']],
+  dec:[['sig','p ≤ α','✅ Different variances — prefer Welch or Games-Howell'],['nsig','p &gt; α','❌ Compatible variances — ANOVA/Tukey are appropriate']],
+  tip:['info','💡 Brown-Forsythe is the most recommended because it is robust to non-normality; Bartlett is more powerful but sensitive to non-normal data.']},
+ sum:{pt:{obj:'Verificar se os grupos têm a mesma variabilidade.',when:'Antes de ANOVA/teste t clássico, ou ao escolher entre Tukey e Games-Howell.',groups:'2 ou mais grupos (colunas), cada um com ≥ 2 valores e variação.',defaults:'α = 0,05.',apps:'Validar premissas; comparar precisão de máquinas ou métodos.',params:'Levene, Brown-Forsythe, Bartlett (e F para 2 grupos) com estatística e p; variância, DP e CV por grupo.'},
+      en:{obj:'Check whether the groups have the same variability.',when:'Before ANOVA/classic t-test, or when choosing between Tukey and Games-Howell.',groups:'2 or more groups (columns), each with ≥ 2 values and variation.',defaults:'α = 0.05.',apps:'Validating assumptions; comparing machine or method precision.',params:'Levene, Brown-Forsythe, Bartlett (and F for 2 groups) with statistic and p; variance, SD and CV per group.'}}},
+
+{sid:'wiki-tec-posthoc',tec:['anova'],icon:'🏅',
+ pt:{title:'Post-hoc da ANOVA (Tukey HSD e Games-Howell)',badge:'Comparativo',
+  intro:'Quando a ANOVA indica diferença, o <strong>post-hoc</strong> mostra <em>quais pares</em> de grupos diferem. O programa oferece o <strong>Tukey HSD</strong> (assume variâncias iguais, com IC) e o <strong>Games-Howell</strong> (não assume), ambos com valor-p exato já ajustado para as comparações múltiplas. Também aparece nas abas <em>Comparativo</em> e <em>Relatório</em> da Análise Comparativa (3+ estudos), no PDF e no Excel.',
+  f:[['Tukey-Kramer','q = |x̄ᵢ − x̄ⱼ| / √( MS<sub>dentro</sub>/2 · (1/nᵢ + 1/nⱼ) ) &nbsp;~ amplitude studentizada q(k, N − k)'],['IC do Tukey','(x̄ᵢ − x̄ⱼ) ± q<sub>crít</sub> · √( MS<sub>dentro</sub>/2 · (1/nᵢ + 1/nⱼ) )'],['Games-Howell','q = |x̄ᵢ − x̄ⱼ| / √( (sᵢ²/nᵢ + sⱼ²/nⱼ)/2 ), &nbsp;gl de Welch-Satterthwaite em cada par']],
+  dec:[['sig','p (ajustado) ≤ α','✅ O par difere'],['nsig','p (ajustado) &gt; α','❌ Sem diferença entre o par']],
+  tip:['info','💡 Interprete os pares principalmente quando a ANOVA global for significativa. Se o teste de homogeneidade (Brown-Forsythe) indicar variâncias diferentes, prefira o Games-Howell.']},
+ en:{title:'ANOVA post-hoc (Tukey HSD and Games-Howell)',badge:'Comparative',
+  intro:'When ANOVA indicates a difference, the <strong>post-hoc</strong> shows <em>which pairs</em> of groups differ. The program offers <strong>Tukey HSD</strong> (assumes equal variances, with CI) and <strong>Games-Howell</strong> (does not), both with an exact p-value already adjusted for multiple comparisons. It also appears in the <em>Comparative</em> and <em>Report</em> tabs of the Comparative Analysis (3+ studies), in the PDF and in the Excel file.',
+  f:[['Tukey-Kramer','q = |x̄ᵢ − x̄ⱼ| / √( MS<sub>within</sub>/2 · (1/nᵢ + 1/nⱼ) ) &nbsp;~ studentized range q(k, N − k)'],['Tukey CI','(x̄ᵢ − x̄ⱼ) ± q<sub>crit</sub> · √( MS<sub>within</sub>/2 · (1/nᵢ + 1/nⱼ) )'],['Games-Howell','q = |x̄ᵢ − x̄ⱼ| / √( (sᵢ²/nᵢ + sⱼ²/nⱼ)/2 ), &nbsp;Welch-Satterthwaite df for each pair']],
+  dec:[['sig','p (adjusted) ≤ α','✅ The pair differs'],['nsig','p (adjusted) &gt; α','❌ No difference for the pair']],
+  tip:['info','💡 Interpret the pairs mainly when the global ANOVA is significant. If the homogeneity test (Brown-Forsythe) indicates different variances, prefer Games-Howell.']},
+ sum:{pt:{obj:'Descobrir quais pares de grupos diferem após uma ANOVA.',when:'Depois de uma ANOVA significativa com 3 ou mais grupos.',groups:'3 ou mais grupos (colunas), cada um com ≥ 2 valores.',defaults:'α = 0,05.',apps:'Comparar tratamentos, lotes, fornecedores ou máquinas par a par.',params:'Tukey HSD (Δ, IC, q, p ajustado) e Games-Howell (Δ, q, gl, p ajustado); recomendação do método.'},
+      en:{obj:'Find out which pairs of groups differ after an ANOVA.',when:'After a significant ANOVA with 3 or more groups.',groups:'3 or more groups (columns), each with ≥ 2 values.',defaults:'α = 0.05.',apps:'Comparing treatments, batches, suppliers or machines pairwise.',params:'Tukey HSD (Δ, CI, q, adjusted p) and Games-Howell (Δ, q, df, adjusted p); method recommendation.'}}},
+
+{sid:'wiki-tec-paired',tec:['paired'],icon:'👥',
+ pt:{title:'Amostras pareadas (t, Wilcoxon, Bland-Altman)',badge:'Pareado',
+  intro:'Compara duas medições do <strong>mesmo item</strong> (antes/depois ou dois métodos) com o <strong>teste t pareado</strong>, o <strong>Wilcoxon</strong> (não paramétrico) e a <strong>concordância de Bland-Altman</strong>.',
+  f:[['Diferenças','dᵢ = yᵢ − xᵢ'],['t pareado','t = d̄ / (s<sub>d</sub> / √n), &nbsp;gl = n − 1; &nbsp;d<sub>z</sub> = d̄ / s<sub>d</sub>'],['Wilcoxon (postos sinalizados)','W⁺ = Σ postos de |dᵢ| com dᵢ &gt; 0; &nbsp;W = mín(W⁺, W⁻)'],['Limites de concordância (Bland-Altman)','LoA = d̄ ± 1,96 · s<sub>d</sub>']],
+  dec:[['sig','p ≤ α','✅ Houve mudança significativa entre as medições'],['nsig','p &gt; α','❌ Sem mudança significativa']],
+  tip:['warning','⚠️ Use o t pareado quando as <em>diferenças</em> forem aproximadamente normais; caso contrário, o Wilcoxon. No Bland-Altman, decida se a faixa entre os limites de concordância é aceitável para a sua aplicação.']},
+ en:{title:'Paired samples (t, Wilcoxon, Bland-Altman)',badge:'Paired',
+  intro:'Compares two measurements of the <strong>same item</strong> (before/after or two methods) with the <strong>paired t-test</strong>, the <strong>Wilcoxon</strong> (non-parametric) and <strong>Bland-Altman agreement</strong>.',
+  f:[['Differences','dᵢ = yᵢ − xᵢ'],['Paired t','t = d̄ / (s<sub>d</sub> / √n), &nbsp;df = n − 1; &nbsp;d<sub>z</sub> = d̄ / s<sub>d</sub>'],['Wilcoxon (signed-rank)','W⁺ = sum of ranks of |dᵢ| with dᵢ &gt; 0; &nbsp;W = min(W⁺, W⁻)'],['Limits of agreement (Bland-Altman)','LoA = d̄ ± 1.96 · s<sub>d</sub>']],
+  dec:[['sig','p ≤ α','✅ There was a significant change between measurements'],['nsig','p &gt; α','❌ No significant change']],
+  tip:['warning','⚠️ Use the paired t when the <em>differences</em> are approximately normal; otherwise, Wilcoxon. In Bland-Altman, decide whether the range between the limits of agreement is acceptable for your application.']},
+ sum:{pt:{obj:'Comparar duas medições do mesmo item (antes/depois ou dois métodos).',when:'Quando cada linha traz um par de medições do mesmo item.',groups:'2 colunas numéricas pareadas linha a linha (≥ 3 pares).',defaults:'α = 0,05.',apps:'Antes/depois de um tratamento; comparar dois instrumentos.',params:'Diferença média, t, gl, p, IC, d de Cohen (dz), Wilcoxon (W, p), viés e limites de Bland-Altman.'},
+      en:{obj:'Compare two measurements of the same item (before/after or two methods).',when:'When each row holds a pair of measurements of the same item.',groups:'2 numeric columns paired row by row (≥ 3 pairs).',defaults:'α = 0.05.',apps:'Before/after a treatment; comparing two instruments.',params:'Mean difference, t, df, p, CI, Cohen’s dz, Wilcoxon (W, p), Bland-Altman bias and limits.'}}},
+
+{sid:'wiki-tec-mw',tec:['mw'],icon:'🥊',
+ pt:{title:'Mann-Whitney U',badge:'Não paramétrico',
+  intro:'Alternativa não paramétrica ao teste t para <strong>dois grupos independentes</strong>: compara os <strong>postos</strong> dos valores, sem exigir normalidade. Com mais de 2 grupos, o programa compara todos os pares com ajuste de Bonferroni.',
+  f:[['Estatística U','U₁ = R₁ − n₁(n₁ + 1)/2, &nbsp;U₂ = n₁n₂ − U₁, &nbsp;U = mín(U₁, U₂)'],['Aproximação normal (com empates)','z = (U − n₁n₂/2) / √( n₁n₂/12 · [ (N + 1) − Σ(t³ − t) / (N(N − 1)) ] )'],['Tamanho de efeito','r = (U₁ − U₂) / (n₁n₂) &nbsp;(bisserial por postos); &nbsp;P(A &gt; B) = U₁ / (n₁n₂)']],
+  dec:[['sig','p ≤ α','✅ Um grupo tende a ter valores maiores'],['nsig','p &gt; α','❌ Sem evidência de deslocamento entre os grupos']],
+  tip:['info','💡 O p-valor é <strong>exato</strong> quando não há empates e n ≤ 30 por grupo; caso contrário usa a aproximação normal com correção de continuidade e de empates.']},
+ en:{title:'Mann-Whitney U',badge:'Non-parametric',
+  intro:'Non-parametric alternative to the t-test for <strong>two independent groups</strong>: it compares the <strong>ranks</strong> of the values, without requiring normality. With more than 2 groups, the program compares all pairs with Bonferroni adjustment.',
+  f:[['U statistic','U₁ = R₁ − n₁(n₁ + 1)/2, &nbsp;U₂ = n₁n₂ − U₁, &nbsp;U = min(U₁, U₂)'],['Normal approximation (with ties)','z = (U − n₁n₂/2) / √( n₁n₂/12 · [ (N + 1) − Σ(t³ − t) / (N(N − 1)) ] )'],['Effect size','r = (U₁ − U₂) / (n₁n₂) &nbsp;(rank-biserial); &nbsp;P(A &gt; B) = U₁ / (n₁n₂)']],
+  dec:[['sig','p ≤ α','✅ One group tends to have larger values'],['nsig','p &gt; α','❌ No evidence of a shift between the groups']],
+  tip:['info','💡 The p-value is <strong>exact</strong> when there are no ties and n ≤ 30 per group; otherwise it uses the normal approximation with continuity and tie corrections.']},
+ sum:{pt:{obj:'Comparar dois grupos independentes sem supor normalidade.',when:'Dados não normais, com outliers ou em escala ordinal, com 2 grupos.',groups:'2 ou mais grupos (colunas), cada um com ≥ 2 valores (todos os pares se houver mais de 2).',defaults:'α = 0,05; p ajustado por Bonferroni entre pares.',apps:'Alternativa ao teste t; comparar tempos, vidas ou rankings.',params:'U, z, p (exato ou aproximado), correlação bisserial por postos, P(A > B) e medianas.'},
+      en:{obj:'Compare two independent groups without assuming normality.',when:'Non-normal data, with outliers or ordinal scale, with 2 groups.',groups:'2 or more groups (columns), each with ≥ 2 values (all pairs if more than 2).',defaults:'α = 0.05; p adjusted by Bonferroni across pairs.',apps:'Alternative to the t-test; comparing times, lives or rankings.',params:'U, z, p (exact or approximate), rank-biserial correlation, P(A > B) and medians.'}}},
+
+{sid:'wiki-tec-kw',tec:['kw'],icon:'🏔️',
+ pt:{title:'Kruskal-Wallis',badge:'Não paramétrico',
+  intro:'Extensão do Mann-Whitney para <strong>3 ou mais grupos</strong> (alternativa não paramétrica à ANOVA). Compara os postos médios dos grupos e, se for significativo, o post-hoc de <strong>Dunn</strong> (com ajuste de Bonferroni) indica quais pares diferem.',
+  f:[['Estatística H','H = [12 / (N(N + 1))] · Σ R<sub>j</sub>² / n<sub>j</sub> − 3(N + 1) &nbsp;(dividida pela correção de empates); &nbsp;gl = k − 1'],['Tamanho de efeito','ε² = H / (N − 1)'],['Post-hoc de Dunn','z = (R̄ᵢ − R̄ⱼ) / √( [N(N + 1)/12 − Σ(t³ − t)/(12(N − 1))] · (1/nᵢ + 1/nⱼ) )']],
+  dec:[['sig','p ≤ α','✅ Ao menos um grupo tende a valores diferentes'],['nsig','p &gt; α','❌ Sem diferença significativa entre os grupos']],
+  tip:['info','💡 Não exige normalidade. Um resultado significativo diz que existe diferença; use o Dunn para saber <em>onde</em>.']},
+ en:{title:'Kruskal-Wallis',badge:'Non-parametric',
+  intro:'Extension of Mann-Whitney to <strong>3 or more groups</strong> (non-parametric alternative to ANOVA). It compares the mean ranks of the groups and, if significant, the <strong>Dunn</strong> post-hoc (with Bonferroni adjustment) indicates which pairs differ.',
+  f:[['H statistic','H = [12 / (N(N + 1))] · Σ R<sub>j</sub>² / n<sub>j</sub> − 3(N + 1) &nbsp;(divided by the tie correction); &nbsp;df = k − 1'],['Effect size','ε² = H / (N − 1)'],['Dunn post-hoc','z = (R̄ᵢ − R̄ⱼ) / √( [N(N + 1)/12 − Σ(t³ − t)/(12(N − 1))] · (1/nᵢ + 1/nⱼ) )']],
+  dec:[['sig','p ≤ α','✅ At least one group tends to different values'],['nsig','p &gt; α','❌ No significant difference between groups']],
+  tip:['info','💡 It does not require normality. A significant result says a difference exists; use Dunn to know <em>where</em>.']},
+ sum:{pt:{obj:'Comparar 3 ou mais grupos sem supor normalidade.',when:'Dados não normais, com outliers ou ordinais, com 3+ grupos.',groups:'2 ou mais grupos (colunas).',defaults:'α = 0,05; Dunn com Bonferroni.',apps:'Alternativa à ANOVA; comparar tratamentos ou lotes.',params:'H, gl, p, ε², posto médio e mediana por grupo, pares de Dunn.'},
+      en:{obj:'Compare 3 or more groups without assuming normality.',when:'Non-normal, outlier-prone or ordinal data, with 3+ groups.',groups:'2 or more groups (columns).',defaults:'α = 0.05; Dunn with Bonferroni.',apps:'Alternative to ANOVA; comparing treatments or batches.',params:'H, df, p, ε², mean rank and median per group, Dunn pairs.'}}},
+
+{sid:'wiki-tec-onesample',tec:['onesample'],icon:'📌',
+ pt:{title:'Teste t de uma amostra',badge:'Referência',
+  intro:'Compara a <strong>média</strong> de um grupo com um valor de referência ou alvo (μ₀), com IC e tamanho de efeito; o <strong>Wilcoxon</strong> faz o mesmo para a mediana sem exigir normalidade.',
+  f:[['Estatística t','t = (x̄ − μ₀) / (s / √n), &nbsp;gl = n − 1'],['Intervalo de confiança','x̄ ± t<sub>α/2, n−1</sub> · s/√n'],['Tamanho de efeito','d = (x̄ − μ₀) / s']],
+  dec:[['sig','p ≤ α (μ₀ fora do IC)','✅ A média difere do valor de referência'],['nsig','p &gt; α (μ₀ dentro do IC)','❌ Compatível com o valor de referência']],
+  tip:['info','💡 Informe o valor de referência (μ₀) nos parâmetros. Se o IC não contiver μ₀, o resultado é significativo.']},
+ en:{title:'One-sample t-test',badge:'Reference',
+  intro:'Compares the <strong>mean</strong> of a group with a reference or target value (μ₀), with CI and effect size; <strong>Wilcoxon</strong> does the same for the median without requiring normality.',
+  f:[['t statistic','t = (x̄ − μ₀) / (s / √n), &nbsp;df = n − 1'],['Confidence interval','x̄ ± t<sub>α/2, n−1</sub> · s/√n'],['Effect size','d = (x̄ − μ₀) / s']],
+  dec:[['sig','p ≤ α (μ₀ outside the CI)','✅ The mean differs from the reference value'],['nsig','p &gt; α (μ₀ inside the CI)','❌ Compatible with the reference value']],
+  tip:['info','💡 Enter the reference value (μ₀) in the parameters. If the CI does not contain μ₀, the result is significant.']},
+ sum:{pt:{obj:'Verificar se a média (ou mediana) difere de um valor de referência ou alvo.',when:'Quando existe um valor nominal, especificação ou meta para comparar.',groups:'1 ou mais colunas (cada uma comparada a μ₀), com n ≥ 2.',defaults:'α = 0,05; μ₀ informado pelo usuário.',apps:'Conferir se lotes atendem ao valor nominal.',params:'Média, DP, t, gl, p, IC, d, mediana e p do Wilcoxon.'},
+      en:{obj:'Check whether the mean (or median) differs from a reference or target value.',when:'When there is a nominal value, specification or goal to compare with.',groups:'1 or more columns (each compared with μ₀), with n ≥ 2.',defaults:'α = 0.05; μ₀ provided by the user.',apps:'Checking whether batches meet the nominal value.',params:'Mean, SD, t, df, p, CI, d, median and Wilcoxon p.'}}},
+
+{sid:'wiki-tec-regr',tec:['regr'],icon:'📈',
+ pt:{title:'Correlação e regressão',badge:'Relação',
+  intro:'Mede a relação entre duas variáveis: <strong>r de Pearson</strong> (linear), <strong>ρ de Spearman</strong> (monotônica), a <strong>reta de mínimos quadrados</strong> com R², coeficientes com p-valor e IC, e a detecção de pontos influentes por <strong>Cook</strong> e <strong>DFFITS</strong> (veja as seções específicas).',
+  f:[['Correlação de Pearson','r = Σ(xᵢ − x̄)(yᵢ − ȳ) / √( Σ(xᵢ − x̄)² · Σ(yᵢ − ȳ)² )'],['Reta ajustada','ŷ = β₀ + β₁x, &nbsp;β₁ = S<sub>xy</sub>/S<sub>xx</sub>, &nbsp;β₀ = ȳ − β₁x̄, &nbsp;R² = r²'],['Teste de r (H₀: ρ = 0)','t = r √( (n − 2)/(1 − r²) ), &nbsp;gl = n − 2']],
+  tip:['warning','⚠️ Correlação não implica causalidade, e pontos isolados ou relações curvas podem enganar r e R². Olhe sempre o gráfico de dispersão e os pontos influentes.']},
+ en:{title:'Correlation and regression',badge:'Relationship',
+  intro:'Measures the relationship between two variables: <strong>Pearson r</strong> (linear), <strong>Spearman ρ</strong> (monotonic), the <strong>least-squares line</strong> with R², coefficients with p-value and CI, and detection of influential points by <strong>Cook</strong> and <strong>DFFITS</strong> (see the specific sections).',
+  f:[['Pearson correlation','r = Σ(xᵢ − x̄)(yᵢ − ȳ) / √( Σ(xᵢ − x̄)² · Σ(yᵢ − ȳ)² )'],['Fitted line','ŷ = β₀ + β₁x, &nbsp;β₁ = S<sub>xy</sub>/S<sub>xx</sub>, &nbsp;β₀ = ȳ − β₁x̄, &nbsp;R² = r²'],['Test of r (H₀: ρ = 0)','t = r √( (n − 2)/(1 − r²) ), &nbsp;df = n − 2']],
+  tip:['warning','⚠️ Correlation does not imply causation, and isolated points or curved relationships can mislead r and R². Always look at the scatter plot and the influential points.']},
+ sum:{pt:{obj:'Quantificar e modelar a relação entre duas variáveis.',when:'Quando se quer saber se X e Y variam juntas e prever Y a partir de X.',groups:'2 colunas numéricas (X e Y), com ≥ 3 pares.',defaults:'α = 0,05.',apps:'Calibração, dose-resposta, relação processo × propriedade.',params:'r, ρ, R², equação, coeficientes (EP, t, p, IC), R² exponencial, Cook e DFFITS.'},
+      en:{obj:'Quantify and model the relationship between two variables.',when:'When you want to know whether X and Y vary together and predict Y from X.',groups:'2 numeric columns (X and Y), with ≥ 3 pairs.',defaults:'α = 0.05.',apps:'Calibration, dose-response, process × property relationship.',params:'r, ρ, R², equation, coefficients (SE, t, p, CI), exponential R², Cook and DFFITS.'}}},
+
+{sid:'wiki-tec-corrmat',tec:['corrmat'],icon:'🧩',
+ pt:{title:'Matriz de correlação',badge:'Relação',
+  intro:'Calcula a correlação (Pearson ou Spearman) entre <strong>todos os pares de variáveis</strong> de uma vez, com p-valores, mapa de calor e ranking dos pares mais fortes. Cada par usa apenas as linhas em que as duas variáveis têm valor.',
+  f:[['Correlação entre as variáveis i e j','r<sub>ij</sub> = Cov(xᵢ, xⱼ) / (sᵢ · sⱼ)'],['Spearman','ρ = r calculado sobre os <em>postos</em> dos dados'],['Significância','t = r √( (n − 2)/(1 − r²) ), &nbsp;gl = n − 2']],
+  tip:['warning','⚠️ Com muitos pares, alguns resultados “significativos” aparecem por acaso (comparações múltiplas). Priorize relações fortes e com sentido físico.']},
+ en:{title:'Correlation matrix',badge:'Relationship',
+  intro:'Computes the correlation (Pearson or Spearman) between <strong>all pairs of variables</strong> at once, with p-values, heatmap and a ranking of the strongest pairs. Each pair uses only the rows in which both variables have a value.',
+  f:[['Correlation between variables i and j','r<sub>ij</sub> = Cov(xᵢ, xⱼ) / (sᵢ · sⱼ)'],['Spearman','ρ = r computed on the <em>ranks</em> of the data'],['Significance','t = r √( (n − 2)/(1 − r²) ), &nbsp;df = n − 2']],
+  tip:['warning','⚠️ With many pairs, some “significant” results appear by chance (multiple comparisons). Prioritize strong relationships that make physical sense.']},
+ sum:{pt:{obj:'Ver a correlação entre várias variáveis de uma só vez.',when:'Para explorar relações entre muitas medições antes de modelar.',groups:'2 ou mais variáveis (colunas) alinhadas por linha.',defaults:'α = 0,05; método Pearson.',apps:'Explorar relações entre propriedades, parâmetros de processo e resultados.',params:'Matriz r/ρ com p e n, mapa de calor e pares ordenados por força.'},
+      en:{obj:'See the correlation among several variables at once.',when:'To explore relationships among many measurements before modeling.',groups:'2 or more variables (columns) aligned by row.',defaults:'α = 0.05; Pearson method.',apps:'Exploring relationships among properties, process parameters and results.',params:'r/ρ matrix with p and n, heatmap and pairs sorted by strength.'}}},
+
+{sid:'wiki-tec-poly',tec:['poly'],icon:'〰️',
+ pt:{title:'Regressão polinomial',badge:'Relação',
+  intro:'Ajusta curvas de <strong>grau 1 a 6</strong>, compara os graus por R² ajustado e AIC e mostra coeficientes, p-valores, resíduos e o gráfico do ajuste. Útil quando a relação entre X e Y é curva.',
+  f:[['Modelo','ŷ = β₀ + β₁x + β₂x² + … + β<sub>d</sub>x<sup>d</sup>'],['Mínimos quadrados','β = (XᵀX)⁻¹ Xᵀy'],['R² ajustado','R²<sub>aj</sub> = 1 − (1 − R²)(n − 1)/(n − d − 1)'],['AIC (erros gaussianos)','AIC = n ln(SQE/n) + 2(d + 1)']],
+  tip:['warning','⚠️ Graus altos “decoram” o ruído e extrapolam muito mal. Prefira o menor grau que capture a curvatura e não use o polinômio fora da faixa de X observada.']},
+ en:{title:'Polynomial regression',badge:'Relationship',
+  intro:'Fits curves of <strong>degree 1 to 6</strong>, compares the degrees by adjusted R² and AIC and shows coefficients, p-values, residuals and the fit plot. Useful when the relationship between X and Y is curved.',
+  f:[['Model','ŷ = β₀ + β₁x + β₂x² + … + β<sub>d</sub>x<sup>d</sup>'],['Least squares','β = (XᵀX)⁻¹ Xᵀy'],['Adjusted R²','R²<sub>adj</sub> = 1 − (1 − R²)(n − 1)/(n − d − 1)'],['AIC (Gaussian errors)','AIC = n ln(SSE/n) + 2(d + 1)']],
+  tip:['warning','⚠️ High degrees “memorize” noise and extrapolate very badly. Prefer the lowest degree that captures the curvature and do not use the polynomial outside the observed X range.']},
+ sum:{pt:{obj:'Ajustar uma curva polinomial à relação entre X e Y.',when:'Quando a relação é curva e a reta não descreve bem.',groups:'2 colunas numéricas (X e Y), com ≥ 4 pares.',defaults:'α = 0,05; grau 2 (1 a 6).',apps:'Curvas de calibração, resposta térmica, desgaste.',params:'Equação, R², R² ajustado, RMSE, AIC, p do maior grau, coeficientes e resíduos.'},
+      en:{obj:'Fit a polynomial curve to the relationship between X and Y.',when:'When the relationship is curved and a line does not describe it well.',groups:'2 numeric columns (X and Y), with ≥ 4 pairs.',defaults:'α = 0.05; degree 2 (1 to 6).',apps:'Calibration curves, thermal response, wear.',params:'Equation, R², adjusted R², RMSE, AIC, p of the highest degree, coefficients and residuals.'}}}
+];
+
+/* ── ações ── */
+function wikiRunTec(id){
+  try{
+    if(typeof tecOpen!=='function'||typeof tecPick!=='function') throw new Error('módulo indisponível');
+    tecOpen(); tecPick(id); // o pop-up abre por cima da Wiki, que continua aberta por baixo
+  }catch(e){ console.error('wikiRunTec',e); if(typeof notify==='function') notify(_wkL('Não foi possível abrir as Técnicas de análise.','Could not open Analysis Techniques.'),'error'); }
+}
+function _wikiTecName(id){ var t=(typeof _tecTech==='function')?_tecTech(id):null; return t?_wkL(t.pt.n,t.en.n):id; }
+function _wikiTecActions(ids){
+  var multi=ids.length>1;
+  return '<div class="wiki-actions" data-auto="1">'+ids.map(function(id){
+    var nm=_wikiTecName(id), lbl=_wkL('Realizar análise','Run analysis');
+    return '<button type="button" class="wiki-run-btn" onclick="wikiRunTec(\''+id+'\')" title="'+_wkL('Abre “','Opens “')+nm+_wkL('” em Técnicas de análise','” in Analysis Techniques')+'"><span>🧬</span><span>'+lbl+(multi?': '+nm:'')+'</span></button>'
+      +(multi?'':'<span class="wiki-actions-lbl">→ '+nm+'</span>');
+  }).join('')+'</div>';
+}
+function _wikiTecSectionHTML(s){
+  var c=getCurrentLang()==='en'?s.en:s.pt;
+  var h='<div class="wiki-section-header"><span class="wiki-section-icon">'+s.icon+'</span><span class="wiki-section-title">'+c.title+'</span><span class="wiki-section-badge">'+c.badge+'</span></div>';
+  h+='<p class="wiki-p">'+c.intro+'</p>';
+  if(c.f&&c.f.length) h+='<div class="wiki-subsection"><div class="wiki-subsection-title">'+_wkL('Fórmulas','Formulas')+'</div><div class="wiki-formula-block">'+c.f.map(function(x,i){ return '<div class="wf-label"'+(i?' style="margin-top:14px"':'')+'>'+x[0]+'</div><div class="wiki-formula">'+x[1]+'</div>'; }).join('')+'</div></div>';
+  if(c.dec&&c.dec.length) h+='<div class="wiki-decision">'+c.dec.map(function(d){ return '<div class="wiki-decision-item '+d[0]+'"><div class="wd-cond">'+d[1]+'</div><div class="wd-result">'+d[2]+'</div></div>'; }).join('')+'</div>';
+  if(c.tip) h+='<div class="wiki-callout '+c.tip[0]+'">'+c.tip[1]+'</div>';
+  return h+_wikiTecActions(s.tec);
+}
+function _wikiTecOverviewHTML(){
+  var techs=(typeof TEC_TECHS!=='undefined')?TEC_TECHS:[];
+  var h='<div class="wiki-section-header"><span class="wiki-section-icon">🧬</span><span class="wiki-section-title">'+_wkL('Técnicas de análise','Analysis techniques')+'</span><span class="wiki-section-badge">'+_wkL('Visão geral','Overview')+'</span></div>';
+  h+='<p class="wiki-p">'+_wkL(
+    'O botão <strong>🧬 Técnicas de análise</strong> da tela inicial reúne '+techs.length+' técnicas estatísticas prontas: escolha a técnica, informe os dados (<em>importar arquivo</em>, <kbd>Ctrl</kbd>+<kbd>V</kbd> ou <em>arrastar e soltar</em>) e receba os parâmetros, tabelas e gráficos do estudo. Cada técnica permite criar <strong>várias abas</strong> (um estudo por aba) e, com o perfil, guardar os estudos para continuar depois.',
+    'The <strong>🧬 Analysis techniques</strong> button on the home screen gathers '+techs.length+' ready-made statistical techniques: pick the technique, add your data (<em>import a file</em>, <kbd>Ctrl</kbd>+<kbd>V</kbd> or <em>drag and drop</em>) and get the study’s parameters, tables and charts. Each technique lets you create <strong>several tabs</strong> (one study per tab) and, with the profile, save the studies to continue later.')+'</p>';
+  h+='<div class="wiki-tec-grid">'+techs.map(function(t){
+    var where=WIKI_TEC_WHERE[t.id], extra=(WIKI_TEC_EXTRA[t.id]||[]).map(function(sid){ var s=WIKI_TEC_SECTIONS.filter(function(x){ return x.sid===sid; })[0]; var c=s?(getCurrentLang()==='en'?s.en:s.pt):null; return c?'<a href="#'+sid+'" onclick="wikiScroll(\''+sid+'\')">'+c.title+'</a>':''; }).join('');
+    return '<div class="wiki-tec-card"><div class="wiki-tec-card-h"><span class="wiki-tec-ic">'+t.icon+'</span><b>'+_wkL(t.pt.n,t.en.n)+'</b></div><div class="wiki-tec-card-d">'+_wkL(t.pt.d,t.en.d)+'</div>'
+      +'<div class="wiki-tec-card-b"><button type="button" class="wiki-run-btn" onclick="wikiRunTec(\''+t.id+'\')"><span>🧬</span><span>'+_wkL('Realizar análise','Run analysis')+'</span></button>'
+      +(where?'<a class="wiki-tec-link" href="#'+where+'" onclick="wikiScroll(\''+where+'\')">📖 '+_wkL('Ver na Wiki','See in Wiki')+'</a>':'')+'</div>'
+      +(extra?'<div class="wiki-tec-extra">'+_wkL('Veja também: ','See also: ')+extra+'</div>':'')+'</div>';
+  }).join('')+'</div>';
+  h+='<div class="wiki-callout info">'+_wkL('💡 <strong>Realizar análise</strong> abre o pop-up diretamente na técnica escolhida. Ao fechá-lo, você volta para esta página da Wiki.','💡 <strong>Run analysis</strong> opens the pop-up directly on the chosen technique. When you close it, you come back to this Wiki page.')+'</div>';
+  return h;
+}
+
+/* ── montagem (uma vez) e tradução (a cada troca de idioma) ── */
+var _wikiTecBuilt=false;
+function wikiTecBuild(){
+  if(_wikiTecBuilt) return;
+  var nav=document.querySelector('#wikiPage .wiki-nav'), lastSec=document.getElementById('wiki-proj-resumo');
+  if(!nav||!lastSec) return;
+  _wikiTecBuilt=true;
+  var g=document.createElement('div'); g.className='wiki-nav-group'; g.id='wikiNavGroupTec'; nav.appendChild(g);
+  var ids=['wiki-tec-resumo'].concat(WIKI_TEC_SECTIONS.map(function(s){ return s.sid; })), prev=lastSec;
+  ids.forEach(function(sid){
+    var a=document.createElement('a'); a.href='#'+sid; a.setAttribute('onclick',"wikiScroll('"+sid+"')"); a.dataset.tec='1'; nav.appendChild(a);
+    var d=document.createElement('div'); d.className='wiki-section'; d.id=sid; prev.insertAdjacentElement('afterend',d); prev=d;
+  });
+  wikiTecApplyLang();
+}
+function wikiTecApplyLang(){
+  if(!_wikiTecBuilt){ wikiTecBuild(); return; }
+  var en=getCurrentLang()==='en', g=document.getElementById('wikiNavGroupTec'); if(g) g.textContent=en?'Analysis techniques':'Técnicas de análise';
+  var links=document.querySelectorAll('#wikiPage .wiki-nav a[data-tec]');
+  var ov=document.getElementById('wiki-tec-resumo'); if(ov) ov.innerHTML=_wikiTecOverviewHTML();
+  if(links[0]) links[0].textContent='🧬 '+(en?'Overview':'Visão geral');
+  WIKI_TEC_SECTIONS.forEach(function(s,i){
+    var el=document.getElementById(s.sid); if(el) el.innerHTML=_wikiTecSectionHTML(s);
+    if(links[i+1]) links[i+1].textContent=s.icon+' '+(en?s.en.title:s.pt.title);
+  });
+  // botões "Realizar análise" nas seções que já existiam
+  Object.keys(WIKI_TEC_MAP).forEach(function(sid){
+    var sec=document.getElementById(sid); if(!sec) return;
+    var old=sec.querySelector('.wiki-actions[data-auto]'); if(old) old.remove();
+    sec.insertAdjacentHTML('beforeend',_wikiTecActions(WIKI_TEC_MAP[sid]));
+  });
+}
+
+/* Resumo Estatístico (download .txt): inclui as técnicas novas */
+(function(){
+  if(typeof _wikiSummaryData==='undefined') return;
+  WIKI_TEC_SECTIONS.forEach(function(s){
+    ['pt','en'].forEach(function(l){
+      var c=s[l], m=s.sum[l];
+      _wikiSummaryData[l].push({icon:s.icon,title:c.title,group:l==='pt'?'Técnicas de análise':'Analysis Techniques',obj:m.obj,when:m.when,groups:m.groups,defaults:m.defaults,apps:m.apps,params:m.params});
+    });
+  });
+})();
+
+wikiTecBuild();
+
+</script>
+
 
 
 <!--  tooltips flutuantes do Gerador de Gráficos, agora como filhos DIRETOS do <body>
