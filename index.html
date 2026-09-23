@@ -823,6 +823,10 @@ body.light-theme .btn-topbar.btn-topbar-treat-clear:hover{background:rgba(248,11
 .gr-chart-chip .gcc-name{font-size:13px;font-weight:700;color:var(--text2);line-height:1.3}
 .gr-chart-chip .gcc-why{font-size:11.5px;color:var(--text4);line-height:1.45;margin-top:1px}
 .gr-chart-chip .gcc-arrow{margin-left:auto;color:var(--text4);font-size:16px;flex-shrink:0}
+/* ov.1.1.2: chips de TÉCNICAS recomendadas — mesma estrutura dos chips de gráfico
+   (reaproveita .gr-chart-chip) com faixa de destaque, para diferenciar as duas listas. */
+.gr-chart-chip.gr-tec-chip{border-left:3px solid var(--accent)}
+.gr-chart-chip.gr-tec-chip:hover{border-color:var(--accent)}
 /* glossary */
 .guide-gloss-toggle{display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-size:12px;color:var(--text3);background:transparent;border:1px dashed var(--border2);border-radius:10px;padding:7px 14px;cursor:pointer;transition:all .15s}
 .guide-gloss-toggle:hover{border-color:var(--accent);color:var(--text2)}
@@ -2860,6 +2864,30 @@ body.light-theme .tec-overlay{--tec-hover:#000;--tec-hover-bg:rgba(0,0,0,.05)}
 .tec-foot span{display:block;text-wrap:balance}
 
 /* área de trabalho */
+/* ov.1.1.2: bloco "Quando usar / Quando NÃO usar" — fica ACIMA das abas do estudo para o
+   usuário decidir se a técnica serve para o caso dele ANTES de carregar os dados. É um
+   <details> para não empurrar as abas para baixo quando já não for necessário. */
+.tec-when{background:var(--bg4);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.tec-when>summary{list-style:none;cursor:pointer;padding:9px 12px;font-size:12px;font-weight:700;color:var(--text2);display:flex;align-items:center;gap:8px;user-select:none}
+.tec-when>summary::-webkit-details-marker{display:none}
+.tec-when>summary:hover{background:var(--bg5,var(--bg3));color:var(--text)}
+.tec-when>summary .tec-when-arrow{margin-left:auto;color:var(--text4);font-size:11px;transition:transform .18s}
+.tec-when[open]>summary .tec-when-arrow{transform:rotate(90deg)}
+.tec-when>summary .tec-when-sub{font-weight:500;color:var(--text4);font-size:11px}
+.tec-when-body{padding:0 12px 11px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:760px){.tec-when-body{grid-template-columns:1fr}}
+.tec-when-col{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:9px 11px}
+.tec-when-col.ok{border-left:3px solid #22d382}
+.tec-when-col.no{border-left:3px solid #f87171}
+.tec-when-h{font-size:11.5px;font-weight:700;margin-bottom:5px;letter-spacing:.2px}
+.tec-when-col.ok .tec-when-h{color:#22d382}
+.tec-when-col.no .tec-when-h{color:#f87171}
+.tec-when-ul{margin:0;padding-left:16px;font-size:11.5px;color:var(--text3);line-height:1.55}
+.tec-when-ul li{margin-bottom:3px}
+.tec-when-ul li:last-child{margin-bottom:0}
+.tec-when-alt{grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:11.5px;color:var(--text4)}
+.tec-when-alt-btn{background:var(--bg2);border:1px solid var(--border2);color:var(--text3);border-radius:999px;padding:4px 11px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.tec-when-alt-btn:hover{border-color:var(--accent);color:var(--text)}
 .tec-fmt{font-size:12px;color:var(--text3);background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:12px;line-height:1.5}
 .tec-tabs{display:flex;align-items:flex-end;gap:4px;flex-wrap:wrap;border-bottom:1.5px solid var(--border);margin-bottom:14px}
 .tec-tab{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border);border-bottom:none;border-radius:10px 10px 0 0;padding:8px 8px 8px 13px;font-size:12.5px;font-weight:600;color:var(--text3);cursor:pointer;max-width:220px;transition:all .15s;margin-bottom:-1.5px}
@@ -13030,6 +13058,7 @@ var I18N={
     'guide.step':'Passo','guide.back':'Voltar','guide.restart':'Reiniciar','guide.close':'Fechar',
     'guide.watch':'O que observar','guide.caveat':'Atenção','guide.goto':'Ir para',
     'guide.charts':'Gráficos recomendados','guide.chartsHint':'Clique para abrir o Gerador de Gráficos já neste tipo (personalize e exporte a figura).',
+    'guide.techs':'Técnicas de análise recomendadas','guide.techsHint':'Clique para abrir o pop-up 🧬 Técnicas de análise já nesta técnica (cole os dados e receba os parâmetros e gráficos).',
     // intro
     'guide.introH':'Não sabe por onde começar?',
     'guide.introP':'Este assistente conduz você, passo a passo, até a análise certa para o seu objetivo — explicando em linguagem simples o que fazer e como interpretar os resultados. Ideal para quem não domina estatística.',
@@ -13390,6 +13419,7 @@ var I18N={
     'guide.step':'Step','guide.back':'Back','guide.restart':'Restart','guide.close':'Close',
     'guide.watch':'What to watch','guide.caveat':'Caution','guide.goto':'Go to',
     'guide.charts':'Recommended charts','guide.chartsHint':'Click to open the Chart Generator already on this type (customize and export the figure).',
+    'guide.techs':'Recommended analysis techniques','guide.techsHint':'Click to open the 🧬 Analysis Techniques pop-up already on this technique (paste your data and get the parameters and charts).',
     'guide.introH':'Not sure where to start?',
     'guide.introP':'This assistant walks you, step by step, to the right analysis for your goal — explaining in plain language what to do and how to read the results. Ideal for anyone without a statistics background.',
     'guide.feat1':'<b>Simple questions</b> lead you to the ideal analysis',
@@ -70009,6 +70039,25 @@ function _guideResultHTML(node){
   if(node.caveat){
     html+='<div class="gr-caveat">⚠️ <span><strong>'+_guideEsc(_guideT('guide.caveat','Atenção'))+':</strong> '+_guideEsc(_guideTx(node.caveat))+'</span></div>';
   }
+  // ov.1.1.2: técnicas recomendadas — liga o Guia ao pop-up 🧬 Técnicas de análise.
+  // Cada chip abre a técnica já selecionada, com a explicação de POR QUE ela cabe aqui.
+  var recs=(typeof GUIDE_TEC_REC!=='undefined')?GUIDE_TEC_REC[node.id]:null;
+  if(recs&&recs.length&&typeof _tecTech==='function'){
+    var chips=recs.map(function(r){
+      var tc=_tecTech(r.id); if(!tc) return '';
+      var nm=_guideLang()==='en'?tc.en.n:tc.pt.n, why=_guideTx(r.why);
+      return '<button class="gr-chart-chip gr-tec-chip" onclick="guideOpenTec(\''+r.id+'\')">'
+        +'<span class="gcc-ic">'+tc.icon+'</span>'
+        +'<span class="gcc-txt"><span class="gcc-name">'+_guideEsc(nm)+'</span>'
+        +(why?'<span class="gcc-why">'+_guideEsc(why)+'</span>':'')
+        +'</span><span class="gcc-arrow">→</span></button>';
+    }).join('');
+    if(chips){
+      html+='<div class="guide-sec-h">\uD83E\uDDEC '+_guideEsc(_guideT('guide.techs','Técnicas de análise recomendadas'))+'</div>';
+      html+='<div class="gr-charts">'+chips+'</div>';
+      html+='<div class="gr-go-hint" style="margin:-10px 0 16px">'+_guideEsc(_guideT('guide.techsHint',''))+'</div>';
+    }
+  }
   // recommended charts — suggest suitable figures from the Chart Generator based on
   // the path the user chose. Each chip opens the Generator already on that chart type.
   // (Chart-branch result nodes ARE chart recommendations themselves, so they carry no list.)
@@ -70067,6 +70116,135 @@ var GUIDE_CHART_LABELS = {
   heatmap:{ic:'🔥', pt:'Heatmap', en:'Heatmap'},
   fda:{ic:'📈', pt:'FDA (dist. acumulada)', en:'FDA (cumulative)'}
 };
+/* ov.1.1.2 — GUIA ESTATÍSTICO × 🧬 TÉCNICAS DE ANÁLISE
+   Mapa (nó de resultado do Guia → técnicas do catálogo) mantido FORA de GUIDE_TREE e de
+   GUIDE_ENRICH, seguindo a mesma ideia de "camada sobreposta" já usada no enriquecimento:
+   a árvore de perguntas continua intocada e o vínculo pode evoluir sozinho.
+   Os ids das técnicas são os mesmos de TEC_TECHS (validados em tempo de render). */
+var GUIDE_TEC_REC = {
+  // ── SIMPLE ──
+  r_simple_desc:[
+    {id:'desc', why:{pt:'O mesmo resumo (média, IQR, CV, forma) direto sobre a coluna colada.', en:'The same summary (mean, IQR, CV, shape) straight from the pasted column.'}},
+    {id:'outliers', why:{pt:'Lista os valores fora de 1,5×IQR e os extremos de 3×IQR.', en:'Lists values beyond 1.5×IQR and the 3×IQR extremes.'}},
+    {id:'normal', why:{pt:'Confirma se a distribuição é normal antes de qualquer teste.', en:'Confirms whether the distribution is normal before any test.'}},
+    {id:'pareto', why:{pt:'Mostra quais poucos itens concentram a maior parte do total.', en:'Shows which few items concentrate most of the total.'}}
+  ],
+  r_simple_infer:[
+    {id:'regr', why:{pt:'Correlação, reta, R² e pontos influentes entre X e Y.', en:'Correlation, line, R² and influential points between X and Y.'}},
+    {id:'onesample', why:{pt:'Compara sua média com um valor de especificação/alvo.', en:'Compares your mean against a specification/target value.'}},
+    {id:'boot', why:{pt:'IC robusto sem supor normalidade dos dados.', en:'Robust CI without assuming data normality.'}},
+    {id:'corrmat', why:{pt:'Se houver mais de duas colunas, vê todas as associações de uma vez.', en:'With more than two columns, see all associations at once.'}}
+  ],
+  r_simple_adv:[
+    {id:'weibull', why:{pt:'β, η, B10 e MTBF a partir dos tempos até a falha.', en:'β, η, B10 and MTBF from the times to failure.'}},
+    {id:'distfit', why:{pt:'Compara normal, lognormal, Weibull, exponencial e gama por AIC/BIC.', en:'Compares normal, lognormal, Weibull, exponential and gamma by AIC/BIC.'}},
+    {id:'normal', why:{pt:'Shapiro-Wilk com Q-Q plot para checar a normalidade.', en:'Shapiro-Wilk with a Q-Q plot to check normality.'}},
+    {id:'boot', why:{pt:'Reamostragem para IC e viés da estimativa.', en:'Resampling for the estimate\u2019s CI and bias.'}}
+  ],
+  // ── COMPARE ──
+  r_compare_means:[
+    {id:'ttest', why:{pt:'Dois grupos: Welch/Student com d de Cohen.', en:'Two groups: Welch/Student with Cohen\u2019s d.'}},
+    {id:'anova', why:{pt:'Três ou mais grupos, com η² e post-hoc de Tukey.', en:'Three or more groups, with η² and Tukey\u2019s post-hoc.'}},
+    {id:'mw', why:{pt:'Alternativa a dois grupos quando os dados não são normais.', en:'Two-group alternative when the data are not normal.'}},
+    {id:'kw', why:{pt:'Alternativa à ANOVA para dados não normais, com post-hoc de Dunn.', en:'ANOVA alternative for non-normal data, with Dunn\u2019s post-hoc.'}}
+  ],
+  r_compare_dist:[
+    {id:'overlay', why:{pt:'Sobrepõe histogramas, FDP, FDA e Q-Q dos grupos.', en:'Overlays histograms, PDF, CDF and Q-Q of the groups.'}},
+    {id:'chi', why:{pt:'Testa se as distribuições diferem, e não só as médias.', en:'Tests whether the distributions differ, not only the means.'}},
+    {id:'distfit', why:{pt:'Identifica qual modelo descreve melhor cada grupo.', en:'Identifies which model best describes each group.'}},
+    {id:'variation', why:{pt:'Diferença percentual entre os estudos em mapa de calor.', en:'Percentage difference between studies as a heatmap.'}}
+  ],
+  r_compare_assump:[
+    {id:'diag', why:{pt:'Checklist automático: normalidade, outliers e homogeneidade.', en:'Automatic checklist: normality, outliers and homogeneity.'}},
+    {id:'normal', why:{pt:'Shapiro-Wilk grupo a grupo.', en:'Shapiro-Wilk group by group.'}},
+    {id:'levene', why:{pt:'Levene/Bartlett para a igualdade de variâncias.', en:'Levene/Bartlett for equality of variances.'}},
+    {id:'grubbs', why:{pt:'Confirma formalmente os outliers suspeitos.', en:'Formally confirms the suspect outliers.'}},
+    {id:'mahal', why:{pt:'Aponta qual estudo inteiro está fora do padrão.', en:'Points out which whole study is off-pattern.'}}
+  ],
+  // ── ENGINEERING (o ensaio roda no módulo; estas técnicas tratam os RESULTADOS) ──
+  r_eng_tracao:[
+    {id:'desc', why:{pt:'Resume UTS, σ_y ou E de vários corpos de prova.', en:'Summarizes UTS, σ_y or E across several specimens.'}},
+    {id:'ttest', why:{pt:'Compara duas condições/materiais pela propriedade obtida.', en:'Compares two conditions/materials by the obtained property.'}},
+    {id:'outliers', why:{pt:'Sinaliza corpos de prova com resultado atípico.', en:'Flags specimens with an atypical result.'}}
+  ],
+  r_eng_flexao:[
+    {id:'desc', why:{pt:'Resume tensão máxima e módulo de flexão do lote.', en:'Summarizes maximum stress and flexural modulus of the batch.'}},
+    {id:'anova', why:{pt:'Compara três ou mais formulações/espessuras.', en:'Compares three or more formulations/thicknesses.'}},
+    {id:'outliers', why:{pt:'Identifica ensaios discrepantes antes de reportar a média.', en:'Identifies discrepant tests before reporting the mean.'}}
+  ],
+  r_eng_dureza:[
+    {id:'desc', why:{pt:'Estatísticas completas das medições de dureza.', en:'Full statistics of the hardness measurements.'}},
+    {id:'grubbs', why:{pt:'Teste formal para a identação claramente fora da faixa.', en:'Formal test for the indentation clearly out of range.'}},
+    {id:'anova', why:{pt:'Compara regiões/tratamentos térmicos da peça.', en:'Compares regions/heat treatments of the part.'}},
+    {id:'normal', why:{pt:'Verifica a normalidade exigida pelos testes acima.', en:'Checks the normality required by the tests above.'}}
+  ],
+  r_eng_ftir:[
+    {id:'overlay', why:{pt:'Sobrepõe as distribuições de intensidade de amostras diferentes.', en:'Overlays intensity distributions from different samples.'}},
+    {id:'corrmat', why:{pt:'Correlaciona intensidades de várias bandas entre si.', en:'Correlates intensities of several bands with one another.'}}
+  ],
+  r_eng_tga:[
+    {id:'desc', why:{pt:'Resume temperaturas de degradação e perdas de massa do lote.', en:'Summarizes degradation temperatures and mass losses of the batch.'}},
+    {id:'regr', why:{pt:'Relaciona perda de massa com temperatura ou composição.', en:'Relates mass loss to temperature or composition.'}},
+    {id:'ttest', why:{pt:'Compara duas formulações pela temperatura de degradação.', en:'Compares two formulations by degradation temperature.'}}
+  ],
+  r_eng_drx:[
+    {id:'desc', why:{pt:'Resume tamanhos de cristalito calculados por Scherrer.', en:'Summarizes crystallite sizes computed by Scherrer.'}},
+    {id:'overlay', why:{pt:'Compara a distribuição dos parâmetros entre amostras.', en:'Compares the parameter distribution across samples.'}}
+  ],
+  // ── CHART (a figura vem do Gerador; a técnica entrega o número por trás dela) ──
+  r_chart_scatter:[
+    {id:'regr', why:{pt:'Entrega R², equação da reta e valor-p da relação do gráfico.', en:'Delivers R², line equation and p-value behind the chart.'}},
+    {id:'poly', why:{pt:'Se a nuvem for curva, ajusta o grau adequado.', en:'If the scatter is curved, fits the proper degree.'}}
+  ],
+  r_chart_line:[
+    {id:'regr', why:{pt:'Quantifica a tendência mostrada na linha.', en:'Quantifies the trend shown by the line.'}},
+    {id:'poly', why:{pt:'Ajusta tendências não lineares ao longo de X.', en:'Fits non-linear trends along X.'}}
+  ],
+  r_chart_sideby:[
+    {id:'variation', why:{pt:'Calcula a diferença percentual entre os conjuntos lado a lado.', en:'Computes the percentage difference between the side-by-side sets.'}}
+  ],
+  r_chart_bar:[
+    {id:'anova', why:{pt:'Testa se as barras (grupos) realmente diferem entre si.', en:'Tests whether the bars (groups) really differ from each other.'}},
+    {id:'ttest', why:{pt:'Para apenas duas barras, entrega o valor-p e o tamanho de efeito.', en:'For only two bars, delivers the p-value and the effect size.'}}
+  ],
+  r_chart_histogram:[
+    {id:'desc', why:{pt:'Números por trás da forma: média, assimetria e curtose.', en:'Numbers behind the shape: mean, skewness and kurtosis.'}},
+    {id:'normal', why:{pt:'Diz se o formato de sino é estatisticamente aceitável.', en:'Tells whether the bell shape is statistically acceptable.'}}
+  ],
+  r_chart_boxplot:[
+    {id:'desc', why:{pt:'Quartis, IQR e limites exatos usados na caixa.', en:'Quartiles, IQR and the exact limits used in the box.'}},
+    {id:'outliers', why:{pt:'Lista, um a um, os pontos marcados fora dos bigodes.', en:'Lists, one by one, the points flagged outside the whiskers.'}},
+    {id:'anova', why:{pt:'Testa se as caixas representam grupos diferentes.', en:'Tests whether the boxes represent different groups.'}}
+  ],
+  r_chart_weibull:[
+    {id:'weibull', why:{pt:'β, η, B10, MTBF e confiabilidade além do gráfico.', en:'β, η, B10, MTBF and reliability beyond the chart.'}},
+    {id:'distfit', why:{pt:'Confirma se Weibull é mesmo o melhor modelo para os dados.', en:'Confirms whether Weibull really is the best model for the data.'}}
+  ],
+  r_chart_pareto:[
+    {id:'pareto', why:{pt:'Tabela com a contribuição acumulada e o corte dos 80%.', en:'Table with cumulative contribution and the 80% cut-off.'}}
+  ],
+  r_chart_heatmap:[
+    {id:'corrmat', why:{pt:'Gera o mapa de calor de correlações com valores-p.', en:'Generates the correlation heatmap with p-values.'}},
+    {id:'variation', why:{pt:'Mapa de calor da variação percentual entre grupos.', en:'Heatmap of the percentage variation between groups.'}}
+  ],
+  r_chart_fda:[
+    {id:'distfit', why:{pt:'Ajusta a distribuição teórica que a FDA está sugerindo.', en:'Fits the theoretical distribution the CDF is suggesting.'}},
+    {id:'normal', why:{pt:'Compara formalmente a curva empírica com a normal.', en:'Formally compares the empirical curve with the normal one.'}}
+  ]
+};
+// recommended-technique chip → close the assistant and open the 🧬 Analysis Techniques
+// pop-up already on the chosen technique (same path used by the Wiki's "Realizar análise").
+function guideOpenTec(id){
+  guideClose();
+  try{
+    if(typeof tecOpen!=='function'||typeof tecPick!=='function') throw new Error('módulo indisponível');
+    tecOpen(); tecPick(id);
+  }catch(e){
+    console.error('guideOpenTec',e);
+    try{ if(typeof notify==='function') notify(_guideLang()==='en'?'Could not open Analysis Techniques.':'Não foi possível abrir as Técnicas de análise.','error'); }catch(_){}
+  }
+}
+
 // recommended-chart chip → close the assistant, open the Chart Generator and
 // pre-select the chosen type (same path guideRunTarget uses for the chart branch).
 function guideOpenChart(type){
@@ -74975,6 +75153,7 @@ var _tecOpen=false, _tecView='catalog', _tecCur=null, _tecCat='all', _tecQuery='
 var _tecState={v:1,last:null,techs:{}};
 var _tecCache={}, _tecChartIds=[], _tecMsg=null, _tecRestored=false;
 var _tecPasteOpen=false, _tecPasteTxt='', _tecPersistT=null, _tecWarnedQuota=false, _tecRenaming=null;
+var _tecWhenOpen=true; // ov.1.1.2: painel "quando usar / quando não usar" aberto por padrão
 var TEC_ALPHAS=[0.10,0.05,0.025,0.01,0.001];
 var TEC_MAX_COLS=30, TEC_MAX_ROWS=50000;
 
@@ -75471,10 +75650,30 @@ function tecPick(id){
 function tecBack(){
   _tecView='catalog'; _tecMsg=null; _tecPasteOpen=false; tecRender();
 }
+/* ov.1.1.2: painel "Quando usar / Quando NÃO usar" (dados em TEC_WHEN), desenhado ACIMA das
+   abas do estudo. O estado aberto/fechado vive em _tecWhenOpen (sessão) para que o usuário
+   experiente possa recolhê-lo sem que ele volte a abrir a cada troca de técnica/idioma. */
+function _tWhenHtml(tech){
+  var w=(typeof TEC_WHEN!=='undefined')?TEC_WHEN[tech.id]:null; if(!w) return '';
+  var ul=function(arr){ return '<ul class="tec-when-ul">'+arr.map(function(x){ return '<li>'+_tEsc(_tL(x[0],x[1]))+'</li>'; }).join('')+'</ul>'; };
+  var h='<details class="tec-when"'+(_tecWhenOpen?' open':'')+' ontoggle="_tecWhenOpen=this.open">'+
+    '<summary>\uD83E\uDDED <span>'+_tL('Esta técnica serve para o meu caso?','Is this technique right for my case?')+'</span>'+
+    '<span class="tec-when-sub">'+_tL('quando usar · quando não usar','when to use · when not to use')+'</span>'+
+    '<span class="tec-when-arrow">▶</span></summary>'+
+    '<div class="tec-when-body">'+
+      '<div class="tec-when-col ok"><div class="tec-when-h">✔ '+_tL('Use quando','Use it when')+'</div>'+ul(w.use)+'</div>'+
+      '<div class="tec-when-col no"><div class="tec-when-h">✖ '+_tL('Evite quando','Avoid it when')+'</div>'+ul(w.avoid)+'</div>';
+  if(w.alt&&w.alt.length){
+    h+='<div class="tec-when-alt"><span>'+_tL('Não é o seu caso? Veja também:','Not your case? Also see:')+'</span>'+
+      w.alt.map(function(id){ var a=_tecTech(id); return a?'<button type="button" class="tec-when-alt-btn" onclick="tecPick(\''+id+'\')">'+a.icon+' '+_tEsc(_tL(a.pt.n,a.en.n))+'</button>':''; }).join('')+'</div>';
+  }
+  return h+'</div></details>';
+}
 function tecRenderWork(){
   var body=document.getElementById('tecBody'), tech=_tecTech(_tecCur); if(!body||!tech) return;
   _tecDestroyCharts();
   body.innerHTML='<div class="tec-work">'+
+    _tWhenHtml(tech)+
     '<div class="tec-fmt">📋 <b>'+_tL('Como preparar os dados:','How to prepare the data:')+'</b> '+_tEsc(_tL(tech.pt.f,tech.en.f))+'</div>'+
     '<div class="tec-tabs" id="tecTabs"></div><div id="tecIntake"></div><div id="tecResults"></div></div>';
   tecRenderTabs(); tecRenderIntake(); tecRenderResults();
@@ -75736,6 +75935,206 @@ var TEC_CATS=[
 ];
 var TEC_TECHS=[];
 function _tReg(o){ TEC_TECHS.push(o); }
+
+/* ov.1.1.2 — RECOMENDAÇÕES DE USO (mostradas acima das abas de cada estudo).
+   Camada de conteúdo separada do catálogo: assim o registro de cada técnica (compute/render)
+   continua intocado e o texto de orientação pode crescer sem inflar aquelas funções.
+   Formato: {use:[[pt,en]…], avoid:[[pt,en]…], alt:[ids de outras técnicas]}.
+   Bilíngue pelo mesmo _tL() do restante do módulo — tecApplyLang() re-renderiza tudo. */
+var TEC_WHEN={
+  desc:{
+    use:[['Você quer o retrato inicial dos dados: centro, dispersão, quartis e forma.','You want the first picture of the data: center, spread, quartiles and shape.'],
+         ['Precisa reportar média, desvio, CV e IC antes de qualquer teste.','You need to report mean, std. dev., CV and CI before any test.'],
+         ['Quer comparar visualmente várias colunas no mesmo boxplot.','You want to visually compare several columns in the same boxplot.']],
+    avoid:[['Você já quer decidir se dois grupos diferem — descritiva não dá valor-p.','You already want to decide whether two groups differ — descriptives give no p-value.'],
+           ['Os dados são contagens/categorias em vez de medidas numéricas.','The data are counts/categories instead of numeric measurements.'],
+           ['Há menos de 2 valores válidos na coluna.','There are fewer than 2 valid values in the column.']],
+    alt:['ttest','anova','normal']},
+  outliers:{
+    use:[['Quer localizar rapidamente valores atípicos antes de analisar.','You want to quickly locate atypical values before analyzing.'],
+         ['Precisa separar outliers moderados (1,5×IQR) de extremos (3×IQR).','You need to separate moderate (1.5×IQR) from extreme (3×IQR) outliers.'],
+         ['A distribuição é assimétrica — o IQR não supõe normalidade.','The distribution is skewed — the IQR assumes no normality.']],
+    avoid:[['Você precisa de um valor-p formal para justificar a exclusão de um ponto.','You need a formal p-value to justify excluding a point.'],
+           ['A amostra é muito pequena (n < 5): quase tudo vira \u201cnormal\u201d ou \u201catípico\u201d.','The sample is very small (n < 5): almost anything looks \u201cnormal\u201d or \u201catypical\u201d.'],
+           ['O ponto extremo é fisicamente esperado (ex.: pico de ensaio) — não é erro.','The extreme point is physically expected (e.g., a test peak) — it is not an error.']],
+    alt:['grubbs','desc','mahal']},
+  grubbs:{
+    use:[['Precisa de um teste formal, com valor-p, para declarar um outlier.','You need a formal test, with a p-value, to declare an outlier.'],
+         ['Os dados são aproximadamente normais e o suspeito é o valor mais extremo.','The data are approximately normal and the suspect is the most extreme value.'],
+         ['Quer remover outliers em sequência (versão iterativa) e ver cada passo.','You want to remove outliers in sequence (iterative version) and see each step.']],
+    avoid:[['Os dados não passam no teste de normalidade — Grubbs assume normalidade.','The data fail the normality test — Grubbs assumes normality.'],
+           ['Há vários outliers agrupados no mesmo lado (mascaramento).','There are several outliers clustered on the same side (masking).'],
+           ['n < 7: o teste perde quase todo o poder.','n < 7: the test loses almost all of its power.']],
+    alt:['normal','outliers','boot']},
+  normal:{
+    use:[['Vai aplicar teste t, ANOVA ou IC e precisa checar o pressuposto de normalidade.','You will apply a t-test, ANOVA or CI and need to check the normality assumption.'],
+         ['Quer o Q-Q plot junto do valor-p, para ver ONDE os dados se afastam.','You want the Q-Q plot along with the p-value, to see WHERE the data deviate.'],
+         ['n entre 7 e 5000 — faixa em que Shapiro-Wilk funciona bem.','n between 7 and 5000 — the range where Shapiro-Wilk works well.']],
+    avoid:[['n muito grande: qualquer desvio mínimo já rejeita a normalidade.','Very large n: any tiny deviation already rejects normality.'],
+           ['n < 7: praticamente nunca rejeita, mesmo com dados claramente não normais.','n < 7: it practically never rejects, even with clearly non-normal data.'],
+           ['Você quer saber QUAL distribuição descreve os dados, não só se é normal.','You want to know WHICH distribution fits the data, not only whether it is normal.']],
+    alt:['distfit','mw','boot']},
+  pareto:{
+    use:[['Quer priorizar: poucas causas/itens respondem pela maior parte do total.','You want to prioritize: a few causes/items account for most of the total.'],
+         ['Tem contagens de falhas, custos ou defeitos por categoria.','You have counts of failures, costs or defects per category.'],
+         ['Precisa de um argumento visual para escolher onde agir primeiro.','You need a visual argument to choose where to act first.']],
+    avoid:[['Os valores podem ser negativos — o acumulado perde sentido.','Values can be negative — the cumulative curve loses meaning.'],
+           ['Todas as categorias contribuem de forma parecida (sem concentração).','All categories contribute similarly (no concentration).'],
+           ['Você quer testar diferença estatística entre categorias.','You want to test a statistical difference between categories.']],
+    alt:['desc','chi','variation']},
+  weibull:{
+    use:[['Tem tempos, ciclos ou distâncias ATÉ A FALHA (valores positivos).','You have times, cycles or distances TO FAILURE (positive values).'],
+         ['Quer β (modo de falha), η (vida característica), B10 e MTBF.','You want β (failure mode), η (characteristic life), B10 and MTBF.'],
+         ['Precisa extrapolar confiabilidade para um tempo de missão.','You need to extrapolate reliability to a mission time.']],
+    avoid:[['Os dados são medidas comuns (dureza, tensão) e não tempos até falha.','The data are ordinary measurements (hardness, stress), not times to failure.'],
+           ['Há valores nulos ou negativos na coluna.','There are zero or negative values in the column.'],
+           ['n muito pequeno (< 8): β fica instável e a extrapolação é arriscada.','Very small n (< 8): β becomes unstable and extrapolation is risky.']],
+    alt:['distfit','desc','boot']},
+  distfit:{
+    use:[['Não sabe qual distribuição usar e quer comparar várias de uma vez.','You do not know which distribution to use and want to compare several at once.'],
+         ['Precisa justificar a escolha do modelo por AIC/BIC e K-S.','You need to justify the model choice via AIC/BIC and K-S.'],
+         ['Vai alimentar uma simulação ou um cálculo de confiabilidade.','You will feed a simulation or a reliability calculation.']],
+    avoid:[['A amostra é pequena: vários modelos empatam e a escolha vira ruído.','The sample is small: several models tie and the choice becomes noise.'],
+           ['Os dados misturam duas populações (bimodal) — nenhum modelo simples serve.','The data mix two populations (bimodal) — no simple model fits.'],
+           ['Você só precisa saber se é normal ou não.','You only need to know whether it is normal or not.']],
+    alt:['normal','weibull','overlay']},
+  overlay:{
+    use:[['Quer comparar visualmente a forma das distribuições de vários grupos.','You want to visually compare the distribution shape of several groups.'],
+         ['Precisa de uma figura única (histograma/FDP/FDA/Q-Q) para o relatório.','You need a single figure (histogram/PDF/CDF/Q-Q) for the report.'],
+         ['Vai explicar o resultado de um teste mostrando a sobreposição.','You will explain a test result by showing the overlap.']],
+    avoid:[['Você precisa de um número/valor-p para concluir — isto é visual.','You need a number/p-value to conclude — this is visual only.'],
+           ['São muitos grupos: o gráfico fica ilegível.','There are too many groups: the chart becomes unreadable.'],
+           ['As escalas dos grupos são muito diferentes entre si.','The groups have very different scales from one another.']],
+    alt:['ttest','anova','distfit']},
+  ttest:{
+    use:[['Tem exatamente 2 grupos independentes e quer comparar as médias.','You have exactly 2 independent groups and want to compare the means.'],
+         ['Quer o tamanho de efeito (d de Cohen) junto do valor-p.','You want the effect size (Cohen\u2019s d) along with the p-value.'],
+         ['As variâncias podem ser diferentes — a versão de Welch já cobre isso.','Variances may differ — the Welch version already covers that.']],
+    avoid:[['Há 3 ou mais grupos: comparar aos pares infla o erro tipo I.','There are 3 or more groups: pairwise comparisons inflate the type I error.'],
+           ['Os dados são fortemente não normais com n pequeno.','The data are strongly non-normal with a small n.'],
+           ['As medições são pareadas (antes/depois no mesmo corpo de prova).','The measurements are paired (before/after on the same specimen).']],
+    alt:['anova','mw','paired']},
+  anova:{
+    use:[['Tem 3 ou mais grupos e quer saber se ao menos um difere.','You have 3 or more groups and want to know whether at least one differs.'],
+         ['Precisa do tamanho de efeito (η²) e do post-hoc de Tukey.','You need the effect size (η²) and Tukey\u2019s post-hoc.'],
+         ['Quer conferir a homogeneidade das variâncias no mesmo estudo.','You want to check variance homogeneity in the same study.']],
+    avoid:[['Há só 2 grupos — use o teste t diretamente.','There are only 2 groups — use the t-test directly.'],
+           ['Vários grupos são claramente não normais ou têm n muito pequeno.','Several groups are clearly non-normal or have a very small n.'],
+           ['As variâncias são muito desiguais e os grupos desbalanceados.','Variances are very unequal and groups are unbalanced.']],
+    alt:['kw','levene','ttest']},
+  levene:{
+    use:[['Quer confirmar se os grupos têm dispersão equivalente antes da ANOVA.','You want to confirm whether groups have equivalent spread before ANOVA.'],
+         ['A própria variabilidade é o objeto do estudo (repetibilidade).','Variability itself is the object of the study (repeatability).'],
+         ['Precisa escolher entre t clássico e Welch com base em evidência.','You need to choose between classic t and Welch based on evidence.']],
+    avoid:[['Você quer comparar as MÉDIAS — este teste compara dispersões.','You want to compare MEANS — this test compares spreads.'],
+           ['Os grupos têm n muito pequeno (< 5 por grupo).','Groups have a very small n (< 5 per group).'],
+           ['Há um único grupo.','There is only one group.']],
+    alt:['anova','ttest','desc']},
+  variation:{
+    use:[['Quer a diferença percentual entre estudos/condições, não só o valor-p.','You want the percentage difference between studies/conditions, not only a p-value.'],
+         ['Precisa de um mapa de calor para enxergar todas as comparações de uma vez.','You need a heatmap to see all comparisons at once.'],
+         ['Vai apresentar o impacto prático da mudança para não estatísticos.','You will present the practical impact of the change to non-statisticians.']],
+    avoid:[['Alguma média de referência está próxima de zero — o % explode.','Some reference mean is near zero — the % blows up.'],
+           ['Você precisa de significância estatística para concluir.','You need statistical significance to conclude.'],
+           ['Os grupos medem grandezas diferentes.','The groups measure different quantities.']],
+    alt:['ttest','anova','overlay']},
+  chi:{
+    use:[['Quer comparar a DISTRIBUIÇÃO (forma) dos grupos, não só a média.','You want to compare the group DISTRIBUTION (shape), not only the mean.'],
+         ['Precisa de uma medida de associação (V de Cramér).','You need an association measure (Cramér\u2019s V).'],
+         ['As médias são parecidas, mas você suspeita de formas diferentes.','Means look similar, but you suspect different shapes.']],
+    avoid:[['Muitas classes ficam com frequência esperada < 5.','Many classes end up with expected frequency < 5.'],
+           ['n pequeno em algum grupo.','Small n in some group.'],
+           ['Você quer a diferença entre as médias — use teste t/ANOVA.','You want the difference between means — use t-test/ANOVA.']],
+    alt:['anova','overlay','kw']},
+  mahal:{
+    use:[['Quer descobrir qual GRUPO/estudo inteiro está fora do padrão.','You want to find which whole GROUP/study is off-pattern.'],
+         ['Compara os grupos por média e dispersão ao mesmo tempo.','It compares groups by mean and spread at the same time.'],
+         ['Tem vários lotes e quer ranquear o mais discrepante.','You have several batches and want to rank the most discrepant one.']],
+    avoid:[['Você quer achar um PONTO atípico dentro de uma coluna.','You want to find an atypical POINT inside a column.'],
+           ['Há menos de 3 grupos — a distância perde referência.','There are fewer than 3 groups — the distance loses reference.'],
+           ['Os grupos têm n muito desigual.','Groups have very unequal n.']],
+    alt:['outliers','grubbs','variation']},
+  simpson:{
+    use:[['Desconfia que a tendência geral se inverte dentro de cada grupo.','You suspect the overall trend reverses inside each group.'],
+         ['Os dados vêm de subgrupos com tamanhos/níveis muito diferentes.','The data come from subgroups with very different sizes/levels.'],
+         ['Vai tomar uma decisão com base em dados agregados.','You will make a decision based on aggregated data.']],
+    avoid:[['Há um único grupo — o paradoxo não pode ocorrer.','There is only one group — the paradox cannot occur.'],
+           ['Os grupos têm pouquíssimos pontos cada.','Groups have very few points each.'],
+           ['Você já analisa cada grupo separadamente.','You already analyze each group separately.']],
+    alt:['regr','anova','variation']},
+  diag:{
+    use:[['Não sabe por onde começar e quer um checklist automático dos dados.','You do not know where to start and want an automatic data checklist.'],
+         ['Quer saber quais pressupostos falham antes de escolher o teste.','You want to know which assumptions fail before choosing the test.'],
+         ['Vai receber recomendações de quais técnicas rodar em seguida.','You will get recommendations on which techniques to run next.']],
+    avoid:[['Você já sabe exatamente qual teste precisa.','You already know exactly which test you need.'],
+           ['Há um único grupo com pouquíssimos dados.','There is only one group with very little data.'],
+           ['Precisa de um resultado final para o relatório — isto é triagem.','You need a final result for the report — this is screening.']],
+    alt:['normal','levene','anova']},
+  paired:{
+    use:[['A mesma peça/pessoa foi medida duas vezes (antes × depois).','The same part/person was measured twice (before × after).'],
+         ['Está comparando dois métodos/instrumentos na mesma amostra.','You are comparing two methods/instruments on the same sample.'],
+         ['Quer o gráfico de Bland-Altman de concordância.','You want the Bland-Altman agreement plot.']],
+    avoid:[['As duas colunas vêm de amostras independentes.','The two columns come from independent samples.'],
+           ['As linhas não correspondem ao mesmo indivíduo/peça.','Rows do not correspond to the same individual/part.'],
+           ['Há muitos pares incompletos (vazios).','There are many incomplete (blank) pairs.']],
+    alt:['ttest','mw','regr']},
+  mw:{
+    use:[['Tem 2 grupos independentes e os dados NÃO são normais.','You have 2 independent groups and the data are NOT normal.'],
+         ['A amostra é pequena e há outliers que distorcem a média.','The sample is small and outliers distort the mean.'],
+         ['Os dados são ordinais (notas, escalas, classificações).','The data are ordinal (scores, scales, ratings).']],
+    avoid:[['Os dados são normais — o teste t tem mais poder.','The data are normal — the t-test has more power.'],
+           ['Há 3 ou mais grupos.','There are 3 or more groups.'],
+           ['Você precisa comparar médias em unidade física.','You need to compare means in physical units.']],
+    alt:['ttest','kw','boot']},
+  kw:{
+    use:[['Tem 3 ou mais grupos e os dados não atendem à normalidade.','You have 3 or more groups and the data do not meet normality.'],
+         ['Quer o post-hoc de Dunn para saber quais pares diferem.','You want Dunn\u2019s post-hoc to know which pairs differ.'],
+         ['Há outliers fortes que inviabilizam a ANOVA.','There are strong outliers that make ANOVA unusable.']],
+    avoid:[['Os grupos são normais e homocedásticos — prefira ANOVA.','Groups are normal and homoscedastic — prefer ANOVA.'],
+           ['Há apenas 2 grupos — use Mann-Whitney.','There are only 2 groups — use Mann-Whitney.'],
+           ['Os grupos têm n muito pequeno (< 5 cada).','Groups have a very small n (< 5 each).']],
+    alt:['anova','mw','levene']},
+  onesample:{
+    use:[['Quer comparar sua amostra com um valor de especificação/alvo.','You want to compare your sample against a specification/target value.'],
+         ['Precisa verificar se o processo atende ao mínimo de norma.','You need to verify whether the process meets a standard\u2019s minimum.'],
+         ['Tem só um conjunto de medidas e uma referência conhecida.','You have only one set of measurements and a known reference.']],
+    avoid:[['Você tem dois conjuntos de dados para comparar entre si.','You have two datasets to compare against each other.'],
+           ['O valor de referência foi estimado dos próprios dados.','The reference value was estimated from the data itself.'],
+           ['n muito pequeno e distribuição claramente assimétrica.','Very small n and a clearly skewed distribution.']],
+    alt:['ttest','paired','boot']},
+  boot:{
+    use:[['Quer IC sem supor normalidade, com amostra pequena ou assimétrica.','You want a CI without assuming normality, with a small or skewed sample.'],
+         ['Precisa de IC para mediana, desvio ou outra estatística não usual.','You need a CI for the median, std. dev. or another unusual statistic.'],
+         ['Quer avaliar o viés da estimativa por reamostragem.','You want to assess the estimate\u2019s bias through resampling.']],
+    avoid:[['n muito pequeno (< 8): a reamostragem só repete os mesmos valores.','Very small n (< 8): resampling just repeats the same values.'],
+           ['Os dados não são uma amostra aleatória da população.','The data are not a random sample of the population.'],
+           ['Você precisa de um teste de hipótese formal e comparável.','You need a formal, comparable hypothesis test.']],
+    alt:['desc','onesample','distfit']},
+  regr:{
+    use:[['Quer medir e modelar a relação entre duas variáveis numéricas.','You want to measure and model the relationship between two numeric variables.'],
+         ['Precisa de R², equação da reta e diagnóstico de pontos influentes.','You need R², the line equation and influential-point diagnostics.'],
+         ['Vai usar a reta para prever Y dentro da faixa observada de X.','You will use the line to predict Y within the observed X range.']],
+    avoid:[['A nuvem de pontos é claramente curva.','The scatter is clearly curved.'],
+           ['Quer extrapolar muito além da faixa medida de X.','You want to extrapolate far beyond the measured X range.'],
+           ['Correlação alta está sendo lida como relação de causa e efeito.','A high correlation is being read as cause and effect.']],
+    alt:['poly','corrmat','simpson']},
+  corrmat:{
+    use:[['Tem várias variáveis e quer ver todas as associações de uma vez.','You have several variables and want to see all associations at once.'],
+         ['Está explorando quais variáveis merecem análise detalhada.','You are exploring which variables deserve detailed analysis.'],
+         ['Quer alternar entre Pearson (linear) e Spearman (monotônica).','You want to switch between Pearson (linear) and Spearman (monotonic).']],
+    avoid:[['Você já sabe qual é o par X×Y de interesse.','You already know which X×Y pair matters.'],
+           ['Muitas variáveis e poucas linhas: aparecem correlações por acaso.','Many variables and few rows: correlations appear by chance.'],
+           ['As relações são curvas — Pearson não as captura.','Relationships are curved — Pearson does not capture them.']],
+    alt:['regr','poly','desc']},
+  poly:{
+    use:[['A relação entre X e Y é curva e a reta não descreve bem.','The X–Y relationship is curved and a straight line does not describe it.'],
+         ['Quer comparar graus de 1 a 6 por R² ajustado e AIC.','You want to compare degrees 1 to 6 by adjusted R² and AIC.'],
+         ['Tem curvas de calibração, resposta térmica ou desgaste.','You have calibration, thermal-response or wear curves.']],
+    avoid:[['Poucos pontos para o grau escolhido (risco de \u201cdecorar\u201d o ruído).','Too few points for the chosen degree (risk of \u201cmemorizing\u201d noise).'],
+           ['Precisa extrapolar fora da faixa de X — polinômios disparam.','You need to extrapolate outside the X range — polynomials blow up.'],
+           ['A relação é bem descrita por uma reta.','The relationship is well described by a straight line.']],
+    alt:['regr','corrmat','distfit']}
+};
 var _P_ALPHA={k:'alpha',t:'alpha',pt:'Nível de significância (α)',en:'Significance level (α)'};
 function _tMsg(pt,en,kind){ return {msg:_tL(pt,en),kind:kind||'warn'}; }
 function _tPct(a){ return ((1-a)*100).toFixed(a*1000%10===0?0:1).replace(/\.0$/,'')+'%'; }
