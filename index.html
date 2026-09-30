@@ -5392,7 +5392,6 @@ const quantile=(a,p)=>{const s=[...a].sort((x,y)=>x-y),pos=(s.length-1)*p,lo=Mat
 // infraestrutura matemática — lnGamma, etc. — já está disponível). As definições antigas
 // (tabela fixa para t e heurística grosseira para F, ambas travadas em α=0,05) foram removidas.
 function gamma(n){if(n<0.5)return Math.PI/(Math.sin(Math.PI*n)*gamma(1-n));n-=1;let x=0.99999999999980993;[676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7].forEach((c,i)=>x+=c/(n+i+1));const t=n+7.5;return Math.sqrt(2*Math.PI)*Math.pow(t,n+0.5)*Math.exp(-t)*x}
-function erfinv(x){if(x===0)return 0;const a=0.147,ln=Math.log(1-x*x),tt=2/(Math.PI*a)+ln/2;return(x<0?-1:1)*Math.sqrt(Math.sqrt(tt*tt-ln/a)-tt)}
 function fmtSmart(n,maxD=4){if(typeof n!=='number'||!isFinite(n))return'–';if(n===0)return'0';const abs=Math.abs(n);let d=abs>=1000?1:abs>=100?2:abs>=10?3:abs>=1?4:abs>=0.1?4:6;return parseFloat(n.toFixed(Math.min(d,maxD))).toString()}
 const fmt=(n,d=2)=>typeof n==='number'&&isFinite(n)?n.toFixed(d):'–';
 
@@ -5460,13 +5459,56 @@ function computeMonteCarloBootstrap(arr,sims){
 }
 // standard normal CDF Φ(z), Abramowitz-Stegun approximation (same method already
 // used locally inside sDrawCDF, exposed globally here so shapiroWilk() can reuse it).
-function normalCDFStd(z){
-  const sign=z<0?-1:1,az=Math.abs(z)/Math.sqrt(2);
-  const t2=1/(1+0.3275911*az);
-  const poly=t2*(0.254829592+t2*(-0.284496736+t2*(1.421413741+t2*(-1.453152027+t2*1.061405429))));
-  const erf=1-poly*Math.exp(-az*az);
-  return 0.5*(1+sign*erf);
+// ov.1.1.2 (validação numérica): quantil normal de ALTA PRECISÃO — algoritmo AS 241
+// (Wichura, 1988, PPND16), erro relativo ~1e-16. Substitui a aproximação de Winitzki
+// (a=0,147; erro ~2e-3) que fazia o Shapiro-Wilk divergir do R/SciPy na 4ª casa.
+function normInv(p){
+  if(!(p>0&&p<1)) return p<=0?-Infinity:Infinity;
+  var q=p-0.5,r,v;
+  if(Math.abs(q)<=0.425){
+    r=0.180625-q*q;
+    return q*(((((((2509.0809287301226727*r+33430.575583588128105)*r+67265.770927008700853)*r+45921.953931549871457)*r+13731.693765509461125)*r+1971.5909503065514427)*r+133.14166789178437745)*r+3.387132872796366608)/
+      (((((((5226.495278852545925*r+28729.085735721942674)*r+39307.89580009271061)*r+21213.794301586595867)*r+5394.1960214247511077)*r+687.1870074920579083)*r+42.313330701600911252)*r+1);
+  }
+  r=q<0?p:1-p; r=Math.sqrt(-Math.log(r));
+  if(r<=5){ r-=1.6;
+    v=(((((((7.7454501427834140764e-4*r+0.0227238449892691845833)*r+0.24178072517745061177)*r+1.27045825245236838258)*r+3.64784832476320460504)*r+5.7694972214606914055)*r+4.6303378461565452959)*r+1.42343711074968357734)/
+      (((((((1.05075007164441684324e-9*r+5.475938084995344946e-4)*r+0.0151986665636164571966)*r+0.14810397642748007459)*r+0.68976733498510000455)*r+1.6763848301838038494)*r+2.05319162663775882187)*r+1);
+  } else { r-=5;
+    v=(((((((2.01033439929228813265e-7*r+2.71155556874348757815e-5)*r+0.0012426609473880784386)*r+0.026532189526576123093)*r+0.29656057182850489123)*r+1.7848265399172913358)*r+5.4637849111641143699)*r+6.6579046435011037772)/
+      (((((((2.04426310338993978564e-15*r+1.4215117583164458887e-7)*r+1.8463183175100546818e-5)*r+7.868691311456132591e-4)*r+0.0148753612908506148525)*r+0.13692988092273580531)*r+0.59983220655588793769)*r+1);
+  }
+  return q<0?-v:v;
 }
+function erfinv(x){ if(x===0) return 0; if(x<=-1) return -Infinity; if(x>=1) return Infinity; return normInv((x+1)/2)/Math.SQRT2; }
+// ov.1.1.2: FDA normal de alta precisão via erfc (algoritmo de W. J. Cody, 1969; erro
+// relativo < 1e-15 inclusive nas caudas). Substitui Abramowitz-Stegun 7.1.26 (erro 1,5e-7,
+// e que zerava as caudas: p-valores muito pequenos saíam como 0).
+function _erfcCody(x){
+  var ax=Math.abs(x),r;
+  if(ax<0.5){
+    var t=x*x;
+    var top=(((0.185777706184603153*t+3.16112374387056560)*t+113.864154151050156)*t+377.485237685302021)*t+3209.37758913846947;
+    var bot=(((t+23.6012909523441209)*t+244.024637934444173)*t+1282.61652607737228)*t+2844.23683343917062;
+    return 1-x*top/bot;
+  }
+  if(ax<4){
+    r=((((((((2.15311535474403846e-8*ax+5.64188496988670089e-1)*ax+8.88314979438837594)*ax+66.1191906371416295)*ax+298.635138197400131)*ax+881.952221241769090)*ax+1712.04761263407058)*ax+2051.07837782607147)*ax+1230.33935479799725)/
+      ((((((((ax+15.7449261107098347)*ax+117.693950891312499)*ax+537.181101862009858)*ax+1621.38957456669019)*ax+3290.79923573345963)*ax+4362.61909014324716)*ax+3439.36767414372164)*ax+1230.33935480374942);
+  } else {
+    var z=1/(ax*ax);
+    var num=((((1.63153871373020978e-2*z+3.05326634961232344e-1)*z+3.60344899949804439e-1)*z+1.25781726111229246e-1)*z+1.60837851487422766e-2)*z+6.58749161529837803e-4;
+    var den=((((z+2.56852019228982242)*z+1.87295284992346725)*z+5.27905102951428412e-1)*z+6.05183413124413191e-2)*z+2.33520497626869185e-3;
+    r=(0.56418958354775628695-z*num/den)/ax;
+  }
+  // exp(-x²) sem cancelamento: divide x² em parte "redonda" e resto (como no original de Cody)
+  var xs=Math.trunc(ax*16)/16, del=(ax-xs)*(ax+xs);
+  r*=Math.exp(-xs*xs)*Math.exp(-del);
+  return x<0?2-r:r;
+}
+function normalCDFStd(z){ return z<0 ? 0.5*_erfcCody(-z/Math.SQRT2) : 1-0.5*_erfcCody(z/Math.SQRT2); }
+// cauda superior sem perda de precisão (1-Φ(z) direto), para p-valores muito pequenos
+function normalSFStd(z){ return 0.5*_erfcCody(z/Math.SQRT2); }
 function normalCDF(x,mu,sig){ return sig===0 ? (x>=mu?1:0) : normalCDFStd((x-mu)/sig); }
 // intervalo [lo,hi] usado para desenhar a FDA teórica como curva suave em forma de S
 // (como a Distribuição Acumulada de um livro-texto) — cobre μ±4,5σ, o mesmo K já usado e
@@ -5509,6 +5551,14 @@ function shapiroWilk(arr){
     a[n-1]=an;a[0]=-an;
     for(let i=1;i<n-1;i++)a[i]=m[i]/Math.sqrt(phi);
   }
+  // ov.1.1.2: n = 3 tem solução EXATA (Royston, AS R94): a = (−√½, 0, √½) e
+  // p = (6/π)·(asin√W − asin√¾). Antes caía na aproximação polinomial de n ≥ 4.
+  if(n===3){
+    const a3=Math.SQRT1_2, num3=a3*(x[2]-x[0]);
+    const W3=Math.max(0.75,Math.min(1,(num3*num3)/ssTotal));
+    const p3=Math.max(0,Math.min(1,(6/Math.PI)*(Math.asin(Math.sqrt(W3))-Math.asin(Math.sqrt(0.75)))));
+    return{W:W3,p:p3,n,valid:true};
+  }
   const num=x.reduce((s,v,i)=>s+a[i]*v,0);
   const W=Math.max(0,Math.min(1,(num*num)/ssTotal));
   let z;
@@ -5523,7 +5573,7 @@ function shapiroWilk(arr){
     const sg=Math.exp(-0.4803-0.082676*lnN+0.0030302*lnN*lnN);
     z=(Math.log(1-W)-mu)/sg;
   }
-  const p=Math.max(0,Math.min(1,1-normalCDFStd(z)));
+  const p=Math.max(0,Math.min(1,normalSFStd(z)));   // cauda superior direta (sem 1−Φ)
   return{W,p,n,valid:true};
 }
 // Bootstrap resampling (with replacement) of the Mean AND Standard Deviation —
@@ -5617,6 +5667,84 @@ function fCrit(d1,d2,alpha){
   let lo=0,hi=1000;
   for(let i=0;i<100;i++){ const mid=(lo+hi)/2; if(fCDF(mid,d1,d2)<target)lo=mid;else hi=mid; }
   return (lo+hi)/2;
+}
+// ov.1.1.2: quantil da Beta por bisseção sobre a Beta Incompleta do motor (ibeta).
+function betaQuantile(p,a,b){
+  var lo=0,hi=1;
+  for(var i=0;i<200;i++){ var mid=(lo+hi)/2; if(ibeta(mid,a,b)<p) lo=mid; else hi=mid; if(hi-lo<1e-15) break; }
+  return (lo+hi)/2;
+}
+// ov.1.1.2: gerador pseudoaleatório COM SEMENTE (mulberry32). Usado onde o resultado
+// precisa ser reprodutível entre execuções (p-valor Monte Carlo do qui-quadrado).
+function _seededRng(seed){
+  var a=seed>>>0;
+  return function(){ a=(a+0x6D2B79F5)>>>0; var t=a; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; };
+}
+/* ov.1.1.2: p-valor do qui-quadrado por SIMULAÇÃO DE MONTE CARLO com margens fixas.
+   Cada tabela simulada é obtida permutando os rótulos de coluna das N observações e
+   repartindo-as pelas linhas conforme os totais observados — isso amostra exatamente a
+   distribuição hipergeométrica multivariada condicional às margens, a mesma de R
+   chisq.test(simulate.p.value=TRUE). p = (1 + nº de χ²sim ≥ χ²obs)/(B + 1) (Davison &
+   Hinkley, 1997). Semente fixa → o mesmo resultado a cada execução. */
+var _chiMcCache={};
+function chiSquareMonteCarloP(table,chi2obs,B,seed){
+  // cache: a mesma tabela é consultada pela tela, relatório, PDF, XLSX e diagnóstico
+  var _ck=JSON.stringify(table)+'|'+chi2obs+'|'+(B||0)+'|'+(seed||0);
+  if(_chiMcCache[_ck]) return _chiMcCache[_ck];
+  var _res=_chiSquareMonteCarloP(table,chi2obs,B,seed);
+  var _keys=Object.keys(_chiMcCache); if(_keys.length>50) _chiMcCache={};
+  _chiMcCache[_ck]=_res; return _res;
+}
+function _chiSquareMonteCarloP(table,chi2obs,B,seed){
+  var nr=table.length,nc=table[0].length,i,j,k;
+  var rowT=table.map(function(r){ return r.reduce(function(s,v){ return s+v; },0); });
+  var colT=[]; for(j=0;j<nc;j++){ var s=0; for(i=0;i<nr;i++) s+=table[i][j]; colT.push(s); }
+  var N=rowT.reduce(function(s,v){ return s+v; },0);
+  if(N<2) return {p:1,B:0};
+  B=B||Math.max(2000,Math.min(10000,Math.floor(1e7/N)));
+  var rng=_seededRng(seed||20260930), lab=new Int32Array(N), p0=0;
+  for(j=0,k=0;j<nc;j++) for(var c=0;c<colT[j];c++) lab[k++]=j;
+  var E=[]; for(i=0;i<nr;i++){ E.push([]); for(j=0;j<nc;j++) E[i].push(rowT[i]*colT[j]/N); }
+  var cnt=new Float64Array(nc), ge=0, tol=chi2obs*1e-10;
+  for(var b=0;b<B;b++){
+    for(k=N-1;k>0;k--){ var r=Math.floor(rng()*(k+1)), tmp=lab[k]; lab[k]=lab[r]; lab[r]=tmp; }
+    var chi=0, pos=0;
+    for(i=0;i<nr;i++){
+      cnt.fill(0);
+      for(k=0;k<rowT[i];k++) cnt[lab[pos++]]++;
+      for(j=0;j<nc;j++){ var e=E[i][j]; if(e>0){ var d=cnt[j]-e; chi+=d*d/e; } }
+    }
+    if(chi>=chi2obs-tol) ge++;
+  }
+  return {p:(ge+1)/(B+1),B:B,floor:ge===0};   // floor: nenhuma simulação ≥ observado → p ≤ 1/(B+1)
+}
+/* ov.1.1.2: regressão linear simples COMPLETA (Y = B0 + B1·X), com estimativas numéricas
+   estáveis (somas centradas em duas passagens; SS residual somado a partir dos resíduos, e
+   não por SS_tot − SS_reg, que perde dígitos quando R² ≈ 1). Validada contra NIST Norris. */
+function linearRegressionFull(x,y,alpha){
+  var n=Math.min(x.length,y.length); alpha=alpha||0.05;
+  if(n<3) return null;
+  var mx=0,my=0,i; for(i=0;i<n;i++){ mx+=x[i]; my+=y[i]; } mx/=n; my/=n;
+  var sxx=0,sxy=0,syy=0; for(i=0;i<n;i++){ var dx=x[i]-mx,dy=y[i]-my; sxx+=dx*dx; sxy+=dx*dy; syy+=dy*dy; }
+  if(!(sxx>0)) return null;
+  var b1=sxy/sxx, b0=my-b1*mx, ssr=0;
+  for(i=0;i<n;i++){ var e=y[i]-(b0+b1*x[i]); ssr+=e*e; }
+  var ssreg=b1*sxy, df=n-2, mse=ssr/df, s=Math.sqrt(mse);
+  var seB1=s/Math.sqrt(sxx), seB0=s*Math.sqrt(1/n+mx*mx/sxx);
+  var tB1=seB1>0?b1/seB1:Infinity, F=mse>0?ssreg/mse:Infinity;
+  var p=isFinite(tB1)?ibeta(df/(df+tB1*tB1),df/2,0.5):0;
+  var tc=tCrit(df,alpha), fc=fCrit(1,df,alpha);
+  return {n:n,b0:b0,b1:b1,seB0:seB0,seB1:seB1,s:s,r2:syy>0?(sxy*sxy)/(sxx*syy):0,
+    ssReg:ssreg,ssRes:ssr,ssTot:syy,msReg:ssreg,msRes:mse,F:F,df:df,t:tB1,p:p,tCrit:tc,fCrit:fc,
+    significant:p<=alpha};
+}
+/* ov.1.1.2: formatação de p-valor honesta quanto à precisão numérica. Abaixo de 1e-12
+   o erro de arredondamento da dupla precisão domina e "7.22e-15" seria falsa precisão. */
+function fmtP(p){
+  if(typeof p!=='number'||!isFinite(p)) return '–';
+  if(p<1e-12) return '< 1e-12';
+  if(p<1e-4) return p.toExponential(2);
+  return p.toFixed(4);
 }
 
 function computeBootstrap(arr,sims){
@@ -6730,7 +6858,7 @@ var PDF_SECTIONS = {
     {k:'charts',     lvl:'ini', pt:'Gráficos descritivos',               en:'Descriptive charts'},
     {k:'pareto',     lvl:'int', pt:'Tabela de Pareto',                   en:'Pareto table'},
     {k:'ic',         lvl:'int', pt:'Intervalo de confiança',             en:'Confidence interval'},
-    {k:'tests',      lvl:'int', pt:'Testes estatísticos (t, ANOVA, r)',  en:'Statistical tests (t, ANOVA, r)'},
+    {k:'tests',      lvl:'int', pt:'Regressão e testes (B0, B1, t, F, r)',  en:'Regression & tests (B0, B1, t, F, r)'},
     {k:'weibull',    lvl:'exp', pt:'Weibull',                            en:'Weibull'},
     {k:'mtbf',       lvl:'exp', pt:'MTBF',                               en:'MTBF'},
     {k:'mc',         lvl:'exp', pt:'Monte Carlo',                        en:'Monte Carlo'},
@@ -7268,7 +7396,11 @@ function sComputeAll(xa,ya,cx,cy,conf,alpha,iqrM,mcN,unit){
     const mse=n>p?sse/(n-p):0;
     const hat=x.map(xi=>denX>0?(1/n+(xi-mx)**2/denX):(1/n));
     const cookD=resid.map((e,i)=>{const h=hat[i];if(mse<=0||h>=1)return 0;return(e*e*h)/(p*mse*(1-h)**2);});
-    const studRes=resid.map((e,i)=>{const h=hat[i];const den=mse*(1-h);return den>0?e/Math.sqrt(den):0;});
+    // ov.1.1.2: DFFITS de Belsley, Kuh & Welsch (1980) — resíduo EXTERNAMENTE studentizado
+    // (variância estimada SEM o ponto i). A versão anterior usava o resíduo internamente
+    // studentizado, que equivale a √(p·Cook) e subestimava a influência. Agora coincide com
+    // R dffits() e statsmodels.
+    const studRes=resid.map((e,i)=>{const h=hat[i];if(n-p-1<=0||h>=1)return 0;const s2i=(sse-e*e/(1-h))/(n-p-1);return s2i>0?e/Math.sqrt(s2i*(1-h)):0;});
     const dffitsV=studRes.map((ts,i)=>{const h=hat[i];return(1-h)>0?ts*Math.sqrt(h/(1-h)):0;});
     const cookThresh=4/n;
     const dffitsThresh=2*Math.sqrt(p/n);
@@ -7279,21 +7411,32 @@ function sComputeAll(xa,ya,cx,cy,conf,alpha,iqrM,mcN,unit){
       maxAbs:dffitsV.reduce((m,v)=>Math.abs(v)>m?Math.abs(v):m,0),
       flaggedIdx:dffitsV.map((v,i)=>Math.abs(v)>dffitsThresh?i:-1).filter(i=>i>=0)};
   })();
-  r.ttest=twoSampleTTest(x,y,alpha);
-  const gm=mean([...x,...y]),ssB=n*(mx-gm)**2+n*(my-gm)**2,ssW=x.reduce((s,v)=>s+(v-mx)**2,0)+y.reduce((s,v)=>s+(v-my)**2,0);
-  const msW=ssW/(2*n-2),fS=msW>0?ssB/msW:0,fc=fCrit(1,2*n-2,alpha);
-  r.anova={f:fS,dfBetween:1,dfWithin:2*n-2,ssBetween:ssB,ssWithin:ssW,critical:fc,significant:fS>fc};
-  const pStd=Math.sqrt(((n-1)*r.statsX.std**2+(n-1)*r.statsY.std**2)/(2*n-2));
-  const d=pStd>0?Math.abs(mx-my)/pStd:0;const cohenInterpKey=d<0.2?'cohen.negligible':d<0.5?'cohen.small':d<0.8?'cohen.medium':'cohen.large';
-  r.cohen={d,pooledStd:pStd,interpKey:cohenInterpKey,interp:t(cohenInterpKey)};
-  r.mtbf={value:mx,lambda:mx>0?1/mx:0,median_life:Math.log(2)*mx};
+  /* ov.1.1.2 — TESTES DA ANÁLISE SIMPLES REFEITOS SOBRE A RELAÇÃO Y × X
+     Antes: teste t de DUAS AMOSTRAS (X contra Y), "ANOVA" de 2 grupos (X, Y) e d de Cohen
+     (X contra Y), e MTBF/Monte Carlo calculados sobre a coluna X. Quando X é o índice da
+     observação (1..n) — o uso mais comum — esses números eram aritmeticamente corretos,
+     mas comparavam "posição" com "medida", sem significado físico. Agora:
+       • teste t da INCLINAÇÃO (H₀: β₁ = 0), com p-valor EXATO — responde "Y varia com X?";
+       • ANOVA da REGRESSÃO (SS regressão, SS residual, F = t²), a tabela padrão de
+         qualquer software estatístico, validada contra o NIST StRD (Norris);
+       • coeficientes B0/B1 com erros-padrão e desvio-padrão residual;
+       • MTBF e Monte Carlo sobre Y, a mesma variável do Weibull.
+     O d de Cohen foi retirado: não existe um tamanho de efeito de duas amostras aqui. */
+  const reg=linearRegressionFull(x,y,alpha);
+  r.regression=reg;
+  r.ttest=reg?{t:reg.t,df:reg.df,critical:reg.tCrit,p:reg.p,pApprox:fmtP(reg.p),significant:reg.significant}
+             :{t:0,df:0,critical:0,p:1,pApprox:'–',significant:false};
+  r.anova=reg?{f:reg.F,dfBetween:1,dfWithin:reg.df,ssBetween:reg.ssReg,ssWithin:reg.ssRes,critical:reg.fCrit,p:reg.p,significant:reg.significant}
+             :{f:0,dfBetween:1,dfWithin:0,ssBetween:0,ssWithin:0,critical:0,p:1,significant:false};
+  r.mtbf={value:my,lambda:my>0?1/my:0,median_life:Math.log(2)*my};
   r.weibull=computeWeibull(y);
   // Teste de Normalidade (Shapiro-Wilk) & Bootstrapping — ambos operam sobre Y,
   // a mesma variável já usada pelo Weibull acima.
   r.shapiro=shapiroWilk(y);
   r.bootstrap=computeBootstrap(y,mcN);
   // Monte Carlo — store means array for chart
-  const mcMeans=[];for(let i=0;i<mcN;i++){let s=0;for(let j=0;j<n;j++)s+=x[Math.floor(Math.random()*n)];mcMeans.push(s/n)}
+  // ov.1.1.2: reamostragem da média de Y (antes usava a coluna X por engano)
+  const mcMeans=[];for(let i=0;i<mcN;i++){let s=0;for(let j=0;j<n;j++)s+=y[Math.floor(Math.random()*n)];mcMeans.push(s/n)}
   mcMeans.sort((a,b)=>a-b);
   r.montecarlo={sims:mcN,means:mcMeans,mean:mean(mcMeans),std:std(mcMeans),ci95:[quantile(mcMeans,.025),quantile(mcMeans,.975)],ci99:[quantile(mcMeans,.005),quantile(mcMeans,.995)]};
   return r;
@@ -7674,7 +7817,6 @@ function sDrawQQNoOut(r){const s=r.statsYNoOut;if(!s.arr.length||s.std===0)retur
 function sRenderInf(r){
   const sy=r.statsY;
   const ch=s=>s?`<span class="badge-sig">● ${t('inf.sig')}</span>`:`<span class="badge-notsig">● ${t('inf.nsig')}</span>`;
-  const chC=d=>{const c=d<.2?'#4ade80':d<.5?'#fbbf24':d<.8?'#fb923c':'#f87171';return`<span style="color:${c}" data-cohen-key="${r.cohen.interpKey}">● ${t(r.cohen.interpKey)}</span>`};
   document.getElementById('sTestCards').innerHTML=`
   <div class="test-card"><h4>${t('inf.ci')}${tip('ic95')} – ${r.cy} (${(r.conf*100).toFixed(0)}%)</h4>
     <div class="test-row"><span class="test-key">${t('stat.media')}</span><span class="test-val">${fmtSmart(sy.mean)}</span></div>
@@ -7694,6 +7836,13 @@ function sRenderInf(r){
     <div class="test-row"><span class="test-key">${t('inf.pval')}</span><span class="test-val">${r.ttest.pApprox}</span></div>
     <div class="test-row"><span class="test-key">${t('inf.result')}</span><span class="test-val">${ch(r.ttest.significant)}</span></div>
   </div>
+  ${r.regression?`<div class="test-card"><h4>${t('inf.regTitle')} – ${r.cy} = B0 + B1·${r.cx}</h4>
+    <div class="test-row"><span class="test-key">B0 (${t('inf.regIntercept')})</span><span class="test-val">${fmtSmart(r.regression.b0)} ± ${fmtSmart(r.regression.seB0)}</span></div>
+    <div class="test-row"><span class="test-key">B1 (${t('inf.regSlope')})</span><span class="test-val">${fmtSmart(r.regression.b1)} ± ${fmtSmart(r.regression.seB1)}</span></div>
+    <div class="test-row"><span class="test-key">${t('inf.regResSd')}</span><span class="test-val">${fmtSmart(r.regression.s)}</span></div>
+    <div class="test-row"><span class="test-key">SS ${t('inf.regSSreg')} / SS ${t('inf.regSSres')}</span><span class="test-val">${fmtSmart(r.regression.ssReg)} / ${fmtSmart(r.regression.ssRes)}</span></div>
+    <div class="test-row"><span class="test-key">F (1, ${r.regression.df})</span><span class="test-val">${fmtSmart(r.regression.F)}</span></div>
+  </div>`:''}
   <div class="test-card"><h4>${t('inf.pearson')}${tip('pearson')}</h4>
     <div class="test-row"><span class="test-key">${t('inf.r')}</span><span class="test-val">${fmtSmart(r.correlation)}</span></div>
     <div class="test-row"><span class="test-key">R²</span><span class="test-val">${fmtSmart(r.r2)}</span></div>
@@ -7865,9 +8014,10 @@ function sRenderReport(r){
     ${rr(t('inf.me'),'± '+fmtSmart(sy.me))}${rr(t('inf.sem'),fmtSmart(sy.sem))}
   </div>
   <div class="report-section"><h3>${t('rep.inf')}</h3>
-    ${rr(t('inf.tCalc'),fmtSmart(r.ttest.t))}${rr(t('inf.tCrit'),fmtSmart(r.ttest.critical))}${rr(t('inf.df'),r.ttest.df)}${rr(t('inf.pval'),r.ttest.pApprox)}
-    <div class="report-row"><span>${t('inf.result')} T-Test</span>${chRes(r.ttest.significant,r.ttest.significant?t('inf.sig'):t('inf.nsig'))}</div>
+    ${rr(t('inf.tCalc')+' (β₁)',fmtSmart(r.ttest.t))}${rr(t('inf.tCrit'),fmtSmart(r.ttest.critical))}${rr(t('inf.df'),r.ttest.df)}${rr(t('inf.pval'),r.ttest.pApprox)}
+    <div class="report-row"><span>${t('inf.result')} (H₀: β₁ = 0)</span>${chRes(r.ttest.significant,r.ttest.significant?t('inf.sig'):t('inf.nsig'))}</div>
     ${rr(t('inf.r'),fmtSmart(r.correlation))}${rr(t('inf.r2'),fmtSmart(r.r2))}
+    ${r.regression?rr('B0 ± EP',fmtSmart(r.regression.b0)+' ± '+fmtSmart(r.regression.seB0))+rr('B1 ± EP',fmtSmart(r.regression.b1)+' ± '+fmtSmart(r.regression.seB1))+rr(t('inf.regResSd'),fmtSmart(r.regression.s))+rr('SS '+t('inf.regSSreg'),fmtSmart(r.regression.ssReg))+rr('SS '+t('inf.regSSres'),fmtSmart(r.regression.ssRes))+rr('F (1, '+r.regression.df+')',fmtSmart(r.regression.F)):''}
   </div>
   <div class="report-section"><h3>${t('rep.weibull')}</h3>
     ${rr(t('adv.beta'),fmtSmart(r.weibull.beta))}${rr(t('adv.eta'),fmtSmart(r.weibull.eta))}
@@ -7914,7 +8064,13 @@ function sGenerateXLSX(){
     ['CV(%)',sy.cv,son.cv],['Assimetria',sy.skewness,son.skewness],['Curtose',sy.kurtosis,son.kurtosis],['Outliers',sy.outliers.length,'–']];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(desc),'Descritivas');
   // Sheet 2: Testes
-  const tests=[['Teste','Valor'],['T calculado',r.ttest.t],['T crítico',r.ttest.critical],['gl',r.ttest.df],['p-valor',r.ttest.pApprox],['Resultado T-Test',r.ttest.significant?'SIGNIFICATIVO':'Não Significativo'],['F (ANOVA)',r.anova.f],['F crítico',r.anova.critical],['SS Entre grupos',r.anova.ssBetween],['SS Dentro grupos',r.anova.ssWithin],['Resultado ANOVA',r.anova.significant?'SIGNIFICATIVO':'Não Significativo'],['Pearson (r)',r.correlation],['R²',r.r2],['D de Cohen',r.cohen.d],['Interp. Cohen',r.cohen.interp],['Desvio Padrão Pooled',r.cohen.pooledStd],
+  // ov.1.1.2: valores numéricos em PRECISÃO TOTAL (o XLSX é a fonte para a validação por LRE).
+  const rg=r.regression||{};
+  const tests=[['Teste','Valor'],
+    ['Regressão linear Y = B0 + B1·X',''],['n',rg.n],['B0 (intercepto)',rg.b0],['EP de B0',rg.seB0],['B1 (inclinação)',rg.b1],['EP de B1',rg.seB1],
+    ['Desvio-padrão residual',rg.s],['R²',r.r2],['Pearson (r)',r.correlation],
+    ['SS regressão',rg.ssReg],['SS residual',rg.ssRes],['SS total',rg.ssTot],['gl residual',rg.df],['F (regressão)',rg.F],['F crítico',rg.fCrit],
+    ['T calculado (H0: B1 = 0)',r.ttest.t],['T crítico',r.ttest.critical],['gl',r.ttest.df],['p-valor (exato)',r.ttest.p],['Resultado',r.ttest.significant?'SIGNIFICATIVO':'Não Significativo'],
     [],['Distância de Cook — máxima',r.cook.max],['Distância de Cook — limiar (4/n)',r.cook.threshold],['Distância de Cook — pontos influentes',r.cook.flaggedIdx.length],
     ['DFFITS — máximo (abs.)',r.dffits.maxAbs],['DFFITS — limiar (±)',r.dffits.threshold],['DFFITS — pontos influentes',r.dffits.flaggedIdx.length],
     [],['Shapiro-Wilk — N',r.shapiro.n],['Shapiro-Wilk — W',r.shapiro.W],['Shapiro-Wilk — p-valor',r.shapiro.p],['Shapiro-Wilk — α',r.alpha],['Shapiro-Wilk — Resultado',r.shapiro.p>r.alpha?'Distribuição Normal':'Não-Normal']];
@@ -8021,9 +8177,10 @@ function sDownloadTxt(){
   lines.push('');
   lines.push(isPT?'TESTES ESTATÍSTICOS':'STATISTICAL TESTS');
   lines.push(sep2);
-  lines.push('t = '+fnum(r.ttest.t)+'  |  df = '+r.ttest.df+'  |  t_crit = '+fnum(r.ttest.critical)+'  |  '+(r.ttest.significant?(isPT?'Significativo':'Significant'):(isPT?'Não significativo':'Not significant')));
-  lines.push('ANOVA F = '+fnum(r.anova.f)+'  |  F_crit = '+fnum(r.anova.critical)+'  |  '+(r.anova.significant?(isPT?'Significativo':'Significant'):(isPT?'Não significativo':'Not significant')));
-  lines.push((isPT?"Cohen's d":"Cohen's d")+' = '+fnum(r.cohen.d)+'  ('+r.cohen.interp+')');
+  if(r.regression){ const rg=r.regression;
+    lines.push((isPT?'Regressão':'Regression')+' Y = B0 + B1·X  |  B0 = '+fnum(rg.b0)+' ± '+fnum(rg.seB0)+'  |  B1 = '+fnum(rg.b1)+' ± '+fnum(rg.seB1)+'  |  s = '+fnum(rg.s));
+    lines.push('SS reg = '+fnum(rg.ssReg)+'  |  SS res = '+fnum(rg.ssRes)+'  |  F(1,'+rg.df+') = '+fnum(rg.F)); }
+  lines.push('t (H0: B1 = 0) = '+fnum(r.ttest.t)+'  |  df = '+r.ttest.df+'  |  t_crit = '+fnum(r.ttest.critical)+'  |  p = '+r.ttest.pApprox+'  |  '+(r.ttest.significant?(isPT?'Significativo':'Significant'):(isPT?'Não significativo':'Not significant')));
   lines.push('');
   lines.push(isPT?'CONFIABILIDADE (WEIBULL / MTBF)':'RELIABILITY (WEIBULL / MTBF)');
   lines.push(sep2);
@@ -8707,7 +8864,15 @@ function sGeneratePDF(){
   if(P('pareto')){ sec(t('pdf.paretoSec'));rw(t('pdf.classe'),t('pdf.freqPctAcum'));r.pareto.forEach(p=>rw(S(p.label),p.count+' / '+p.cum.toFixed(1)+'%'));kit.y+=3; }
   if(P('ic')){ sec(t('pdf.icSec')+' ('+(r.conf*100).toFixed(0)+'%)');rw(t('stat.media'),fmtSmart(sy.mean));rw(t('inf.ciLow'),fmtSmart(sy.ci[0]));rw(t('inf.ciHigh'),fmtSmart(sy.ci[1]));rw(t('inf.me'),'+-'+fmtSmart(sy.me));rw(t('inf.sem'),fmtSmart(sy.sem));kit.y+=3; }
   if(P('tests')){
-  sec(t('pdf.testesSec'));rw(t('inf.tCalc'),fmtSmart(r.ttest.t));rw(t('inf.tCrit'),fmtSmart(r.ttest.critical));rw(t('inf.df'),r.ttest.df);rw(t('inf.pval'),r.ttest.pApprox);rw(t('pdf.resultTTest'),r.ttest.significant?t('inf.sig'):t('inf.nsig'),r.ttest.significant);rw(t('inf.fCalc'),fmtSmart(r.anova.f));rw(t('inf.fCrit'),fmtSmart(r.anova.critical));rw(t('inf.ssBetween'),fmtSmart(r.anova.ssBetween));rw(t('inf.ssWithin'),fmtSmart(r.anova.ssWithin));rw(t('pdf.resultAnova'),r.anova.significant?t('inf.sig'):t('inf.nsig'),r.anova.significant);rw(t('inf.r'),fmtSmart(r.correlation));rw(t('inf.r2'),fmtSmart(r.r2));rw(t('inf.cohenD'),fmtSmart(r.cohen.d)+' '+r.cohen.interp);rw(t('inf.pooledStd'),fmtSmart(r.cohen.pooledStd));kit.y+=3;
+  sec(t('pdf.testesSec'));
+  // ov.1.1.2: regressão Y = B0 + B1·X (teste t da inclinação + ANOVA da regressão). O teste t de
+  // duas amostras X×Y, a "ANOVA" X×Y e o d de Cohen X×Y foram retirados (ver sComputeAll).
+  if(r.regression){ const rg=r.regression;
+    rw('B0 ('+t('inf.regIntercept')+')',fmtSmart(rg.b0)+' ± '+fmtSmart(rg.seB0));rw('B1 ('+t('inf.regSlope')+')',fmtSmart(rg.b1)+' ± '+fmtSmart(rg.seB1));
+    rw(t('inf.regResSd'),fmtSmart(rg.s)); }
+  rw(t('inf.tCalc')+' (H0: B1 = 0)',fmtSmart(r.ttest.t));rw(t('inf.tCrit'),fmtSmart(r.ttest.critical));rw(t('inf.df'),r.ttest.df);rw(t('inf.pval'),r.ttest.pApprox);rw(t('pdf.resultTTest'),r.ttest.significant?t('inf.sig'):t('inf.nsig'),r.ttest.significant);
+  rw(t('inf.fCalc')+' (1, '+r.anova.dfWithin+')',fmtSmart(r.anova.f));rw(t('inf.fCrit'),fmtSmart(r.anova.critical));rw('SS '+t('inf.regSSreg'),fmtSmart(r.anova.ssBetween));rw('SS '+t('inf.regSSres'),fmtSmart(r.anova.ssWithin));
+  rw(t('inf.r'),fmtSmart(r.correlation));rw(t('inf.r2'),fmtSmart(r.r2));kit.y+=3;
   }
   if(P('weibull')){ sec(t('pdf.weibullSec'));ig('sWeibullChart',t('chart.weibull'),140,64,3,weibullSnap);rw(t('adv.beta'),fmtSmart(r.weibull.beta));rw(t('adv.eta'),fmtSmart(r.weibull.eta));rw(t('adv.vidaMedia'),fmtSmart(r.weibull.mean));rw(t('adv.t63'),fmtSmart(r.weibull.t63));rw(t('adv.coefAng'),fmtSmart(r.weibull.slope));rw(t('adv.intercept'),fmtSmart(r.weibull.intercept));kit.y+=3; }
   if(P('mtbf')){ sec(t('pdf.mtbfSec'));rw(t('adv.mtbf'),fmtSmart(r.mtbf.value));rw(t('adv.lambda'),fmtSmart(r.mtbf.lambda,6));rw(t('adv.vidaMediana'),fmtSmart(r.mtbf.median_life));kit.y+=3; }
@@ -9061,7 +9226,8 @@ function cRunAnalysis(){
     const denXidx=xr.reduce(function(s2,xi){return s2+(xi-mx2)*(xi-mx2);},0);
     const hat2=xr.map(function(xi){return denXidx>0?(1/n2+(xi-mx2)*(xi-mx2)/denXidx):(1/n2);});
     const cookD2=resid2.map(function(e,i2){const h=hat2[i2];if(mse2<=0||h>=1)return 0;return(e*e*h)/(pDiag*mse2*(1-h)*(1-h));});
-    const studRes2=resid2.map(function(e,i2){const h=hat2[i2];const den=mse2*(1-h);return den>0?e/Math.sqrt(den):0;});
+    // ov.1.1.2: DFFITS de Belsley-Kuh-Welsch (resíduo EXTERNAMENTE studentizado) — ver Análise Simples.
+    const studRes2=resid2.map(function(e,i2){const h=hat2[i2];if(n2-pDiag-1<=0||h>=1)return 0;const s2i=(sse2-e*e/(1-h))/(n2-pDiag-1);return s2i>0?e/Math.sqrt(s2i*(1-h)):0;});
     const dffitsV2=studRes2.map(function(ts,i2){const h=hat2[i2];return(1-h)>0?ts*Math.sqrt(h/(1-h)):0;});
     const cookThresh2=4/n2,dffitsThresh2=2*Math.sqrt(pDiag/n2);
     const cook={values:cookD2,threshold:cookThresh2,max:cookD2.reduce(function(m,v){return v>m?v:m;},0),
@@ -10064,8 +10230,18 @@ function cBuildIndividualSnapshots(kit,res,i){
 // distância é medida até o "centro" formado por todos os estudos, ponderada pela
 // covariância entre essas duas dimensões. D² segue aproximadamente uma distribuição
 // χ² com df = número de dimensões (2), o que dá o limiar de "estudo atípico".
+/* ov.1.1.2: limiar de Mahalanobis para AMOSTRA PEQUENA. Quando o centróide e a covariância
+   são estimados dos próprios k grupos, k·D²/(k−1)² ~ Beta(p/2, (k−p−1)/2) exatamente
+   (Wilks, 1963; Gnanadesikan & Kettenring, 1972). O limiar χ²(p) antigo é só o limite
+   assintótico: com k grupos o D² nunca passa de (k−1)²/k, então com menos de 8 estudos
+   o χ² (5,99 para p=2) jamais era atingido e o teste não conseguia sinalizar nada.
+   Exige k ≥ p+2 = 4 grupos: com 3 grupos o D² de todos é a constante (k−1)²/k = 4/3. */
+function mahalanobisSmallSampleThreshold(k,p,alpha){
+  if(k-p-1<=0) return NaN;
+  return (k-1)*(k-1)/k*betaQuantile(1-alpha,p/2,(k-p-1)/2);
+}
 function cComputeMahalanobis(){
-  if(!cResults||cResults.length<3) return null; // precisa n > p (2 dimensões) pra matriz de covariância não ser singular
+  if(!cResults||cResults.length<4) return null; // ov.1.1.2: k ≥ p+2 = 4 (ver mahalanobisSmallSampleThreshold)
   const feats=cResults.map(r=>[r.stats.mean,r.stats.std]);
   const n=feats.length;
   const meanVec=[0,0];
@@ -10080,9 +10256,11 @@ function cComputeMahalanobis(){
   const values=feats.map(f=>{const d0=f[0]-meanVec[0],d1=f[1]-meanVec[1];return Math.max(0,d0*d0*inv00+2*d0*d1*inv01+d1*d1*inv11);});
   const p=2;
   const alpha=parseFloat((document.getElementById('cAlphaLevel')||{}).value)/1000||0.05;
-  const threshold=chiSquareCritical(p,alpha);
+  const threshold=mahalanobisSmallSampleThreshold(n,p,alpha);
+  const d2Max=(n-1)*(n-1)/n;                       // teto matemático do D² com k grupos
+  const chi2Asym=chiSquareCritical(p,alpha);        // limite assintótico (referência)
   const flaggedIdx=values.map((v,i)=>v>threshold?i:-1).filter(i=>i>=0);
-  return{values,threshold,p,alpha,flaggedIdx,max:values.reduce((m,v)=>v>m?v:m,0)};
+  return{values,threshold,p,k:n,alpha,d2Max,chi2Asym,flaggedIdx,max:values.reduce((m,v)=>v>m?v:m,0)};
 }
 function cRenderMahalanobis(precomputed){
   const box=document.getElementById('cMahalanobisCards');
@@ -10105,7 +10283,8 @@ function cRenderMahalanobis(precomputed){
       scales:{x:{...GC.x},y:{...GC.y,beginAtZero:true,title:{display:true,text:'D² ('+t('mahal.title')+')',color:'#888'}}}}});
   box.innerHTML='<div class="test-card" style="width:100%"><h4>'+t('mahal.title')+tip('mahalanobis')+'</h4>'+
     cResults.map((r,i)=>'<div class="test-row"><span class="test-key" style="color:'+r.color.solid+'">● '+escapeHtml(r.name)+'</span><span class="test-val">D² = '+fmtSmart(m.values[i])+(m.values[i]>m.threshold?' <strong style="color:#f87171">● '+t('mahal.outlier')+'</strong>':'')+'</span></div>').join('')+
-    '<div class="test-row" style="border-top:1px dashed var(--border2);margin-top:6px;padding-top:8px"><span class="test-key">'+t('mahal.threshold')+' (χ², df='+m.p+', α='+m.alpha.toFixed(3)+')</span><span class="test-val">'+fmtSmart(m.threshold)+'</span></div>'+
+    '<div class="test-row" style="border-top:1px dashed var(--border2);margin-top:6px;padding-top:8px"><span class="test-key">'+t('mahal.threshold')+' (k='+m.k+', p='+m.p+', α='+m.alpha.toFixed(3)+')</span><span class="test-val">'+fmtSmart(m.threshold)+'</span></div>'+
+    '<div class="test-row"><span class="test-key">'+t('mahal.d2max')+'</span><span class="test-val">'+fmtSmart(m.d2Max)+'</span></div>'+
     '</div>';
 }
 
@@ -10135,15 +10314,39 @@ function cComputeChiHomogeneity(){
     }
   }
   const df=(table.length-1)*(nBins-1);
-  const pval=df>0?chiSquarePValue(chi2,df):1;
+  // ov.1.1.2: o p da distribuição χ² é ASSINTÓTICO — só vale quando as frequências
+  // esperadas não são pequenas (regra de Cochran: ≤ 20% das células com esperada < 5 e
+  // nenhuma < 1). Fora disso, usa-se o p por simulação de Monte Carlo com margens fixas
+  // (mesmo método de R chisq.test(simulate.p.value=TRUE)), com semente fixa.
+  const pAsym=df>0?chiSquarePValue(chi2,df):1;
+  let lowExp=0,minExp=Infinity,cells=0;
+  for(let ri=0;ri<table.length;ri++) for(let bi=0;bi<nBins;bi++){
+    const e=(rowTotals[ri]*colTotals[bi])/grand; cells++; if(e<5) lowExp++; if(e<minExp) minExp=e;
+  }
+  const lowExpPct=cells?lowExp/cells*100:0;
+  const cochranOk=(lowExpPct<=20)&&(minExp>=1);
+  const mc=df>0?chiSquareMonteCarloP(table,chi2):{p:1,B:0,floor:false};
+  const pval=cochranOk?pAsym:mc.p;                 // p usado na DECISÃO
+  const pMethod=cochranOk?'asym':'mc';
   const k=Math.max(1,Math.min(table.length-1,nBins-1));
   const cramerV=grand>0?Math.sqrt(chi2/(grand*k)):0;
   const alpha=parseFloat((document.getElementById('cAlphaLevel')||{}).value)/1000||0.05;
   // valor crítico de χ² (limiar da tabela de qui-quadrado) para df e α informados —
   // permite comparar diretamente χ² calculado vs χ² crítico, sem precisar consultar o p-valor.
   const chiCritical=df>0?chiSquareCritical(df,alpha):0;
-  return{table,edges,w,nBins,rowTotals,colTotals,grand,chi2,rowContrib,df,pval,cramerV,alpha,chiCritical,significant:pval<=alpha};
+  return{table,edges,w,nBins,rowTotals,colTotals,grand,chi2,rowContrib,df,pval,pAsym,pMC:mc.p,mcB:mc.B,mcFloor:mc.floor,pMethod,
+    lowExp,lowExpPct,minExp,cochranOk,cramerV,alpha,chiCritical,significant:pval<=alpha};
 }
+// ov.1.1.2: texto dos p-valores do qui-quadrado (assintótico × Monte Carlo) e aviso de Cochran.
+function _chiPmcTxt(c){ return (c.mcFloor?'≤ ':'')+fmtP(c.pMC)+' (B='+c.mcB.toLocaleString()+')'; }
+function _chiRows(c){
+  return [
+    [t('chihomog.pAsym')+(c.pMethod==='asym'?' ★':''), fmtP(c.pAsym)],
+    [t('chihomog.pMC')+(c.pMethod==='mc'?' ★':''), _chiPmcTxt(c)],
+    [t('chihomog.expMin'), fmtSmart(c.minExp)+' — '+c.lowExp+'/'+(c.table.length*c.nBins)+' '+t('chihomog.cellsLt5')]
+  ];
+}
+function _chiWarn(c){ return c.cochranOk?'':t('chihomog.cochranWarn'); }
 function _cramerInterpKey(v){
   if(v<0.1) return 'chihomog.cramerNeg';
   if(v<0.3) return 'chihomog.cramerWeak';
@@ -10169,7 +10372,8 @@ function cRenderChiHomogeneity(precomputed){
       scales:{x:{...GC.x,title:{display:true,text:t('chihomog.categoryAxis'),color:'#888'}},y:{...GC.y,beginAtZero:true}}}});
   box.innerHTML='<div class="test-card" style="width:100%"><h4>'+t('chihomog.title')+tip('chihomog')+'</h4>'+
     '<div class="test-row"><span class="test-key">χ²</span><span class="test-val">'+fmtSmart(c.chi2)+'</span></div>'+
-    '<div class="test-row"><span class="test-key">'+t('cmp.pval')+'</span><span class="test-val">'+fmtSmart(c.pval,4)+'</span></div>'+
+    _chiRows(c).map(function(rw_){ return '<div class="test-row"><span class="test-key">'+rw_[0]+'</span><span class="test-val">'+rw_[1]+'</span></div>'; }).join('')+
+    (c.cochranOk?'':'<div class="test-row"><span class="test-key" style="color:#fbbf24;white-space:normal">⚠️ '+_chiWarn(c)+'</span><span class="test-val"></span></div>')+
     '<div class="test-row"><span class="test-key">gl (df)</span><span class="test-val">'+c.df+'</span></div>'+
     '<div class="test-row"><span class="test-key">'+t('chihomog.chiCritical')+' (α='+c.alpha.toFixed(3)+')</span><span class="test-val">'+fmtSmart(c.chiCritical)+'</span></div>'+
     '<div class="test-row"><span class="test-key">'+t('chihomog.cramerV')+tip('cramerv')+'</span><span class="test-val">'+fmtSmart(c.cramerV,4)+' ('+t(_cramerInterpKey(c.cramerV))+')</span></div>'+
@@ -10198,9 +10402,11 @@ function _isMonotonicTrend(arr){
    bloco "Técnicas de análise — numérica de alta precisão"; _tAnovaFast e _tVarTests vêm do mesmo bloco.
    A Análise Simples continua usando twoSampleTTest/oneWayANOVA (só cTTest/cANOVA são usadas aqui). */
 function cFmtP(p){
+  // ov.1.1.2: abaixo de 1e-12 a dupla precisão não sustenta os dígitos (Tukey 7.22e-15 no
+  // STATLab × 1.55e-15 no SciPy era ruído numérico dos dois lados). Exibe-se só o limite;
+  // o XLSX continua gravando o número bruto.
   if(p===null||p===undefined||!isFinite(p)) return '–';
-  if(p<=0) return '< 1e-300';
-  return p>=1e-4?p.toFixed(4):p.toExponential(2);
+  return fmtP(p);
 }
 function cPTxt(p){ return '= '+cFmtP(p); }
 function _cPvalT(tv,df){ return Math.min(1,Math.max(0,ibeta(df/(df+tv*tv),df/2,0.5))); }        // bicaudal exato
@@ -11991,14 +12197,14 @@ function cRenderCRelatorio(){
   if(mahalDataR){
     html+=`<div class="report-section"><h3>📐 ${t('mahal.title')}</h3>
       ${cResults.map((r,ri)=>`<div class="report-row"><span style="color:${r.color.solid}">● ${escapeHtml(r.name)}</span><strong>D² = ${fmtSmart(mahalDataR.values[ri])}${mahalDataR.values[ri]>mahalDataR.threshold?' — '+t('mahal.outlier'):''}</strong></div>`).join('')}
-      ${rr(t('mahal.threshold')+' (df='+mahalDataR.p+', α='+mahalDataR.alpha.toFixed(3)+')',fmtSmart(mahalDataR.threshold))}
+      ${rr(t('mahal.threshold')+' (k='+mahalDataR.k+', p='+mahalDataR.p+', α='+mahalDataR.alpha.toFixed(3)+')',fmtSmart(mahalDataR.threshold))}${rr(t('mahal.d2max'),fmtSmart(mahalDataR.d2Max))}
     </div>`;
   }else{
     html+=`<div class="report-section"><h3>📐 ${t('mahal.title')}</h3><p style="color:var(--text4);font-size:12px;margin:0">${t('mahal.insufficient')}</p></div>`;
   }
   if(chiHomogDataR){
     html+=`<div class="report-section"><h3>🔲 ${t('chihomog.title')}</h3>
-      ${rr('χ²',fmtSmart(chiHomogDataR.chi2))}${rr(t('cmp.pval'),cFmtP(chiHomogDataR.pval))}${rr(t('crep.gl'),chiHomogDataR.df)}
+      ${rr('χ²',fmtSmart(chiHomogDataR.chi2))}${_chiRows(chiHomogDataR).map(x=>rr(x[0],x[1])).join('')}${chiHomogDataR.cochranOk?'':rr('⚠️ '+_chiWarn(chiHomogDataR),'')}${rr(t('crep.gl'),chiHomogDataR.df)}
       ${rr(t('chihomog.chiCritical')+' (α='+chiHomogDataR.alpha.toFixed(3)+')',fmtSmart(chiHomogDataR.chiCritical))}
       ${rr(t('chihomog.cramerV'),fmtSmart(chiHomogDataR.cramerV,4)+' ('+t(_cramerInterpKey(chiHomogDataR.cramerV))+')')}
       <div class="report-row"><span>${t('inf.result')}</span>${chRes(chiHomogDataR.significant,t(chiHomogDataR.significant?'chihomog.heterogeneous':'chihomog.homogeneous'))}</div>
@@ -12099,8 +12305,8 @@ function cGenerateXLSX(){
 
     // ── Aba 3d: Distância de Mahalanobis & Teste Qui-Quadrado de Homogeneidade ──
     const mahalX=cComputeMahalanobis();
-    const mahalHeader=['Estudo','Distância de Mahalanobis (D²)','Limiar (χ², α)','Estudo Atípico?'];
-    const mahalRows=mahalX?cResults.map((r,ri)=>[r.name,mahalX.values[ri],mahalX.threshold,mahalX.values[ri]>mahalX.threshold?'SIM':'não']):[['Insuficiente — são necessários pelo menos 3 estudos']];
+    const mahalHeader=['Estudo','Distância de Mahalanobis (D²)','Limiar (Beta, amostra pequena)','D² máximo possível (k−1)²/k','Estudo Atípico?'];
+    const mahalRows=mahalX?cResults.map((r,ri)=>[r.name,mahalX.values[ri],mahalX.threshold,mahalX.d2Max,mahalX.values[ri]>mahalX.threshold?'SIM':'não']):[['Insuficiente — são necessários pelo menos 4 estudos']];
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([mahalHeader,...mahalRows]),'Mahalanobis');
 
     const chiX=cComputeChiHomogeneity();
@@ -12111,7 +12317,11 @@ function cGenerateXLSX(){
       chiRows.push(['χ² total',chiX.chi2]);
       chiRows.push(['gl (df)',chiX.df]);
       chiRows.push(['χ² crítico (α='+chiX.alpha.toFixed(3)+')',chiX.chiCritical]);
-      chiRows.push(['p-valor',chiX.pval]);
+      chiRows.push(['p-valor assintótico (distribuição χ²)',chiX.pAsym]);
+      chiRows.push(['p-valor Monte Carlo (margens fixas, B='+chiX.mcB+(chiX.mcFloor?'; nenhuma simulação ≥ observado → p ≤ 1/(B+1)':'')+')',chiX.pMC]);
+      chiRows.push(['p-valor usado na decisão',chiX.pMethod==='mc'?'Monte Carlo':'assintótico']);
+      chiRows.push(['Freq. esperada mínima',chiX.minExp]);
+      chiRows.push(['% células com esperada < 5',chiX.lowExpPct]);
       chiRows.push(['V de Cramér',chiX.cramerV]);
       chiRows.push(['Resultado',chiX.significant?'Distribuições Heterogêneas':'Distribuições Homogêneas']);
       XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([chiHeader,...chiRows]),'Qui-Quadrado Homogeneidade');
@@ -12244,7 +12454,8 @@ function cGeneratePDF(){
   if(mahalPdf){
     ig('cMahalanobisChart',t('mahal.title'),165,72,3,mahalSnap);
     cResults.forEach((r,i)=>rw(r.name,'D² = '+fmtSmart(mahalPdf.values[i])+(mahalPdf.values[i]>mahalPdf.threshold?' — '+t('mahal.outlier'):''),mahalPdf.values[i]>mahalPdf.threshold));
-    rw(t('mahal.threshold')+' (df='+mahalPdf.p+', α='+mahalPdf.alpha.toFixed(3)+')',fmtSmart(mahalPdf.threshold));
+    rw(t('mahal.threshold')+' (k='+mahalPdf.k+', p='+mahalPdf.p+', α='+mahalPdf.alpha.toFixed(3)+')',fmtSmart(mahalPdf.threshold));
+    rw(t('mahal.d2max'),fmtSmart(mahalPdf.d2Max));
   }else{
     rw(t('mahal.insufficient'),'');
   }
@@ -12254,7 +12465,7 @@ function cGeneratePDF(){
   sec('🔲 '+t('chihomog.title'));
   if(chiPdf){
     ig('cChiHomogChart',t('chihomog.title'),165,72,3,chiSnap);
-    rw('χ²',fmtSmart(chiPdf.chi2));rw(t('cmp.pval'),cFmtP(chiPdf.pval));rw(t('crep.gl'),chiPdf.df);
+    rw('χ²',fmtSmart(chiPdf.chi2));_chiRows(chiPdf).forEach(x=>rw(x[0],x[1]));if(!chiPdf.cochranOk) rw('! '+_chiWarn(chiPdf),'');rw(t('crep.gl'),chiPdf.df);
     rw(t('chihomog.chiCritical')+' (α='+chiPdf.alpha.toFixed(3)+')',fmtSmart(chiPdf.chiCritical));
     rw(t('chihomog.cramerV'),fmtSmart(chiPdf.cramerV,4)+' ('+t(_cramerInterpKey(chiPdf.cramerV))+')');
     rw(t('cmp.result'),t(chiPdf.significant?'chihomog.heterogeneous':'chihomog.homogeneous'),chiPdf.significant);
@@ -13202,8 +13413,8 @@ var I18N={
     'sec.dffits':'DFFITS','sec.cookD':'Distância de Cook','adv.cookD':'Distância de Cook','adv.cookThresh':'Limiar de Cook (4/n)','adv.dffitsThresh':'Limiar DFFITS','adv.influentialPts':'pontos influentes','adv.cookMax':'Cook máximo','adv.dffitsMax':'DFFITS máximo (abs.)','rep.regDiag':'Diagnóstico de Regressão (Cook & DFFITS)',
     'adv.shapiro.title':'Teste de Normalidade (Shapiro-Wilk)','sec.shapiro':'Teste de Normalidade (Shapiro-Wilk)',
     'rep.shapiro':'🔔 Teste de Normalidade (Shapiro-Wilk)','rep.bootstrap':'🔁 Bootstrapping (Reamostragem)',
-    'mahal.title':'Distância de Mahalanobis','mahal.threshold':'Limiar (χ²)','mahal.outlier':'Estudo Atípico',
-    'mahal.insufficient':'São necessários pelo menos 3 estudos para calcular a Distância de Mahalanobis (espaço Média × Desvio Padrão).',
+    'chihomog.pAsym':'p-valor assintótico (distribuição χ²)','chihomog.pMC':'p-valor Monte Carlo (margens fixas)','chihomog.expMin':'Freq. esperada mínima','chihomog.cellsLt5':'células com esperada < 5','chihomog.cochranWarn':'Frequências esperadas pequenas (regra de Cochran violada): o p assintótico não é confiável — a decisão usa o p de Monte Carlo (★).','mahal.title':'Distância de Mahalanobis','mahal.threshold':'Limiar (Beta, amostra pequena)','mahal.d2max':'D² máximo possível — (k−1)²/k','mahal.outlier':'Estudo Atípico',
+    'mahal.insufficient':'São necessários pelo menos 4 estudos para a Distância de Mahalanobis (espaço Média × Desvio Padrão): com 3, o D² de todos é a mesma constante e o teste não discrimina.',
     'chihomog.title':'Teste Qui-Quadrado de Homogeneidade','chihomog.cramerV':'V de Cramér',
     'chihomog.chiCritical':'χ² Crítico',
     'chihomog.homogeneous':'Distribuições Homogêneas','chihomog.heterogeneous':'Distribuições Heterogêneas',
@@ -13245,11 +13456,11 @@ var I18N={
     'csec.relatorio':'Relatório Comparativo',
     'csec.checkPT0':'Resumo Comparativo','csec.checkPT1':'Testes Estatísticos','csec.checkPT2':'Gráficos Sobrepostos','csec.checkPT3':'Individual por Estudo','csec.checkPT4':'Tabelas Weibull',
     // Inferential labels
-    'inf.ttest':'Teste t (Uma Amostra)','inf.ttest2':'Teste t (Duas Amostras – X vs Y)',
+    'inf.ttest':'Teste t (Uma Amostra)','inf.ttest2':'Teste t da inclinação (H₀: β₁ = 0)',
     'inf.anova':'ANOVA One-Way','inf.cohen':'Tamanho do Efeito – D de Cohen',
     'inf.pearson':'Correlação de Pearson (X vs Y)','inf.ci':'Intervalo de Confiança',
     'inf.tCalc':'T calculado','inf.tCrit':'T crítico','inf.df':'Graus de liberdade',
-    'inf.pval':'p-valor aprox.','inf.result':'Resultado','inf.sig':'SIGNIFICATIVO','inf.nsig':'Não Significativo',
+    'inf.regTitle':'Regressão linear','inf.regIntercept':'intercepto','inf.regSlope':'inclinação','inf.regResSd':'Desvio-padrão residual','inf.regSSreg':'regressão','inf.regSSres':'residual','inf.pval':'p-valor','inf.result':'Resultado','inf.sig':'SIGNIFICATIVO','inf.nsig':'Não Significativo',
     'inf.fCalc':'F calculado','inf.fCrit':'F crítico','inf.ssBetween':'SS Entre grupos','inf.ssWithin':'SS Dentro grupos',
     'inf.diff':'Diferença de médias','inf.pooledStd':'Desvio Padrão Pooled',
     'inf.r':'Pearson (r)','inf.r2':'R²','inf.cohenD':'D de Cohen','inf.cohenInterp':'Interpretação',
@@ -13572,8 +13783,8 @@ var I18N={
     'sec.dffits':'DFFITS','sec.cookD':"Cook's Distance",'adv.cookD':"Cook's Distance",'adv.cookThresh':'Cook threshold (4/n)','adv.dffitsThresh':'DFFITS threshold','adv.influentialPts':'influential points','adv.cookMax':"Max Cook's D",'adv.dffitsMax':'Max |DFFITS|','rep.regDiag':"Regression Diagnostics (Cook's D & DFFITS)",
     'adv.shapiro.title':'Normality Test (Shapiro-Wilk)','sec.shapiro':'Normality Test (Shapiro-Wilk)',
     'rep.shapiro':'🔔 Normality Test (Shapiro-Wilk)','rep.bootstrap':'🔁 Bootstrapping (Resampling)',
-    'mahal.title':'Mahalanobis Distance','mahal.threshold':'Threshold (χ²)','mahal.outlier':'Outlier Study',
-    'mahal.insufficient':'At least 3 studies are needed to compute Mahalanobis Distance (Mean × Std. Dev. space).',
+    'chihomog.pAsym':'Asymptotic p-value (χ² distribution)','chihomog.pMC':'Monte Carlo p-value (fixed margins)','chihomog.expMin':'Minimum expected freq.','chihomog.cellsLt5':'cells with expected < 5','chihomog.cochranWarn':'Small expected frequencies (Cochran rule violated): the asymptotic p is unreliable — the decision uses the Monte Carlo p (★).','mahal.title':'Mahalanobis Distance','mahal.threshold':'Threshold (Beta, small sample)','mahal.d2max':'Maximum possible D² — (k−1)²/k','mahal.outlier':'Outlier Study',
+    'mahal.insufficient':'At least 4 studies are needed for Mahalanobis Distance (Mean × Std. Dev. space): with 3, every D² is the same constant and the test cannot discriminate.',
     'chihomog.title':'Chi-Square Homogeneity Test','chihomog.cramerV':"Cramér's V",
     'chihomog.chiCritical':'Critical χ²',
     'chihomog.homogeneous':'Homogeneous Distributions','chihomog.heterogeneous':'Heterogeneous Distributions',
@@ -13612,11 +13823,11 @@ var I18N={
     'clib.chart':'Chart','clib.desc':'Choose the analysis type and which studies to show in each chart. Axes and colors adjust automatically.',
     'csec.relatorio':'Comparative Report',
     'csec.checkPT0':'Comparative Summary','csec.checkPT1':'Statistical Tests','csec.checkPT2':'Overlaid Charts','csec.checkPT3':'Individual by Study','csec.checkPT4':'Weibull Tables',
-    'inf.ttest':'T-Test (One Sample)','inf.ttest2':'T-Test (Two Sample – X vs Y)',
+    'inf.ttest':'T-Test (One Sample)','inf.ttest2':'Slope t-test (H₀: β₁ = 0)',
     'inf.anova':'One-Way ANOVA','inf.cohen':'Effect Size – Cohen D',
     'inf.pearson':'Pearson Correlation (X vs Y)','inf.ci':'Confidence Interval',
     'inf.tCalc':'T statistic','inf.tCrit':'T critical','inf.df':'Degrees of freedom',
-    'inf.pval':'p-value (approx.)','inf.result':'Result','inf.sig':'SIGNIFICANT','inf.nsig':'Not Significant',
+    'inf.regTitle':'Linear regression','inf.regIntercept':'intercept','inf.regSlope':'slope','inf.regResSd':'Residual standard deviation','inf.regSSreg':'regression','inf.regSSres':'residual','inf.pval':'p-value','inf.result':'Result','inf.sig':'SIGNIFICANT','inf.nsig':'Not Significant',
     'inf.fCalc':'F statistic','inf.fCrit':'F critical','inf.ssBetween':'SS Between groups','inf.ssWithin':'SS Within groups',
     'inf.diff':'Mean difference','inf.pooledStd':'Pooled Std. Dev.',
     'inf.r':'Pearson (r)','inf.r2':'R²','inf.cohenD':'Cohen D','inf.cohenInterp':'Interpretation',
@@ -22548,7 +22759,7 @@ function wikiApplyLang(){
           :['Distância de Mahalanobis ao quadrado, do estudo analisado','Vetor (média, desvio padrão) do estudo analisado','Vetor médio (média, desvio padrão) de todos os estudos','Inversa da matriz de covariância entre média e desvio padrão','Graus de liberdade (= 2, nº de dimensões)','Nível de significância'];
         tds.forEach(function(td,i){if(descs[i])td.textContent=descs[i];});
         var wfl=sec.querySelectorAll('.wf-label');
-        var flbls=en?['Squared Mahalanobis Distance','Threshold (Critical Chi-Square)']:['Distância de Mahalanobis ao Quadrado','Limiar (Qui-Quadrado Crítico)'];
+        var flbls=en?['Squared Mahalanobis Distance','Threshold for k studies (Beta — exact for small samples; requires k ≥ 4)']:['Distância de Mahalanobis ao Quadrado','Limiar para k estudos (Beta — exato para amostra pequena; exige k ≥ 4)'];
         wfl.forEach(function(e,i){if(flbls[i])e.textContent=flbls[i];});
         var decs=sec.querySelectorAll('.wiki-decision-item');
         if(decs[0]) decs[0].querySelector('.wd-result').textContent=en?'✅ ATYPICAL study relative to the group':'✅ Estudo ATÍPICO em relação ao grupo';
@@ -23288,7 +23499,7 @@ function sUpdateI18n(){
     'T calculado':'inf.tCalc','T statistic':'inf.tCalc',
     'T critico':'inf.tCrit','T critical':'inf.tCrit',
     'Graus de liberdade':'inf.df','Graus de Liberdade':'inf.df','Degrees of freedom':'inf.df',
-    'p-valor aprox.':'inf.pval','p-value (approx.)':'inf.pval',
+    'p-valor aprox.':'inf.pval','p-value (approx.)':'inf.pval','p-valor':'inf.pval','p-value':'inf.pval',
     'Resultado':'inf.result','Result':'inf.result',
     'F calculado':'inf.fCalc','F statistic':'inf.fCalc',
     'F critico':'inf.fCrit','F critical':'inf.fCrit',
@@ -23320,6 +23531,7 @@ function sUpdateI18n(){
       ['Intervalo de Confiança','inf.ci',false],['Confidence Interval','inf.ci',false],
       ['Teste t (Uma Amostra)','inf.ttest',false],['T-Test (One Sample)','inf.ttest',false],
       ['Teste t (Duas Amostras','inf.ttest2',true],['T-Test (Two Sample','inf.ttest2',true],
+      ['Teste t da inclinação','inf.ttest2',true],['Slope t-test','inf.ttest2',true],
       ['ANOVA One-Way','inf.anova',false],['One-Way ANOVA','inf.anova',false],
       ['Tamanho do Efeito','inf.cohen',true],['Effect Size','inf.cohen',true],
       ['Cohen D','inf.cohen',true],
@@ -23481,7 +23693,7 @@ function sUpdateI18n(){
     'T calculado':'inf.tCalc','T statistic':'inf.tCalc',
     'T crítico':'inf.tCrit','T critical':'inf.tCrit',
     'Graus de liberdade':'inf.df','Degrees of freedom':'inf.df',
-    'p-valor aprox.':'inf.pval','p-value (approx.)':'inf.pval',
+    'p-valor aprox.':'inf.pval','p-value (approx.)':'inf.pval','p-valor':'inf.pval','p-value':'inf.pval',
     'F calculado':'inf.fCalc','F statistic':'inf.fCalc',
     'F crítico':'inf.fCrit','F critical':'inf.fCrit',
     'SS Entre grupos':'inf.ssBetween','SS Between groups':'inf.ssBetween',
@@ -24244,7 +24456,7 @@ var STAT_TIPS={
   cv:{pt:'Dispersão relativa: até ~10% indica baixa variabilidade; acima de ~30%, alta.',en:'Relative spread: up to ~10% is low variability; above ~30% is high.'},
   outliers:{pt:'Pontos fora de 1,5×IQR (critério de Tukey). Verifique se são erros de medição ou fenômenos reais.',en:'Points beyond 1.5×IQR (Tukey\u2019s rule). Check whether they are measurement errors or real phenomena.'},
   ic95:{pt:'Faixa plausível para a média verdadeira da população. Quanto mais estreita, mais precisa a estimativa.',en:'Plausible range for the population\u2019s true mean. Narrower means a more precise estimate.'},
-  ttest:{pt:'p-valor < α indica diferença estatisticamente significativa entre X e Y (Teste-T de Welch).',en:'p-value < α indicates a statistically significant difference between X and Y (Welch\u2019s t-test).'},
+  ttest:{pt:'Na Análise Simples: teste t da inclinação da reta Y = B0 + B1·X (H₀: β₁ = 0). p-valor < α indica que Y varia com X. Na Comparativa: Teste-T de Welch entre dois estudos.',en:'In Simple Analysis: t-test of the slope of Y = B0 + B1·X (H₀: β₁ = 0). p-value < α means Y changes with X. In Comparative: Welch\u2019s t-test between two studies.'},
   pearson:{pt:'r vai de −1 a +1: o sinal dá a direção e |r| perto de 1 é associação linear forte. R² é a fração de Y explicada por X.',en:'r ranges from −1 to +1: the sign gives the direction and |r| near 1 means strong linear association. R² is the fraction of Y explained by X.'},
   weibull:{pt:'β<1: falhas precoces. β≈1: taxa de falha constante. β>1: desgaste/envelhecimento.',en:'β<1: early failures. β≈1: constant failure rate. β>1: wear-out/aging.'},
   mtbf:{pt:'Tempo médio entre falhas e estatísticas da simulação de Monte Carlo em torno da média.',en:'Mean time between failures and Monte Carlo simulation statistics around the mean.'},
@@ -24253,7 +24465,7 @@ var STAT_TIPS={
   cohend:{pt:'Tamanho do efeito: ~0,2 é pequeno, ~0,5 é médio, ~0,8 ou mais é grande.',en:'Effect size: ~0.2 is small, ~0.5 is medium, ~0.8 or more is large.'},
   anova:{pt:'Com 3+ grupos, F alto e p-valor < α indicam que ao menos um grupo difere dos demais (mas não diz qual).',en:'With 3+ groups, a high F and p-value < α mean at least one group differs from the others (but not which one).'},
   welchcmp:{pt:'p-valor < α indica que as médias dos dois grupos diferem significativamente (Teste-T de Welch).',en:'p-value < α indicates the two groups\u2019 means differ significantly (Welch\u2019s t-test).'},
-  mahalanobis:{pt:'D² acima do limiar χ² sinaliza um estudo atípico em relação aos demais (requer 3+ estudos).',en:'D² above the χ² threshold flags a study as atypical relative to the others (requires 3+ studies).'},
+  mahalanobis:{pt:'D² acima do limiar sinaliza um estudo atípico em relação aos demais. O limiar usa a distribuição Beta (exata para poucos estudos; Wilks, 1963) e exige 4+ estudos.',en:'D² above the threshold flags a study as atypical relative to the others. The threshold uses the Beta distribution (exact for few studies; Wilks, 1963) and requires 4+ studies.'},
   chihomog:{pt:'p-valor < α indica que a distribuição de frequências difere entre os grupos (não homogênea).',en:'p-value < α indicates the frequency distribution differs across the groups (not homogeneous).'},
   cramerv:{pt:'Força da associação entre grupo e faixa de valores: perto de 0 é fraca, perto de 1 é forte.',en:'Strength of the association between group and value range: near 0 is weak, near 1 is strong.'},
   cookdffits:{pt:'Valores altos sinalizam pontos que influenciam fortemente a regressão. Vale reavaliar se distorcem o resultado.',en:'High values flag points that strongly influence the regression. Worth reassessing if they distort the result.'}
@@ -45232,8 +45444,8 @@ function cgGoHome(ev){
           <div class="wiki-formula-block">
             <div class="wf-label">Distância de Mahalanobis ao Quadrado</div>
             <div class="wiki-formula">D² = (x − μ)ᵀ × Σ⁻¹ × (x − μ)</div>
-            <div class="wf-label" style="margin-top:14px">Limiar (Qui-Quadrado Crítico)</div>
-            <div class="wiki-formula">D* = χ²_crítico (df = 2, α)</div>
+            <div class="wf-label" style="margin-top:14px">Limiar para k estudos (Beta — exato para amostra pequena; exige k ≥ 4)</div>
+            <div class="wiki-formula">D* = (k − 1)²/k × Beta₁₋α(1, (k − 3)/2)</div>
           </div>
         </div>
         <div class="wiki-sim" id="wikiSim-mahalanobis">
@@ -69375,7 +69587,7 @@ var GUIDE_ENRICH = {
     ]
   },
   r_simple_infer:{
-    optDesc:{pt:'Inferência: intervalo de confiança da média, comparar X×Y, correlação.', en:'Inference: confidence interval of the mean, compare X vs Y, correlation.'},
+    optDesc:{pt:'Inferência: intervalo de confiança da média, regressão Y × X, correlação.', en:'Inference: confidence interval of the mean, Y × X regression, correlation.'},
     summary:{pt:'Generalize da amostra para a população e meça associação entre X e Y.', en:'Generalize from sample to population and measure association between X and Y.'},
     needs:{pt:'1 arquivo com 2 colunas numéricas (X e Y).', en:'1 file with 2 numeric columns (X and Y).'},
     steps:[
@@ -69602,7 +69814,7 @@ var GUIDE_TREE = {
     question:{pt:'Qual é o seu foco na análise de uma variável?', en:'What is your focus for a single-variable analysis?'},
     options:[
       {icon:'📊', label:{pt:'Resumir a distribuição: média, dispersão, outliers', en:'Summarize the distribution: mean, spread, outliers'}, next:'r_simple_desc'},
-      {icon:'🧪', label:{pt:'Inferir sobre a média, comparar X × Y, correlação', en:'Infer about the mean, compare X vs Y, correlation'}, next:'r_simple_infer'},
+      {icon:'🧪', label:{pt:'Inferir sobre a média, regressão Y × X, correlação', en:'Infer about the mean, Y × X regression, correlation'}, next:'r_simple_infer'},
       {icon:'🔬', label:{pt:'Confiabilidade/vida útil, normalidade, simulação', en:'Reliability/lifetime, normality, simulation'}, next:'r_simple_adv'}
     ]
   },
@@ -69628,10 +69840,10 @@ var GUIDE_TREE = {
     watch:[
       {pt:'IC 95% da média (com Margem de Erro e Erro Padrão da média)', en:'95% CI of the mean (with Margin of Error and Standard Error of the mean)'},
       {pt:'Z-score dos valores mínimo e máximo', en:'Z-score of the minimum and maximum values'},
-      {pt:'Teste-T de Welch entre X e Y (T calculado, T crítico, p-valor)', en:'Welch\u2019s T-Test between X and Y (T statistic, T critical, p-value)'},
+      {pt:'Regressão Y = B0 + B1·X: teste t da inclinação (T calculado, T crítico, p-valor exato) e ANOVA da regressão (F)', en:'Regression Y = B0 + B1·X: slope t-test (T statistic, T critical, exact p-value) and regression ANOVA (F)'},
       {pt:'Correlação de Pearson (r) e R²', en:'Pearson correlation (r) and R²'}
     ],
-    caveat:{pt:'X e Y são tratados como amostras independentes (Welch). O programa não realiza teste-t pareado.', en:'X and Y are treated as independent samples (Welch). The program does not run a paired t-test.'},
+    caveat:{pt:'O teste t avalia a inclinação da reta Y × X (H₀: β₁ = 0). Para comparar duas amostras (independentes ou pareadas) use 🧬 Técnicas de análise → Teste t / Pareado.', en:'The t-test assesses the slope of the Y × X line (H₀: β₁ = 0). To compare two samples (independent or paired) use 🧬 Analysis techniques → t-test / Paired.'},
     target:{fn:'launchSimple', tab:'sinferencial'}
   },
   r_simple_adv:{
@@ -77542,7 +77754,7 @@ var TEC_WHEN={
          ['Compara os grupos por média e dispersão ao mesmo tempo.','It compares groups by mean and spread at the same time.'],
          ['Tem vários lotes e quer ranquear o mais discrepante.','You have several batches and want to rank the most discrepant one.']],
     avoid:[['Você quer achar um PONTO atípico dentro de uma coluna.','You want to find an atypical POINT inside a column.'],
-           ['Há menos de 3 grupos — a distância perde referência.','There are fewer than 3 groups — the distance loses reference.'],
+           ['Há menos de 4 grupos — com 3, todos os D² são iguais e o teste não discrimina.','There are fewer than 4 groups — with 3, every D² is equal and the test cannot discriminate.'],
            ['Os grupos têm n muito desigual.','Groups have very unequal n.']],
     alt:['outliers','grubbs','variation']},
   simpson:{
@@ -78134,14 +78346,18 @@ function _tMeansChart(id,gs,title){
       var exp=(rowT[ri]*colT[bi])/grand; cells++; if(exp<5) lowExp++;
       if(exp>0){ var c2=Math.pow(table[ri][bi]-exp,2)/exp; chi2+=c2; contrib[ri]+=c2; }
     }
-    var df=(table.length-1)*(nb-1), p=df>0?chiSquarePValue(chi2,df):1, k=Math.max(1,Math.min(table.length-1,nb-1)), V=grand>0?Math.sqrt(chi2/(grand*k)):0;
-    return {items:items,table:table,edges:edges,w:w,nb:nb,rowT:rowT,colT:colT,grand:grand,chi2:chi2,contrib:contrib,df:df,p:p,V:V,crit:df>0?chiSquareCritical(df,alpha):0,alpha:alpha,lowExp:lowExp,cells:cells};
+    // ov.1.1.2: p assintótico só com a regra de Cochran atendida; senão, p de Monte Carlo (margens fixas).
+    var minE=Infinity; for(var r2=0;r2<table.length;r2++) for(var b2=0;b2<nb;b2++){ var e2=(rowT[r2]*colT[b2])/grand; if(e2<minE) minE=e2; }
+    var df=(table.length-1)*(nb-1), pAsym=df>0?chiSquarePValue(chi2,df):1, k=Math.max(1,Math.min(table.length-1,nb-1)), V=grand>0?Math.sqrt(chi2/(grand*k)):0;
+    var cochranOk=(lowExp/cells<=0.2)&&(minE>=1), mc=df>0?chiSquareMonteCarloP(table,chi2):{p:1,B:0,floor:false}, p=cochranOk?pAsym:mc.p;
+    return {items:items,table:table,edges:edges,w:w,nb:nb,rowT:rowT,colT:colT,grand:grand,chi2:chi2,contrib:contrib,df:df,p:p,pAsym:pAsym,pMC:mc.p,mcB:mc.B,mcFloor:mc.floor,cochranOk:cochranOk,minE:minE,V:V,crit:df>0?chiSquareCritical(df,alpha):0,alpha:alpha,lowExp:lowExp,cells:cells};
   };
   o.render=function(res,tab){
     var al=res.alpha, sig=res.p<=al, h='';
     h+='<div class="stats-grid">'+_tKpi('χ²',_tFix(res.chi2,3))+_tKpi(_tL('gl','df'),res.df)+_tKpi('p-valor',_tFp(res.p),sig?'#f87171':'#22d382')+_tKpi('χ² '+_tL('crítico','critical'),_tFix(res.crit,3))+_tKpi(_tL('V de Cramér','Cramér’s V'),_tFix(res.V,3))+'</div>';
     h+='<div class="test-card"><div class="test-row"><span class="test-key">'+_tL('Decisão','Decision')+' (α='+al+')</span><span class="test-val">'+_tBadge(sig,'Distribuições diferentes','Different distributions','Distribuições homogêneas','Homogeneous distributions')+'</span></div></div>';
-    if(res.lowExp>0) h+=_tNote('⚠️ '+_tL(res.lowExp+' de '+res.cells+' células têm frequência esperada < 5 — o teste fica menos confiável; use mais dados ou menos grupos.',res.lowExp+' of '+res.cells+' cells have expected frequency < 5 — the test is less reliable; use more data or fewer groups.'),'warn');
+    h+=_tTable([_tL('p-valor','p-value'),_tL('Valor','Value')],[[_tL('Assintótico (distribuição χ²)','Asymptotic (χ² distribution)')+(res.cochranOk?' ★':''),fmtP(res.pAsym)],[_tL('Monte Carlo (margens fixas, B=','Monte Carlo (fixed margins, B=')+res.mcB+')'+(res.cochranOk?'':' ★'),(res.mcFloor?'≤ ':'')+fmtP(res.pMC)]]);
+    if(res.lowExp>0) h+=_tNote('⚠️ '+_tL(res.lowExp+' de '+res.cells+' células têm frequência esperada < 5'+(res.cochranOk?'':' (regra de Cochran violada): a decisão usa o p de Monte Carlo (★)')+' — o teste fica menos confiável; use mais dados ou menos grupos.',res.lowExp+' of '+res.cells+' cells have expected frequency < 5'+(res.cochranOk?'':' (Cochran rule violated): the decision uses the Monte Carlo p (★)')+' — the test is less reliable; use more data or fewer groups.'),'warn');
     h+=_tChartBox('tecC1',_tL('Distribuição dos valores por faixa e grupo','Value distribution by range and group'),300);
     var labels=res.edges.map(function(e,i){ return fmtSmart(e,3)+' – '+fmtSmart(e+res.w,3); });
     h+=_tSecTitle('📋 '+_tL('Frequências observadas','Observed frequencies'))+_tTable([_tL('Grupo','Group')].concat(labels).concat([_tL('Total','Total'),_tL('Contribuição χ²','χ² contribution')]),
@@ -78158,13 +78374,13 @@ function _tMeansChart(id,gs,title){
 /* ─────────────── 12. DISTÂNCIA DE MAHALANOBIS ─────────────── */
 (function(){
   var o={id:'mahal',cat:'cmp',icon:'📍',shape:'groups',kw:'mahalanobis distancia atipico grupo multivariado estudo discrepante',
-    pt:{n:'Distância de Mahalanobis',d:'Identifica grupos/estudos atípicos em relação aos demais considerando média e desvio-padrão em conjunto.',f:'Uma coluna por grupo (3 ou mais, cada um com ≥ 2 valores). 1ª linha = nomes.'},
-    en:{n:'Mahalanobis distance',d:'Flags groups/studies that are atypical relative to the others, considering mean and standard deviation together.',f:'One column per group (3 or more, each with ≥ 2 values). 1st row = names.'},
+    pt:{n:'Distância de Mahalanobis',d:'Identifica grupos/estudos atípicos em relação aos demais considerando média e desvio-padrão em conjunto.',f:'Uma coluna por grupo (4 ou mais, cada um com ≥ 2 valores). 1ª linha = nomes.'},
+    en:{n:'Mahalanobis distance',d:'Flags groups/studies that are atypical relative to the others, considering mean and standard deviation together.',f:'One column per group (4 or more, each with ≥ 2 values). 1st row = names.'},
     params:[_P_ALPHA],defaults:{alpha:0.05}};
   o.example=function(){ return {cols:[_tNormCol('E1',15,121,50,5),_tNormCol('E2',15,122,51,5.5),_tNormCol('E3',15,123,49,4.8),_tNormCol('E4',15,124,52,5.2),_tNormCol('E5',15,125,50.5,5),_tNormCol('E6',15,126,64,11)]}; };
   o.compute=function(tab){
     var items=_tSelCols(tab);
-    if(items.length<3) return _tMsg('A distância de Mahalanobis precisa de ao menos 3 grupos (colunas).','Mahalanobis distance needs at least 3 groups (columns).','info');
+    if(items.length<4) return _tMsg('A distância de Mahalanobis precisa de ao menos 4 grupos (colunas): com 3, o D² de todos é a mesma constante e o teste não discrimina.','Mahalanobis distance needs at least 4 groups (columns): with 3, every D² is the same constant and the test cannot discriminate.','info');
     var small=items.filter(function(i){ return i.arr.length<2; });
     if(small.length) return _tMsg('Cada grupo precisa de ao menos 2 valores. Problema em: '+small.map(function(s){ return _tEsc(s.name); }).join(', '),'Each group needs at least 2 values. Problem in: '+small.map(function(s){ return _tEsc(s.name); }).join(', '));
     var alpha=_tP(tab,o,'alpha'), feats=items.map(function(it){ return [mean(it.arr),std(it.arr)]; }), n=feats.length, mv=[0,0];
@@ -78174,20 +78390,20 @@ function _tMeansChart(id,gs,title){
     if(Math.abs(det)<1e-9) return _tMsg('Matriz de covariância singular (ex.: todos os grupos com o mesmo desvio-padrão ou médias alinhadas): não é possível calcular.','Singular covariance matrix (e.g. all groups with the same standard deviation or aligned means): cannot compute.');
     var i00=s11/det,i01=-s01/det,i11=s00/det;
     var d2=feats.map(function(f){ var d0=f[0]-mv[0],d1=f[1]-mv[1]; return Math.max(0,d0*d0*i00+2*d0*d1*i01+d1*d1*i11); });
-    var thr=chiSquareCritical(2,alpha);
-    return {items:items,feats:feats,d2:d2,thr:thr,alpha:alpha,flag:d2.map(function(v){ return v>thr; }),mv:mv};
+    var thr=mahalanobisSmallSampleThreshold(n,2,alpha);   // ov.1.1.2: Beta (exato p/ amostra pequena)
+    return {items:items,feats:feats,d2:d2,thr:thr,alpha:alpha,flag:d2.map(function(v){ return v>thr; }),mv:mv,d2Max:(n-1)*(n-1)/n};
   };
   o.render=function(res,tab){
     var nf=res.flag.filter(Boolean).length, mx=Math.max.apply(null,res.d2), h='';
-    h+='<div class="stats-grid">'+_tKpi(_tL('Grupos','Groups'),res.items.length)+_tKpi(_tL('Atípicos','Atypical'),nf,nf?'#f87171':'#22d382')+_tKpi(_tL('D² máximo','Max D²'),_tFix(mx,3))+_tKpi('χ² ('+_tL('gl','df')+'=2, α='+res.alpha+')',_tFix(res.thr,3))+'</div>';
+    h+='<div class="stats-grid">'+_tKpi(_tL('Grupos','Groups'),res.items.length)+_tKpi(_tL('Atípicos','Atypical'),nf,nf?'#f87171':'#22d382')+_tKpi(_tL('D² máximo','Max D²'),_tFix(mx,3))+_tKpi(_tL('Limiar (Beta)','Threshold (Beta)')+' α='+res.alpha,_tFix(res.thr,3))+_tKpi(_tL('D² máx. possível','Max possible D²'),_tFix(res.d2Max,3))+'</div>';
     h+=_tChartBox('tecC1',_tL('Distância de Mahalanobis (D²) por grupo','Mahalanobis distance (D²) per group'),300);
     h+=_tSecTitle('📋 '+_tL('Resultado por grupo','Result per group'))+_tTable([_tL('Grupo','Group'),_tL('Média','Mean'),_tL('Desvio-padrão','Std. dev.'),'D²',_tL('Avaliação','Assessment')],
       res.items.map(function(it,i){ return [_tEsc(it.name),_tFmt(res.feats[i][0],5),_tFmt(res.feats[i][1],5),_tFix(res.d2[i],3),_tBadge(res.flag[i],'Atípico','Atypical','Dentro do padrão','Within pattern')]; }));
-    h+=_tNote(_tL('Cada grupo é resumido por (média, desvio-padrão) e comparado com o “centro” de todos os grupos, levando em conta a correlação entre as duas medidas. D² acima do χ² crítico (2 graus de liberdade) sugere um grupo que foge do padrão dos demais — um sinal para investigar, não uma prova.','Each group is summarized by (mean, standard deviation) and compared with the “center” of all groups, accounting for the correlation between the two measures. A D² above the critical χ² (2 degrees of freedom) suggests a group that departs from the others — a signal to investigate, not proof.'));
+    h+=_tNote(_tL('Cada grupo é resumido por (média, desvio-padrão) e comparado com o “centro” de todos os grupos, levando em conta a correlação entre as duas medidas. D² acima do limiar sugere um grupo que foge do padrão dos demais — um sinal para investigar, não uma prova. O limiar vem da distribuição Beta, exata quando centro e covariância são estimados dos próprios k grupos (Wilks, 1963): com k grupos o D² nunca passa de (k−1)²/k, por isso o χ² assintótico (5,99) seria inatingível com poucos grupos.','Each group is summarized by (mean, standard deviation) and compared with the “center” of all groups, accounting for the correlation between the two measures. A D² above the threshold suggests a group that departs from the others — a signal to investigate, not proof. The threshold comes from the Beta distribution, exact when center and covariance are estimated from the k groups themselves (Wilks, 1963): with k groups D² can never exceed (k−1)²/k, so the asymptotic χ² (5.99) would be unreachable with few groups.'));
     return {html:h,after:function(){
       _tChart('tecC1',{type:'bar',data:{labels:res.items.map(function(i){ return i.name; }),datasets:[
         {label:'D²',data:res.d2,backgroundColor:res.flag.map(function(f,i){ return f?'rgba(248,113,113,.75)':res.items[i].color.fill; }),borderColor:res.flag.map(function(f,i){ return f?'rgba(248,113,113,1)':res.items[i].color.solid; }),borderWidth:1.5,order:2},
-        {type:'line',label:_tL('Limite χ² crítico','Critical χ² limit'),data:res.items.map(function(){ return res.thr; }),borderColor:'rgba(255,105,180,1)',borderDash:[6,4],borderWidth:2,pointRadius:0,fill:false,order:1}]},
+        {type:'line',label:_tL('Limiar (Beta)','Threshold (Beta)'),data:res.items.map(function(){ return res.thr; }),borderColor:'rgba(255,105,180,1)',borderDash:[6,4],borderWidth:2,pointRadius:0,fill:false,order:1}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:_tLeg()},scales:{x:_tAx('x'),y:_tAx('y','D²',{beginAtZero:true})}}});
     }};
   };
@@ -78222,7 +78438,9 @@ function _tMeansChart(id,gs,title){
     var ex=_fitExpXY(xr,yr);
     var pD=2, hat=xr.map(function(x){ return 1/n+(x-mx)*(x-mx)/lin.sxx; });
     var cook=resid.map(function(e,i){ var h=hat[i]; if(mse<=0||h>=1) return 0; return (e*e*h)/(pD*mse*(1-h)*(1-h)); });
-    var stud=resid.map(function(e,i){ var den=mse*(1-hat[i]); return den>0?e/Math.sqrt(den):0; });
+    // ov.1.1.2: DFFITS de Belsley-Kuh-Welsch (resíduo EXTERNAMENTE studentizado).
+    var _sseT=resid.reduce(function(s,e){ return s+e*e; },0);
+    var stud=resid.map(function(e,i){ var h=hat[i]; if(n-3<=0||h>=1) return 0; var s2i=(_sseT-e*e/(1-h))/(n-3); return s2i>0?e/Math.sqrt(s2i*(1-h)):0; });
     var dff=stud.map(function(ts,i){ var h=hat[i]; return (1-h)>0?ts*Math.sqrt(h/(1-h)):0; });
     var cT=4/n, dT=2*Math.sqrt(pD/n);
     return {xn:cx.n,yn:cy.n,xr:xr,yr:yr,rows:rows,n:n,df:df,lin:lin,alpha:alpha,s:s,seB:seB,seA:seA,tB:tB,tA:tA,pB:pB,pA:pA,tc:tc,rho:rho,pR:pR,ex:ex,
