@@ -46870,17 +46870,43 @@ function cgGoHome(ev){
                 <label id="cgLblCustomAxisColor" style="flex:1">Personalizar Cor dos Eixos</label>
                 <input type="checkbox" id="cgCustomAxisColorOn" onchange="cgOnCustomAxisColorToggle();cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899">
               </div>
-              <div class="cg-field" style="display:none;align-items:center;gap:8px;margin-top:6px" id="cgAxisColorRow">
-                <label id="cgLblAxisColor" style="flex:1">Cor da Linha dos Eixos</label>
-                <input type="color" id="cgAxisColor" value="#888888" onchange="cgUpdateChart()" style="width:32px;height:24px;border:none;background:none;cursor:pointer;padding:0">
+              <!-- ov.1.1.2: cor da LINHA de cada eixo, separadamente (X1, Y1, X2, Y2). X2/Y2 só
+                   aparecem quando o eixo secundário está ativo. "cgAxisColor" continua sendo o X1. -->
+              <div class="cg-field" style="display:none;flex-direction:column;align-items:stretch;gap:4px;margin-top:6px" id="cgAxisColorRow">
+                <label id="cgLblAxisColor" style="font-size:10.5px;color:var(--text4)">Cor da Linha dos Eixos</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;width:100%">
+                  <div class="cg-axc-item" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisColorX1" style="flex:1;font-size:11px">Eixo X1</label><input type="color" id="cgAxisColor" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                  <div class="cg-axc-item" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisColorY1" style="flex:1;font-size:11px">Eixo Y1</label><input type="color" id="cgAxisColorY1" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                  <div class="cg-axc-item cg-axc-x2" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisColorX2" style="flex:1;font-size:11px">Eixo X2</label><input type="color" id="cgAxisColorX2" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                  <div class="cg-axc-item cg-axc-y2" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisColorY2" style="flex:1;font-size:11px">Eixo Y2</label><input type="color" id="cgAxisColorY2" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                </div>
               </div>
               <div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-top:8px">
                 <label id="cgLblCustomAxisValColor" style="flex:1">Personalizar Cor dos Valores dos Eixos</label>
                 <input type="checkbox" id="cgCustomAxisValColorOn" onchange="cgOnCustomAxisValColorToggle();cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899">
               </div>
-              <div class="cg-field" style="display:none;align-items:center;gap:8px;margin-top:6px" id="cgAxisValColorRow">
-                <label id="cgLblAxisValColor" style="flex:1">Cor dos Valores dos Eixos</label>
-                <input type="color" id="cgAxisValColor" value="#888888" onchange="cgUpdateChart()" style="width:32px;height:24px;border:none;background:none;cursor:pointer;padding:0">
+              <div class="cg-field" style="display:none;flex-direction:column;align-items:stretch;gap:4px;margin-top:6px" id="cgAxisValColorRow">
+                <label id="cgLblAxisValColor" style="font-size:10.5px;color:var(--text4)">Cor dos Valores dos Eixos</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;width:100%">
+                  <div class="cg-axc-item" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisValColorX1" style="flex:1;font-size:11px">Eixo X1</label><input type="color" id="cgAxisValColor" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                  <div class="cg-axc-item" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisValColorY1" style="flex:1;font-size:11px">Eixo Y1</label><input type="color" id="cgAxisValColorY1" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                  <div class="cg-axc-item cg-axc-x2" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisValColorX2" style="flex:1;font-size:11px">Eixo X2</label><input type="color" id="cgAxisValColorX2" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                  <div class="cg-axc-item cg-axc-y2" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisValColorY2" style="flex:1;font-size:11px">Eixo Y2</label><input type="color" id="cgAxisValColorY2" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                </div>
+              </div>
+              <!-- ov.1.1.2: NOVO — cor dos TÍTULOS de cada eixo, separadamente -->
+              <div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-top:8px">
+                <label id="cgLblCustomAxisTitleColor" style="flex:1">Personalizar Cor dos Títulos dos Eixos</label>
+                <input type="checkbox" id="cgCustomAxisTitleColorOn" onchange="cgOnCustomAxisTitleColorToggle();cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899">
+              </div>
+              <div class="cg-field" style="display:none;flex-direction:column;align-items:stretch;gap:4px;margin-top:6px" id="cgAxisTitleColorRow">
+                <label id="cgLblAxisTitleColor" style="font-size:10.5px;color:var(--text4)">Cor dos Títulos dos Eixos</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;width:100%">
+                  <div class="cg-axc-item" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisTitleColorX1" style="flex:1;font-size:11px">Eixo X1</label><input type="color" id="cgAxisTitleColor" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                  <div class="cg-axc-item" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisTitleColorY1" style="flex:1;font-size:11px">Eixo Y1</label><input type="color" id="cgAxisTitleColorY1" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                  <div class="cg-axc-item cg-axc-x2" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisTitleColorX2" style="flex:1;font-size:11px">Eixo X2</label><input type="color" id="cgAxisTitleColorX2" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                  <div class="cg-axc-item cg-axc-y2" style="display:flex;align-items:center;gap:6px"><label id="cgLblAxisTitleColorY2" style="flex:1;font-size:11px">Eixo Y2</label><input type="color" id="cgAxisTitleColorY2" value="#888888" onchange="cgUpdateChart()" style="width:28px;height:22px;border:none;background:none;cursor:pointer;padding:0"></div>
+                </div>
               </div>
               <div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-top:8px">
                 <label id="cgLblChartBorder" style="flex:1">Borda de Gráfico</label>
@@ -51393,6 +51419,11 @@ function cgOnBarLabelColorMatchToggle(){
   var row=document.getElementById('cgBarLabelColorRow');
   if(row) row.style.display=on?'none':'flex';
 }
+function cgOnCustomAxisTitleColorToggle(){
+  var on=(document.getElementById('cgCustomAxisTitleColorOn')||{}).checked===true;
+  var row=document.getElementById('cgAxisTitleColorRow');
+  if(row) row.style.display=on?'flex':'none';
+}
 function cgOnCustomAxisValColorToggle(){
   var on=(document.getElementById('cgCustomAxisValColorOn')||{}).checked===true;
   var row=document.getElementById('cgAxisValColorRow');
@@ -54089,6 +54120,7 @@ var _cgI18N={
     cgTickMarksLbl:'Marcações dos Eixos (Tick Marks)',cgTickMarksExternal:'Externos',cgTickMarksInternal:'Internos',cgTickMarksBoth:'Ambos',
     cgCustomAxisColorLbl:'Personalizar Cor dos Eixos',cgAxisColorLbl:'Cor da Linha dos Eixos',
     cgCustomAxisValColorLbl:'Personalizar Cor dos Valores dos Eixos',cgAxisValColorLbl:'Cor dos Valores dos Eixos',
+    cgCustomAxisTitleColorLbl:'Personalizar Cor dos Títulos dos Eixos',cgAxisTitleColorLbl:'Cor dos Títulos dos Eixos',cgAxX1:'Eixo X1',cgAxY1:'Eixo Y1',cgAxX2:'Eixo X2',cgAxY2:'Eixo Y2',
     cgAxisTitleGapLbl:'Distância Valores ↔ Título do Eixo',
     cgX2TickFontSizeLbl:'Tamanho dos valores Eixo X2',cgX2TickCountLbl:'Qtd. de valores Eixo X2',
     cgY2TickFontSizeLbl:'Tamanho dos valores Eixo Y2',cgY2TickCountLbl:'Qtd. de valores Eixo Y2',
@@ -54424,6 +54456,7 @@ var _cgI18N={
     cgTickMarksLbl:'Axis Tick Marks',cgTickMarksExternal:'External',cgTickMarksInternal:'Internal',cgTickMarksBoth:'Both',
     cgCustomAxisColorLbl:'Customize Axis Color',cgAxisColorLbl:'Axis Line Color',
     cgCustomAxisValColorLbl:'Customize Axis Values Color',cgAxisValColorLbl:'Axis Values Color',
+    cgCustomAxisTitleColorLbl:'Customize Axis Titles Color',cgAxisTitleColorLbl:'Axis Titles Color',cgAxX1:'X1 Axis',cgAxY1:'Y1 Axis',cgAxX2:'X2 Axis',cgAxY2:'Y2 Axis',
     cgAxisTitleGapLbl:'Values ↔ Axis Title Distance',
     cgX2TickFontSizeLbl:'X2 Axis Values Size',cgX2TickCountLbl:'X2 Axis Value Count',
     cgY2TickFontSizeLbl:'Y2 Axis Values Size',cgY2TickCountLbl:'Y2 Axis Value Count',
@@ -55437,6 +55470,8 @@ function cgApplyLang(){
     'cgLblTickMarks':'cgTickMarksLbl','cgTickMarksExternal':'cgTickMarksExternal','cgTickMarksInternal':'cgTickMarksInternal','cgTickMarksBoth':'cgTickMarksBoth',
     'cgLblCustomAxisColor':'cgCustomAxisColorLbl','cgLblAxisColor':'cgAxisColorLbl',
     'cgLblCustomAxisValColor':'cgCustomAxisValColorLbl','cgLblAxisValColor':'cgAxisValColorLbl',
+    'cgLblCustomAxisTitleColor':'cgCustomAxisTitleColorLbl','cgLblAxisTitleColor':'cgAxisTitleColorLbl',
+    'cgLblAxisColorX1':'cgAxX1','cgLblAxisColorY1':'cgAxY1','cgLblAxisColorX2':'cgAxX2','cgLblAxisColorY2':'cgAxY2','cgLblAxisValColorX1':'cgAxX1','cgLblAxisValColorY1':'cgAxY1','cgLblAxisValColorX2':'cgAxX2','cgLblAxisValColorY2':'cgAxY2','cgLblAxisTitleColorX1':'cgAxX1','cgLblAxisTitleColorY1':'cgAxY1','cgLblAxisTitleColorX2':'cgAxX2','cgLblAxisTitleColorY2':'cgAxY2',
     'cgLblChartBorder':'cgChartBorderLbl','cgLblChartBorderColor':'cgChartBorderColorLbl',
     'cgLblLegendBorder':'cgLegendBorderLbl','cgLblLegendBorderColor':'cgLegendBorderColorLbl',
     'cgXScaleValuesOpt':'cgScaleValuesOpt','cgYScaleValuesOpt':'cgScaleValuesOpt','cgScaleValuesHint':'scaleValuesHint',
@@ -56357,9 +56392,14 @@ function cgRenderRefLines(){
       +'<option value="y"'+(rl.axis==='y'?' selected':'')+'>Y</option>'
       +'<option value="x"'+(rl.axis==='x'?' selected':'')+'>X</option></select>'
       +'<input type="number" id="cgRLVal_'+i+'" value="'+rl.value+'" placeholder="'+cgT('cgRefValPh')+'" step="any" onchange="_cgRefLines['+i+'].value=parseFloat(this.value);delete _cgRefLines['+i+']._pxX;cgUpdateChart()" style="width:70px;flex-shrink:0;font-size:11px;padding:3px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'
-      +'<input type="text" value="'+String(rl.label||'').replace(/"/g,'&quot;')+'" placeholder="'+cgT('cgRefLabelPh')+'" oninput="_cgRefLines['+i+'].label=this.value;cgUpdateChart()" style="flex:1;min-width:60px;font-size:11px;padding:3px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'
-      +'<input type="color" value="'+rl.color+'" onchange="_cgRefLines['+i+'].color=this.value;cgUpdateChart()" style="width:24px;height:24px;flex-shrink:0;border:none;background:none;cursor:pointer;padding:0">'
+      +'<input type="color" id="cgRLColor_'+i+'" value="'+rl.color+'" onchange="_cgRefLines['+i+'].color=this.value;cgUpdateChart()" style="width:24px;height:24px;flex-shrink:0;border:none;background:none;cursor:pointer;padding:0">'
+      +'<button onclick="cgOpenGenericPaletteSwatches(event,function(col){_cgRefLines['+i+'].color=col;var e=document.getElementById(\'cgRLColor_'+i+'\');if(e)e.value=col;cgUpdateChart();})" title="'+cgT('cgPalSwatchTitle')+'" style="flex-shrink:0;padding:2px 6px;background:var(--bg2);border:1px solid var(--border2);color:var(--text4);border-radius:4px;cursor:pointer;font-size:11px;line-height:1">\uD83C\uDF08</button>'
+      +'<span style="flex:1"></span>'
       +'<button onclick="_cgRefLines.splice('+i+',1);cgRenderRefLines();cgUpdateChart()" title="Remover" style="flex-shrink:0;padding:2px 6px;background:var(--bg2);border:1px solid var(--border2);color:#f87171;border-radius:4px;cursor:pointer;font-size:11px">✕</button>'
+      +'</div>'
+      // ov.1.1.2: rótulo da linha em uma linha própria, abaixo de eixo/valor/cor
+      +'<div style="display:flex;gap:4px;align-items:center;margin-bottom:6px">'
+      +'<input type="text" value="'+String(rl.label||'').replace(/"/g,'&quot;')+'" placeholder="'+cgT('cgRefLabelPh')+'" oninput="_cgRefLines['+i+'].label=this.value;cgUpdateChart()" style="flex:1;min-width:60px;font-size:11px;padding:3px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'
       +'</div>';
     var _rlW=(rl.width||2), _rlSt=(rl.style||(rl.dash?'dashed':'solid'));
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
@@ -57239,9 +57279,14 @@ function cgRenderAnnotations(){
     d.innerHTML='<div style="display:flex;gap:4px;width:100%;flex-wrap:wrap">'
       +'<input type="number" value="'+an.x+'" placeholder="X" onchange="_cgAnnotations['+i+'].x=parseFloat(this.value)||0;delete _cgAnnotations['+i+']._pxX;delete _cgAnnotations['+i+']._pxY;cgUpdateChart()" style="width:52px;font-size:11px;padding:3px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'
       +'<input type="number" value="'+an.y+'" placeholder="Y" onchange="_cgAnnotations['+i+'].y=parseFloat(this.value)||0;delete _cgAnnotations['+i+']._pxX;delete _cgAnnotations['+i+']._pxY;cgUpdateChart()" style="width:52px;font-size:11px;padding:3px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'
-      +'<input type="text" value="'+an.text+'" placeholder="texto" oninput="_cgAnnotations['+i+'].text=this.value;cgUpdateChart()" style="flex:1;min-width:60px;font-size:11px;padding:3px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'
-      +'<input type="color" value="'+an.color+'" onchange="_cgAnnotations['+i+'].color=this.value;cgUpdateChart()" style="width:24px;height:24px;flex-shrink:0;border:none;background:none;cursor:pointer;padding:0">'
+      +'<input type="color" id="cgANColor_'+i+'" value="'+an.color+'" onchange="_cgAnnotations['+i+'].color=this.value;cgUpdateChart()" style="width:24px;height:24px;flex-shrink:0;border:none;background:none;cursor:pointer;padding:0">'
+      +'<button onclick="cgOpenGenericPaletteSwatches(event,function(col){_cgAnnotations['+i+'].color=col;var e=document.getElementById(\'cgANColor_'+i+'\');if(e)e.value=col;cgUpdateChart();})" title="'+cgT('cgPalSwatchTitle')+'" style="flex-shrink:0;padding:2px 6px;background:var(--bg3);border:1px solid var(--border2);color:var(--text4);border-radius:4px;cursor:pointer;font-size:11px;line-height:1">\uD83C\uDF08</button>'
+      +'<span style="flex:1"></span>'
       +'<button onclick="_cgAnnotations.splice('+i+',1);cgRenderAnnotations();cgUpdateChart()" style="padding:2px 6px;background:var(--bg3);border:1px solid var(--border2);color:#f87171;border-radius:4px;cursor:pointer;font-size:11px;flex-shrink:0">✕</button>'
+      +'</div>'
+      // ov.1.1.2: texto da anotação em uma linha própria
+      +'<div style="display:flex;gap:4px;width:100%;margin-top:4px">'
+      +'<input type="text" value="'+String(an.text||'').replace(/"/g,'&quot;')+'" placeholder="texto" oninput="_cgAnnotations['+i+'].text=this.value;cgUpdateChart()" style="flex:1;min-width:60px;font-size:11px;padding:3px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'
       +'</div>'
       +'<div style="display:flex;align-items:center;gap:6px;margin-top:3px">'
       +'<span style="font-size:10px;color:var(--text4);flex-shrink:0">Tamanho</span>'
@@ -57860,6 +57905,65 @@ function cgUpdateChart(){
   }
   return out;
 }
+/* ov.1.1.2 — CORES POR EIXO (X1, Y1, X2, Y2) no Gerador de Gráficos
+   Os ramos de cgUpdateChart() (Dispersão/Linha, Barras, Histograma, FDA, FDP, Controle,
+   Weibull, Pareto, Boxplot, Violino…) montam suas escalas com uma única cor de eixo, de valor
+   e de título. Em vez de reescrever cada ramo, este plugin global intercepta o gráfico do
+   Gerador no beforeInit (antes de as escalas serem construídas) e aplica a cor de cada eixo
+   separadamente, conforme 🎨 Estilo:
+     • Personalizar Cor dos Eixos           → border.color + grid.tickColor
+     • Personalizar Cor dos Valores dos Eixos → ticks.color
+     • Personalizar Cor dos Títulos dos Eixos → title.color
+   Identificação do eixo: horizontal em cima ("top" ou id x2) = X2; vertical à direita
+   ("right" ou id y2) = Y2; demais horizontais = X1; demais verticais = Y1.
+   Com as opções desligadas o plugin não altera nada (comportamento anterior preservado). */
+function _cgAxisSlot(id,sc){
+  if(!sc||id==='r') return null;
+  var ax=sc.axis||((/^x/i).test(id)?'x':((/^y/i).test(id)?'y':(sc.indexAxis||null)));
+  if(sc.position==='top'||id==='x2') return 'X2';
+  if(sc.position==='right'||id==='y2') return 'Y2';
+  if(ax==='x'||sc.position==='bottom') return 'X1';
+  if(ax==='y'||sc.position==='left') return 'Y1';
+  return null;
+}
+function _cgAxisColorsRead(){
+  var g=function(id){ return (document.getElementById(id)||{}).value||'#888888'; };
+  var on=function(id){ return (document.getElementById(id)||{}).checked===true; };
+  var mk=function(base){ return {X1:g(base),Y1:g(base+'Y1'),X2:g(base+'X2'),Y2:g(base+'Y2')}; };
+  return {
+    line:on('cgCustomAxisColorOn')?mk('cgAxisColor'):null,
+    val:on('cgCustomAxisValColorOn')?mk('cgAxisValColor'):null,
+    title:on('cgCustomAxisTitleColorOn')?mk('cgAxisTitleColor'):null
+  };
+}
+// Mostra os seletores X2/Y2 somente quando o eixo secundário existe no gráfico atual.
+function _cgAxisColorsSyncRows(hasX2,hasY2){
+  document.querySelectorAll('.cg-axc-x2').forEach(function(el){ el.style.display=hasX2?'flex':'none'; });
+  document.querySelectorAll('.cg-axc-y2').forEach(function(el){ el.style.display=hasY2?'flex':'none'; });
+}
+try{
+  Chart.register({
+    id:'cgPerAxisColors',
+    beforeInit:function(chart){
+      try{
+        var cv=chart&&chart.canvas; if(!cv||!cv.closest||!cv.closest('#appChartGen')) return;
+        var o=chart.config&&chart.config.options; if(!o||!o.scales) return;
+        var C=_cgAxisColorsRead(), hasX2=false, hasY2=false;
+        Object.keys(o.scales).forEach(function(id){
+          var sc=o.scales[id]; var slot=_cgAxisSlot(id,sc); if(!slot) return;
+          var shown=(sc.display!==false);
+          if(slot==='X2'&&shown) hasX2=true;
+          if(slot==='Y2'&&shown) hasY2=true;
+          if(C.line){ sc.border=sc.border||{}; sc.border.color=C.line[slot]; sc.grid=sc.grid||{}; sc.grid.tickColor=C.line[slot]; }
+          if(C.val){ sc.ticks=sc.ticks||{}; sc.ticks.color=C.val[slot]; }
+          if(C.title&&sc.title){ sc.title.color=C.title[slot]; }
+        });
+        _cgAxisColorsSyncRows(hasX2,hasY2);
+      }catch(e){ console.warn('cgPerAxisColors',e); }
+    }
+  });
+}catch(e){ console.warn('cgPerAxisColors register',e); }
+
 function _cgUpdateChartRaw(){
   try{ cgMakeSlidersTypeable(); }catch(e){}
   var chartType    = (document.getElementById('cgChartType')||{}).value||'scatter';
@@ -58321,6 +58425,8 @@ function _cgUpdateChartRaw(){
   var customAxisColorOn = (document.getElementById('cgCustomAxisColorOn')||{}).checked===true;
   var customAxisColor = customAxisColorOn ? ((document.getElementById('cgAxisColor')||{}).value||'#888888') : null;
   var axisBorderColor = customAxisColor || tv.gridColor;
+  // ov.1.1.2: cor do eixo Y1 (separada do X1) — usada pelos traços de tick desenhados à mão.
+  var axisBorderColorY = customAxisColorOn ? ((document.getElementById('cgAxisColorY1')||{}).value||'#888888') : tv.gridColor;
   var customAxisValColorOn = (document.getElementById('cgCustomAxisValColorOn')||{}).checked===true;
   var axisValColor = customAxisValColorOn ? ((document.getElementById('cgAxisValColor')||{}).value||'#888888') : tv.tickColor;
   var tickLabelPadding = (tickMarksMode==='external'||tickMarksMode==='both') ? 12 : 4;
@@ -59097,8 +59203,8 @@ function _cgUpdateChartRaw(){
         if(rl.label){
           ctx.font=((rl.fontSize||11))+'px '+(tv.fontFamily||'sans-serif');
           ctx.fillStyle=rl.color||'#fbbf24';
-          if(rl.axis==='y'){ ctx.textAlign='left'; ctx.textBaseline='bottom';
-            ctx.fillText(rl.label, xAxis.left+6, py-3); }
+          if(rl.axis==='y'){ ctx.textAlign='right'; ctx.textBaseline='bottom';
+            ctx.fillText(rl.label, xAxis.right-4, py-3); }
           else { ctx.textAlign='left'; ctx.textBaseline='top';
             ctx.fillText(rl.label, px+4, yAxis.top+4); }
         }
@@ -59377,7 +59483,7 @@ function _cgUpdateChartRaw(){
           py=yAxis.getPixelForValue(rl.value); if(isNaN(py)){return;}
           ctx.moveTo(xAxis.left,py); ctx.lineTo(xAxis.right,py); ctx.stroke(); ctx.setLineDash([]);
           ctx.fillStyle=rl.color||'#fbbf24'; ctx.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif';
-          ctx.fillText(rl.label,xAxis.right+4,py-2);
+          ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText(rl.label||'',xAxis.right-4,py-3);ctx.textAlign='left';ctx.textBaseline='alphabetic';
         } else {
           px=(rl._pxX!==undefined)?rl._pxX:xAxis.getPixelForValue(rl.value); if(isNaN(px)){return;}
           ctx.moveTo(px,yAxis.top); ctx.lineTo(px,yAxis.bottom); ctx.stroke(); ctx.setLineDash([]);
@@ -60089,7 +60195,7 @@ function _cgUpdateChartRaw(){
           ctx2.fillStyle=rl.color||'#fbbf24';
           ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif';
           ctx2.textAlign='left';ctx2.textBaseline='bottom';
-          ctx2.fillText(rl.label||'',xAx.right+4,rlPy-2);
+          ctx2.textAlign='right';ctx2.textBaseline='bottom';ctx2.fillText(rl.label||'',xAx.right-4,rlPy-3);ctx2.textAlign='left';ctx2.textBaseline='alphabetic';
         } else {
           var rlPx=(rl._pxX!==undefined)?rl._pxX:xAx.getPixelForValue(rl.value);
           if(!isFinite(rlPx)){ctx2.restore();return;}
@@ -60417,7 +60523,7 @@ function _cgUpdateChartRaw(){
           ctx2.fillStyle=rl.color||'#fbbf24';
           ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif';
           ctx2.textAlign='left';ctx2.textBaseline='bottom';
-          ctx2.fillText(rl.label||'',xAx.right+4,rlPy-2);
+          ctx2.textAlign='right';ctx2.textBaseline='bottom';ctx2.fillText(rl.label||'',xAx.right-4,rlPy-3);ctx2.textAlign='left';ctx2.textBaseline='alphabetic';
         } else {
           var rlPx=(rl._pxX!==undefined)?rl._pxX:xAx.getPixelForValue(rl.value);
           if(!isFinite(rlPx)){ctx2.restore();return;}
@@ -60470,6 +60576,7 @@ function _cgUpdateChartRaw(){
         if(_int){_c.beginPath();_c.moveTo(_px,_a.bottom);_c.lineTo(_px,_a.bottom-_len);_c.stroke();}
         if(_ext){_c.beginPath();_c.moveTo(_px,_a.bottom);_c.lineTo(_px,_a.bottom+_len);_c.stroke();}
       });
+      _c.strokeStyle=axisBorderColorY; // ov.1.1.2: eixo Y1 com cor própria
       _yA.ticks.forEach(function(tk){
         var _py=_yA.getPixelForValue(tk.value); if(isNaN(_py)) return;
         if(_int){_c.beginPath();_c.moveTo(_a.left,_py);_c.lineTo(_a.left+_len,_py);_c.stroke();}
@@ -60746,7 +60853,7 @@ function _cgUpdateChartRaw(){
       _xA.ticks.forEach(function(tk){ var _px=_xA.getPixelForValue(tk.value); if(isNaN(_px)) return;
         if(_int){_c.beginPath();_c.moveTo(_px,_a.bottom);_c.lineTo(_px,_a.bottom-_len);_c.stroke();}
         if(_ext){_c.beginPath();_c.moveTo(_px,_a.bottom);_c.lineTo(_px,_a.bottom+_len);_c.stroke();} });
-      if(!fdpStairOn) _yA.ticks.forEach(function(tk){ var _py=_yA.getPixelForValue(tk.value); if(isNaN(_py)) return;
+      _c.strokeStyle=axisBorderColorY; if(!fdpStairOn) _yA.ticks.forEach(function(tk){ var _py=_yA.getPixelForValue(tk.value); if(isNaN(_py)) return;
         if(_int){_c.beginPath();_c.moveTo(_a.left,_py);_c.lineTo(_a.left+_len,_py);_c.stroke();}
         if(_ext){_c.beginPath();_c.moveTo(_a.left,_py);_c.lineTo(_a.left-_len,_py);_c.stroke();} });
       _c.restore();
@@ -61079,7 +61186,7 @@ function _cgUpdateChartRaw(){
       var _len=6, _ext=(tickMarksMode==='external'||tickMarksMode==='both'), _int=(tickMarksMode==='internal'||tickMarksMode==='both'); if(!_ext&&!_int) return;
       _c.save(); _c.strokeStyle=axisBorderColor; _c.lineWidth=1;
       _xA.ticks.forEach(function(tk){ var _px=_xA.getPixelForValue(tk.value); if(isNaN(_px)) return; if(_int){_c.beginPath();_c.moveTo(_px,_a.bottom);_c.lineTo(_px,_a.bottom-_len);_c.stroke();} if(_ext){_c.beginPath();_c.moveTo(_px,_a.bottom);_c.lineTo(_px,_a.bottom+_len);_c.stroke();} });
-      _yA.ticks.forEach(function(tk){ var _py=_yA.getPixelForValue(tk.value); if(isNaN(_py)) return; if(_int){_c.beginPath();_c.moveTo(_a.left,_py);_c.lineTo(_a.left+_len,_py);_c.stroke();} if(_ext){_c.beginPath();_c.moveTo(_a.left,_py);_c.lineTo(_a.left-_len,_py);_c.stroke();} });
+      _c.strokeStyle=axisBorderColorY; _yA.ticks.forEach(function(tk){ var _py=_yA.getPixelForValue(tk.value); if(isNaN(_py)) return; if(_int){_c.beginPath();_c.moveTo(_a.left,_py);_c.lineTo(_a.left+_len,_py);_c.stroke();} if(_ext){_c.beginPath();_c.moveTo(_a.left,_py);_c.lineTo(_a.left-_len,_py);_c.stroke();} });
       _c.restore();
     }};
     var ctrlChartBorderPlugin={id:'cgCtrlChartBorder',afterDraw:function(chart){
@@ -61103,7 +61210,7 @@ function _cgUpdateChartRaw(){
       var ctx2=chart.ctx,xAx=chart.scales.x,yAx=chart.scales.y; if(!xAx||!yAx) return; ctx2.save();
       _cgClipToArea(ctx2,chart);   // ov.1.1.2
       _cgRefLines.forEach(function(rl){ ctx2.save(); ctx2.strokeStyle=rl.color||'#fbbf24'; ctx2.lineWidth=(rl.width||2); ctx2.setLineDash(_cgRefLineDashArray(rl)); ctx2.globalAlpha=1;
-        if(rl.axis==='y'){ var rlPy=yAx.getPixelForValue(rl.value); if(!isFinite(rlPy)){ctx2.restore();return;} ctx2.beginPath();ctx2.moveTo(xAx.left,rlPy);ctx2.lineTo(xAx.right,rlPy);ctx2.stroke(); ctx2.setLineDash([]); ctx2.fillStyle=rl.color||'#fbbf24'; ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif'; ctx2.textAlign='left';ctx2.textBaseline='bottom'; ctx2.fillText(rl.label||'',xAx.right+4,rlPy-2); }
+        if(rl.axis==='y'){ var rlPy=yAx.getPixelForValue(rl.value); if(!isFinite(rlPy)){ctx2.restore();return;} ctx2.beginPath();ctx2.moveTo(xAx.left,rlPy);ctx2.lineTo(xAx.right,rlPy);ctx2.stroke(); ctx2.setLineDash([]); ctx2.fillStyle=rl.color||'#fbbf24'; ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif'; ctx2.textAlign='left';ctx2.textBaseline='bottom'; ctx2.textAlign='right';ctx2.textBaseline='bottom';ctx2.fillText(rl.label||'',xAx.right-4,rlPy-3);ctx2.textAlign='left';ctx2.textBaseline='alphabetic'; }
         else { var rlPx=(rl._pxX!==undefined)?rl._pxX:xAx.getPixelForValue(rl.value); if(!isFinite(rlPx)){ctx2.restore();return;} ctx2.beginPath();ctx2.moveTo(rlPx,yAx.top);ctx2.lineTo(rlPx,yAx.bottom);ctx2.stroke(); ctx2.setLineDash([]); ctx2.fillStyle=rl.color||'#fbbf24'; ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif'; ctx2.textAlign='left';ctx2.textBaseline='top'; ctx2.fillText(rl.label||'',rlPx+4,yAx.top+4); }
         ctx2.restore(); });
       _cgAnnotations.forEach(function(an){ var anPx=(an._pxX!==undefined)?an._pxX:xAx.getPixelForValue(an.x); var anPy=(an._pxY!==undefined)?an._pxY:yAx.getPixelForValue(an.y); if(!isFinite(anPx)||!isFinite(anPy)) return; ctx2.save(); ctx2.globalAlpha=1; var aFs=(an.fontSize&&an.fontSize>0)?an.fontSize:11; ctx2.font='bold '+aFs+'px sans-serif'; ctx2.fillStyle=an.color||'#ec4899';
@@ -61527,7 +61634,7 @@ function _cgUpdateChartRaw(){
           ctx2.fillStyle=rl.color||'#fbbf24';
           ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif';
           ctx2.textAlign='left';ctx2.textBaseline='bottom';
-          ctx2.fillText(rl.label||'',xAx.right+4,rlPy-2);
+          ctx2.textAlign='right';ctx2.textBaseline='bottom';ctx2.fillText(rl.label||'',xAx.right-4,rlPy-3);ctx2.textAlign='left';ctx2.textBaseline='alphabetic';
         } else {
           var rlPx=(rl._pxX!==undefined)?rl._pxX:xAx.getPixelForValue(rl.value);
           if(!isFinite(rlPx)){ctx2.restore();return;}
@@ -61581,6 +61688,7 @@ function _cgUpdateChartRaw(){
         if(_int){_c.beginPath();_c.moveTo(_px,_a.bottom);_c.lineTo(_px,_a.bottom-_len);_c.stroke();}
         if(_ext){_c.beginPath();_c.moveTo(_px,_a.bottom);_c.lineTo(_px,_a.bottom+_len);_c.stroke();}
       });
+      _c.strokeStyle=axisBorderColorY; // ov.1.1.2: eixo Y1 com cor própria
       _yA.ticks.forEach(function(tk){
         var _py=_yA.getPixelForValue(tk.value); if(isNaN(_py)) return;
         if(_int){_c.beginPath();_c.moveTo(_a.left,_py);_c.lineTo(_a.left+_len,_py);_c.stroke();}
@@ -61842,7 +61950,7 @@ function _cgUpdateChartRaw(){
           ctx2.fillStyle=rl.color||'#fbbf24';
           ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif';
           ctx2.textAlign='left';ctx2.textBaseline='bottom';
-          ctx2.fillText(rl.label||'',xAx.right+4,rlPy-2);
+          ctx2.textAlign='right';ctx2.textBaseline='bottom';ctx2.fillText(rl.label||'',xAx.right-4,rlPy-3);ctx2.textAlign='left';ctx2.textBaseline='alphabetic';
         } else {
           var rlPx=(rl._pxX!==undefined)?rl._pxX:xAx.getPixelForValue(rl.value);
           if(!isFinite(rlPx)){ctx2.restore();return;}
@@ -62688,7 +62796,8 @@ function _cgUpdateChartRaw(){
       if(xTitle){
         ctx2.save();
         ctx2.font=(boldAxis?'bold ':'')+axisFontSize+'px '+(tv.fontFamily||'sans-serif');
-        ctx2.fillStyle=tv.titleColor||tv.tickColor||'#ccc';
+        var _bpTC=_cgAxisColorsRead().title; // ov.1.1.2: cor do título do Eixo X1
+        ctx2.fillStyle=_bpTC?_bpTC.X1:(tv.titleColor||tv.tickColor||'#ccc');
         ctx2.textAlign='center';
         ctx2.textBaseline='top';
         ctx2.fillText(xTitle,(xAx.left+xAx.right)*0.5,_bpXTitleY);
@@ -62972,7 +63081,7 @@ function _cgUpdateChartRaw(){
           ctx2.fillStyle=rl.color||'#fbbf24';
           ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif';
           ctx2.textAlign='left';ctx2.textBaseline='bottom';
-          ctx2.fillText(rl.label||'',xAx.right+4,rlPy-2);
+          ctx2.textAlign='right';ctx2.textBaseline='bottom';ctx2.fillText(rl.label||'',xAx.right-4,rlPy-3);ctx2.textAlign='left';ctx2.textBaseline='alphabetic';
         } else {
           // X ref line: use stored pixel if dragged (free movement), else map from value
           var rlPx=(rl._pxX!==undefined)?rl._pxX:xAx.getPixelForValue(rl.value);
@@ -64073,7 +64182,7 @@ function _cgUpdateChartRaw(){
         ctx.setLineDash([]);
         ctx.fillStyle=rl.color||'#fbbf24';
         ctx.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif';
-        ctx.fillText(rl.label,xAxis.right+4,py-2);
+        ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText(rl.label||'',xAxis.right-4,py-3);ctx.textAlign='left';ctx.textBaseline='alphabetic';
       } else {
         px=(rl._pxX!==undefined)?rl._pxX:xAxis.getPixelForValue(rl.value);
         if(isNaN(px)) return;
@@ -64381,6 +64490,37 @@ function _cgUpdateChartRaw(){
   // linha mais grossa em x=0 e y=0 (quando 0 está dentro da faixa) — "eixo principal" destacado.
   // Com "Não destacar eixos principais" (ON), essas linhas viram uma linha de GRADE MAIOR (fina),
   // usando a mesma cor/traço da grade e respeitando a visibilidade da grade.
+  // ov.1.1.2: espessura da linha de destaque (x=0 / y=0). Quando x=0 coincide com a borda
+  // esquerda, é ESTA a espessura visível do eixo Y1 — e os eixos X2/Y2 passam a usá-la também.
+  var _CG_AXIS_EMPH_W=2.4;
+  // ov.1.1.2: X2/Y2 com a MESMA espessura do eixo Y1. O Chart.js desenha a borda de X2/Y2 com
+  // 1px, enquanto o Y1 geralmente aparece com 2.4px (linha de destaque em x=0 sobre a borda).
+  // Este plugin calcula a espessura efetiva do Y1 e redesenha a reta de X2/Y2 por cima,
+  // na cor própria de cada eixo (respeita "Personalizar Cor dos Eixos").
+  var cgSecAxisWidthPlugin = {
+    id:'cgSecAxisWidth',
+    afterDraw:function(chart){
+      try{
+        if(!chart.canvas || chart.canvas.id!=='cgMainCanvas') return;
+        var area=chart.chartArea; if(!area) return;
+        var sc=chart.scales||{}, yA=sc.y, xA=sc.x, x2A=sc.x2, y2A=sc.y2;
+        var x2On=!!(x2A && x2A.options && x2A.options.display!==false);
+        var y2On=!!(y2A && y2A.options && y2A.options.display!==false);
+        if(!x2On && !y2On) return;
+        var bw=function(a){ var b=a&&a.options&&a.options.border; return (b&&b.display===false)?0:((b&&isFinite(b.width))?b.width:1); };
+        var y1W=bw(yA)||1;
+        if(!_cgNoAxisEmph && xA && isFinite(xA.min) && isFinite(xA.max) && 0>=Math.min(xA.min,xA.max) && 0<=Math.max(xA.min,xA.max)){
+          var p0=xA.getPixelForValue(0);
+          if(isFinite(p0) && Math.abs(p0-area.left)<=1.5) y1W=Math.max(y1W,_CG_AXIS_EMPH_W);
+        }
+        var ctx=chart.ctx; ctx.save(); ctx.setLineDash([]); ctx.lineWidth=y1W;
+        var col=function(a){ var b=a.options.border; return (b&&b.color)||axisBorderColor; };
+        if(y2On && bw(y2A)>0){ ctx.strokeStyle=col(y2A); ctx.beginPath(); ctx.moveTo(area.right,area.top); ctx.lineTo(area.right,area.bottom); ctx.stroke(); }
+        if(x2On && bw(x2A)>0){ ctx.strokeStyle=col(x2A); ctx.beginPath(); ctx.moveTo(area.left,area.top); ctx.lineTo(area.right,area.top); ctx.stroke(); }
+        ctx.restore();
+      }catch(e){}
+    }
+  };
   var cgAxisEmphasisPlugin = {
     id:'cgAxisEmphasis',
     afterDraw:function(chart){
@@ -64418,14 +64558,17 @@ function _cgUpdateChartRaw(){
         }
         // ── Destacar (padrão): linha grossa em x=0 e y=0 ──
         ctx.save();
-        ctx.lineWidth=2.4; ctx.strokeStyle=axisBorderColor; ctx.setLineDash([]);
+        // ov.1.1.2: a linha y=0 (horizontal) é o eixo X → cor do Eixo X1; a linha x=0 (vertical)
+        // é o eixo Y → cor do Eixo Y1. Antes as duas usavam a cor do X1, por isso o seletor
+        // "Eixo Y1" só mudava os tick marks e o "Eixo X1" pintava também a reta do Y.
+        ctx.lineWidth=_CG_AXIS_EMPH_W; ctx.setLineDash([]);
         if(yA && isFinite(yA.min) && isFinite(yA.max) && 0>=Math.min(yA.min,yA.max) && 0<=Math.max(yA.min,yA.max)){
           var py=yA.getPixelForValue(0);
-          if(isFinite(py) && py>=area.top-0.5 && py<=area.bottom+0.5){ ctx.beginPath(); ctx.moveTo(area.left,py); ctx.lineTo(area.right,py); ctx.stroke(); }
+          if(isFinite(py) && py>=area.top-0.5 && py<=area.bottom+0.5){ ctx.strokeStyle=axisBorderColor; ctx.beginPath(); ctx.moveTo(area.left,py); ctx.lineTo(area.right,py); ctx.stroke(); }
         }
         if(xA && isFinite(xA.min) && isFinite(xA.max) && 0>=Math.min(xA.min,xA.max) && 0<=Math.max(xA.min,xA.max)){
           var px=xA.getPixelForValue(0);
-          if(isFinite(px) && px>=area.left-0.5 && px<=area.right+0.5){ ctx.beginPath(); ctx.moveTo(px,area.top); ctx.lineTo(px,area.bottom); ctx.stroke(); }
+          if(isFinite(px) && px>=area.left-0.5 && px<=area.right+0.5){ ctx.strokeStyle=axisBorderColorY; ctx.beginPath(); ctx.moveTo(px,area.top); ctx.lineTo(px,area.bottom); ctx.stroke(); }
         }
         ctx.restore();
       }catch(e){}
@@ -64702,10 +64845,13 @@ function _cgUpdateChartRaw(){
     afterDraw:function(chart){
       var ctx5=chart.ctx, area=chart.chartArea, xA5=chart.scales.x, yA5=chart.scales.y;
       if(!xA5||!yA5) return;
+      // ov.1.1.2: os títulos X1/Y1 são desenhados à mão (o título do Chart.js fica desligado),
+      // então o plugin global cgPerAxisColors não os alcançava — lemos as cores aqui.
+      var _tC=_cgAxisColorsRead().title;
       ctx5.save();
-      ctx5.fillStyle=tv.titleColor;
       ctx5.font=(boldAxis?'bold ':'')+axisFontSize+'px '+(tv.fontFamily||'sans-serif');
       if(xTitle){
+        ctx5.fillStyle=_tC?_tC.X1:tv.titleColor;
         ctx5.textAlign='center';
         ctx5.textBaseline='top';
         var xTitleY=xA5.bottom-axisTitleLineH-axisTitleGap;
@@ -64713,6 +64859,7 @@ function _cgUpdateChartRaw(){
       }
       if(yTitle){
         ctx5.save();
+        ctx5.fillStyle=_tC?_tC.Y1:tv.titleColor;
         var yTitleX=yA5.left+axisTitleGap;
         ctx5.translate(yTitleX, (area.top+area.bottom)/2);
         ctx5.rotate(-Math.PI/2);
@@ -64791,6 +64938,7 @@ function _cgUpdateChartRaw(){
         if(drawInt){ ctx3.beginPath(); ctx3.moveTo(px3, area.bottom); ctx3.lineTo(px3, area.bottom-tickLen); ctx3.stroke(); }
         if(drawExt){ ctx3.beginPath(); ctx3.moveTo(px3, area.bottom); ctx3.lineTo(px3, area.bottom+tickLen); ctx3.stroke(); }
       });
+      ctx3.strokeStyle=axisBorderColorY; // ov.1.1.2
       yA3.ticks.forEach(function(tick){
         var py3=yA3.getPixelForValue(tick.value);
         if(isNaN(py3)) return;
@@ -65244,6 +65392,10 @@ function _cgUpdateChartRaw(){
         // • Chart border: when on, the panel rectangle is drawn 1.5px in the chosen colour.
         var sbyAxisLineColor = customAxisColorOn ? customAxisColor : (tv.tickColor || '#888');
         var sbyTickValColor  = axisValColor || tv.tickColor || '#888'; // axisValColor already falls back to tv.tickColor
+        // ov.1.1.2: cores separadas por eixo (X1/Y1/X2/Y2) para o desenho manual dos painéis.
+        var _sbyAC=_cgAxisColorsRead();
+        var sbyLineCol=function(k){ return _sbyAC.line?_sbyAC.line[k]:sbyAxisLineColor; };
+        var sbyValCol =function(k){ return _sbyAC.val ?_sbyAC.val[k] :sbyTickValColor; };
         var sbyTickExt = (tickMarksMode==='external'||tickMarksMode==='both');
         var sbyTickInt = (tickMarksMode==='internal'||tickMarksMode==='both');
         var sbyTickLen = 6;
@@ -65303,6 +65455,7 @@ function _cgUpdateChartRaw(){
         // reserves for X2 (top of each panel) and Y2 (right of last panel)
         var x2Active = (sbyX2Mode!=='off');
         var y2Active = (sbyY2Mode!=='off');
+        try{ _cgAxisColorsSyncRows(x2Active, y2Active); }catch(e){}
         var x2TitleReserve = (x2Active && x2Title) ? (sharedAxisTitleFs + 6) : 0;
         var y2TitleReserve = (y2Active && y2Title) ? (sharedAxisTitleFs + 8) : 0;
         var x2TickReserve  = x2Active ? (sbyX2TickFs + 10) : 0;
@@ -65433,7 +65586,7 @@ function _cgUpdateChartRaw(){
         // ── Y-title (shared, rotated on the far left) ──
         if(yTitle){
           ctx.save();
-          ctx.fillStyle = tv.titleColor;
+          ctx.fillStyle = (_sbyAC.title?_sbyAC.title['Y1']:tv.titleColor);
           ctx.font = (boldAxis?'bold ':'') + sharedAxisTitleFs + 'px ' + fontFam;
           ctx.translate(padOuter + legendReserveLeft + sharedAxisTitleFs/2, (plotTop+plotBottom)/2);
           ctx.rotate(-Math.PI/2);
@@ -65444,7 +65597,7 @@ function _cgUpdateChartRaw(){
         // ── Y2-title (shared, rotated on the far right) ──
         if(y2Active && y2Title){
           ctx.save();
-          ctx.fillStyle = tv.titleColor;
+          ctx.fillStyle = (_sbyAC.title?_sbyAC.title['Y2']:tv.titleColor);
           ctx.font = (boldAxis?'bold ':'') + sharedAxisTitleFs + 'px ' + fontFam;
           ctx.translate(cw - padOuter - legendReserveRight - sharedAxisTitleFs/2, (plotTop+plotBottom)/2);
           ctx.rotate(Math.PI/2);
@@ -65455,7 +65608,7 @@ function _cgUpdateChartRaw(){
         // ── X-title (shared, centered below all panels) ──
         if(xTitle){
           ctx.save();
-          ctx.fillStyle = tv.titleColor;
+          ctx.fillStyle = (_sbyAC.title?_sbyAC.title['X1']:tv.titleColor);
           ctx.font = (boldAxis?'bold ':'') + sharedAxisTitleFs + 'px ' + fontFam;
           ctx.textAlign = 'center'; ctx.textBaseline = 'top';
           ctx.fillText(xTitle, (plotLeft+plotRight)/2, plotBottom + xTickReserve + 2);
@@ -65464,7 +65617,7 @@ function _cgUpdateChartRaw(){
         // ── X2-title (shared, centered above all panels, just under mainTitle/subtitle) ──
         if(x2Active && x2Title){
           ctx.save();
-          ctx.fillStyle = tv.titleColor;
+          ctx.fillStyle = (_sbyAC.title?_sbyAC.title['X2']:tv.titleColor);
           ctx.font = (boldAxis?'bold ':'') + sharedAxisTitleFs + 'px ' + fontFam;
           ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
           ctx.fillText(x2Title, (plotLeft+plotRight)/2, top + 2);
@@ -65868,8 +66021,8 @@ function _cgUpdateChartRaw(){
 
           // Tick labels — X (bottom). tick-mark strokes use the axis-line colour and
           // honor external/internal/both; labels use the axis-value colour.
-          ctx.strokeStyle = sbyAxisLineColor;
-          ctx.fillStyle = sbyTickValColor;
+          ctx.strokeStyle = sbyLineCol('X1');
+          ctx.fillStyle = sbyValCol('X1');
           ctx.font = (boldAxis?'bold ':'') + axisTickFontSize + 'px ' + fontFam;
           ctx.textAlign = 'center'; ctx.textBaseline = 'top';
           xTicks.forEach(function(v){
@@ -65880,8 +66033,8 @@ function _cgUpdateChartRaw(){
           });
           if(x2Active){
             ctx.save();
-            ctx.strokeStyle = sbyAxisLineColor;
-            ctx.fillStyle = sbyTickValColor;
+            ctx.strokeStyle = sbyLineCol('X2');
+            ctx.fillStyle = sbyValCol('X2');
             ctx.font = (boldAxis?'bold ':'') + sbyX2TickFs + 'px ' + fontFam;
             ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
             if(sbyX2Mode==='logarithmic' && sxMin>0 && sxMax>0){
@@ -65927,9 +66080,9 @@ function _cgUpdateChartRaw(){
           // Tick labels — Y. Normally only on the LEFTMOST panel to avoid clutter, but
           // Y tick strokes use the axis-line colour + honor tick-mark mode; labels use
           // the axis-value colour.
-          ctx.strokeStyle = sbyAxisLineColor;
+          ctx.strokeStyle = sbyLineCol('Y1');
           if(pi===0 || _sbyIndivY){
-            ctx.fillStyle = sbyTickValColor;
+            ctx.fillStyle = sbyValCol('Y1');
             ctx.font = (boldAxis?'bold ':'') + yAxisTickFontSize + 'px ' + fontFam;
             ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
             yTicks.forEach(function(v){
@@ -65956,8 +66109,8 @@ function _cgUpdateChartRaw(){
           var _isY2TargetPanel = (sbyY2RefSeriesIdx!=null) ? (ds._sIdx===sbyY2RefSeriesIdx) : (pi===N-1);
           if(y2Active && _isY2TargetPanel){
             ctx.save();
-            ctx.strokeStyle = sbyAxisLineColor;
-            ctx.fillStyle = sbyTickValColor;
+            ctx.strokeStyle = sbyLineCol('Y2');
+            ctx.fillStyle = sbyValCol('Y2');
             ctx.font = (boldAxis?'bold ':'') + sbyY2TickFs + 'px ' + fontFam;
             ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
             // o eixo Y2 agora é SEMPRE desenhado na BORDA EXTERNA DIREITA do gráfico
@@ -66479,7 +66632,7 @@ function _cgUpdateChartRaw(){
   _cgChart = new Chart(container, {
     type: eqLabels?'line':'scatter',
     data: {labels: eqLabels, datasets: allDatasets},
-    plugins: [cgSeriesFadeStartPlugin, hlRegionPlugin, shapesPlugin, afterDrawPlugin, minorGridPlugin, cgAxisEmphasisPlugin, insideLegendPlugin, cgLegendBgPlugin, axisTickMarksPlugin, chartBorderPlugin, axisTitlePlugin, zoomInsetPlugin, cgEvalDrawPlugin, _cgSupLinesPlugin, cgSeriesFadeEndPlugin],
+    plugins: [cgSeriesFadeStartPlugin, hlRegionPlugin, shapesPlugin, afterDrawPlugin, minorGridPlugin, cgAxisEmphasisPlugin, cgSecAxisWidthPlugin, insideLegendPlugin, cgLegendBgPlugin, axisTickMarksPlugin, chartBorderPlugin, axisTitlePlugin, zoomInsetPlugin, cgEvalDrawPlugin, _cgSupLinesPlugin, cgSeriesFadeEndPlugin],
     options: {
       responsive:false,
       maintainAspectRatio:false,
@@ -66908,6 +67061,12 @@ function _cgBuildConfigObject(includeData){
     hmTriangleVis: gv('cgHmTriangleVis'),
     customAxisValColorOn: gv('cgCustomAxisValColorOn'),
     axisValColor: gv('cgAxisValColor'),
+    // ov.1.1.2: cores separadas por eixo (X1 = chaves antigas acima)
+    axisColorY1: gv('cgAxisColorY1'), axisColorX2: gv('cgAxisColorX2'), axisColorY2: gv('cgAxisColorY2'),
+    axisValColorY1: gv('cgAxisValColorY1'), axisValColorX2: gv('cgAxisValColorX2'), axisValColorY2: gv('cgAxisValColorY2'),
+    customAxisTitleColorOn: gv('cgCustomAxisTitleColorOn'),
+    axisTitleColor: gv('cgAxisTitleColor'), axisTitleColorY1: gv('cgAxisTitleColorY1'),
+    axisTitleColorX2: gv('cgAxisTitleColorX2'), axisTitleColorY2: gv('cgAxisTitleColorY2'),
     axisTitleGap: gv('cgAxisTitleGap'),
     x2TickFontSize: gv('cgX2TickFontSize'),
     x2TickCount: gv('cgX2TickCount'),
@@ -67436,6 +67595,17 @@ function cgApplyConfigObject(cfg, opts){
       sv('cgHmTriangleVis', cfg.hmTriangleVis);
       sv('cgCustomAxisValColorOn', cfg.customAxisValColorOn);
       sv('cgAxisValColor', cfg.axisValColor);
+      // ov.1.1.2: cores por eixo. Configurações antigas (sem essas chaves) herdam a cor única
+      // que existia antes, para o gráfico salvo continuar com a mesma aparência.
+      (function(){
+        var _f=function(v,fb){ return (v!==undefined&&v!==null&&v!=='')?v:fb; };
+        sv('cgAxisColorY1', _f(cfg.axisColorY1,cfg.axisColor)); sv('cgAxisColorX2', _f(cfg.axisColorX2,cfg.axisColor)); sv('cgAxisColorY2', _f(cfg.axisColorY2,cfg.axisColor));
+        sv('cgAxisValColorY1', _f(cfg.axisValColorY1,cfg.axisValColor)); sv('cgAxisValColorX2', _f(cfg.axisValColorX2,cfg.axisValColor)); sv('cgAxisValColorY2', _f(cfg.axisValColorY2,cfg.axisValColor));
+        sv('cgCustomAxisTitleColorOn', cfg.customAxisTitleColorOn);
+        sv('cgAxisTitleColor', cfg.axisTitleColor); sv('cgAxisTitleColorY1', cfg.axisTitleColorY1);
+        sv('cgAxisTitleColorX2', cfg.axisTitleColorX2); sv('cgAxisTitleColorY2', cfg.axisTitleColorY2);
+        try{ cgOnCustomAxisColorToggle(); cgOnCustomAxisValColorToggle(); cgOnCustomAxisTitleColorToggle(); }catch(e){}
+      })();
       sv('cgAxisTitleGap', cfg.axisTitleGap);
       updateSpan('cgAxisTitleGapVal', cfg.axisTitleGap||4);
       sv('cgX2TickFontSize', cfg.x2TickFontSize);
@@ -68963,6 +69133,45 @@ function cgOpenShapePaletteSwatches(i, ev){
   pop.style.top=(r.bottom+4)+'px';
   pop.style.display='block';
   setTimeout(function(){ document.addEventListener('click', cgSeriesPaletteOutsideClick); }, 0);
+}
+/* ov.1.1.2: popup de paletas (🌈) GENÉRICO — recebe um callback que aplica a cor escolhida.
+   Usado pelas 📌 Linhas de Referência e ✏️ Anotações. Reaproveita o mesmo popup flutuante. */
+var _cgGenericPalCb=null;
+function cgOpenGenericPaletteSwatches(ev, cb){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  _cgActiveSeriesForPalette=null; _cgActiveColForPalette=null; _cgActiveShapeForPalette=null;
+  _cgGenericPalCb=(typeof cb==='function')?cb:null;
+  var pop=document.getElementById('cgSeriesPaletteSwatches');
+  if(!pop) return;
+  if(pop.parentElement!==document.body){ try{ document.body.appendChild(pop); }catch(e){} }
+  if(_cgPalettes.length===0){
+    pop.innerHTML='<div style="font-size:10.5px;color:var(--text4);max-width:180px">'+cgT('cgPalEmptyHint')+'</div>';
+  } else {
+    var html='';
+    _cgPalettes.forEach(function(p){
+      var nm=p.builtin?cgT(p.nameKey):p.name;
+      var nameEsc=String(nm).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      html+='<div style="font-size:10px;color:var(--text4);margin:4px 0 2px">'+nameEsc+'</div>';
+      html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">';
+      p.colors.forEach(function(col){
+        html+='<div onclick="cgApplyGenericPaletteColor(\''+col+'\')" title="'+col+'" style="width:20px;height:20px;border-radius:4px;background:'+col+';border:1px solid rgba(255,255,255,.25);cursor:pointer"></div>';
+      });
+      html+='</div>';
+    });
+    pop.innerHTML=html;
+  }
+  var btn=ev&&ev.currentTarget;
+  var r=btn?btn.getBoundingClientRect():{left:120,bottom:120};
+  var popW=220;
+  pop.style.left=Math.max(4,Math.min(r.left,window.innerWidth-popW-4))+'px';
+  pop.style.top=(r.bottom+4)+'px';
+  pop.style.display='block';
+  setTimeout(function(){ document.addEventListener('click', cgSeriesPaletteOutsideClick); }, 0);
+}
+function cgApplyGenericPaletteColor(col){
+  var cb=_cgGenericPalCb; _cgGenericPalCb=null;
+  try{ if(cb) cb(col); }catch(e){ console.error('palette apply',e); }
+  cgCloseSeriesPaletteSwatches();
 }
 function cgApplyShapePaletteColor(col){
   if(_cgActiveShapeForPalette==null) return;
