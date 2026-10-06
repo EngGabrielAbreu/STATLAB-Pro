@@ -2919,6 +2919,7 @@ body.light-theme .tec-overlay{--tec-hover:#000;--tec-hover-bg:rgba(0,0,0,.05)}
 .tec-src-dim{color:var(--text4);font-size:11.5px}
 .tec-src-btns{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
 .tec-cols{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:10px 0}
+.tec-dl-res{margin-left:auto;display:inline-flex;gap:6px}
 .tec-cols-l{font-size:11.5px;font-weight:700;color:var(--text3);margin-right:2px}
 .tec-col{display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1.5px solid var(--border3);color:var(--text4);border-radius:999px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
 .tec-col.on{background:var(--bg4)}
@@ -3485,6 +3486,9 @@ body.light-theme .prof-hint::before{border-color:#d97706}
     <div class="tec-header">
       <span class="tec-hdr-ic" id="tecHdrIcon">🧬</span>
       <div class="tec-hdr-txt"><div class="tec-title" id="tecTitle">Técnicas de análise</div><div class="tec-sub" id="tecSub">Escolha o método, insira seus dados e veja os parâmetros e gráficos do estudo</div></div>
+      <!-- ov.1.1.2: baixar os RESULTADOS de todas as abas da técnica atual (rótulos/títulos em _tRenderHeader → bilíngue) -->
+      <button class="tec-hbtn" id="tecDlAllTxt" onclick="tecDownloadAll('txt')">⬇ TXT</button>
+      <button class="tec-hbtn" id="tecDlAllXlsx" onclick="tecDownloadAll('xlsx')">⬇ XLSX</button>
       <button class="tec-hbtn" id="tecBackBtn" onclick="tecBack()">← <span>Técnicas</span></button>
       <button class="tec-close" id="tecCloseBtn" onclick="tecClose()" title="Fechar">✕</button>
     </div>
@@ -49917,7 +49921,11 @@ function cgSwitchDataPanel(){
   _rShow('cgYAxisTickFontSizeField', !_isRadar);              // 📏 Tamanho dos valores eixo Y
   _rShow('cgXTickCountField', !_isRadar);                     // 📏 Qtd. de valores Eixo X
   _rShow('cgYTickCountField', !_isRadar && ct!=='etapas');    // 📏 Qtd. de valores Eixo Y removido também no tipo Etapas — o Y é categórico = nº de séries)
-  if(_isRadar) _rShow('cgAxisTitleGapField', false);          // 📏 Distância Valores ↔ Título (linha 32653 já cuida dos demais tipos)
+  if(_isRadar) _rShow('cgAxisTitleGapField', false);
+  // ov.1.1.2: em BARRAS, "Não destacar eixos principais" e "Valor X entre duas linhas" não têm
+  // efeito (são lidos só pelo pipeline de Dispersão/Linha) — removidos da janela 📏 Eixos.
+  _rShowBlock('cgNoAxisEmphasisField', ct!=='bar', 'flex');
+  _rShowBlock('cgXBetweenLinesField', ct!=='bar', 'flex');          // 📏 Distância Valores ↔ Título (linha 32653 já cuida dos demais tipos)
   // RADAR — remover "Eixo X2 (topo)" e "Eixo Y2 (direita)" da janela 📏 Eixos.
   // O radar tem um único eixo radial, então eixos secundários não fazem sentido. Ocultamos os
   // seletores (e seus campos de título), e zeramos os valores para 'off' ao entrar no radar
@@ -57964,6 +57972,68 @@ try{
   });
 }catch(e){ console.warn('cgPerAxisColors register',e); }
 
+/* ov.1.1.2 — Linhas de referência + Anotações para gráficos de eixo categórico (Histograma
+   e Barras). Antes o desenho existia só dentro do ramo do Histograma, e o ramo de Barras não
+   tinha nenhum plugin equivalente — por isso, em Barras, linhas e anotações não apareciam.
+   Agora é uma fábrica única, reutilizada pelos dois tipos (menos código duplicado). */
+function _cgMakeRefAnnotPlugin(id){
+  return {id:id,afterDraw:function(chart){
+      var ctx2=chart.ctx,xAx=chart.scales.x,yAx=chart.scales.y;
+      if(!xAx||!yAx) return;
+      ctx2.save();
+      _cgClipToArea(ctx2,chart);   // ov.1.1.2
+      _cgRefLines.forEach(function(rl){
+        ctx2.save();
+        ctx2.strokeStyle=rl.color||'#fbbf24';
+        ctx2.lineWidth=(rl.width||2);
+        ctx2.setLineDash(_cgRefLineDashArray(rl));
+        ctx2.globalAlpha=1;
+        if(rl.axis==='y'){
+          var rlPy=yAx.getPixelForValue(rl.value);
+          if(!isFinite(rlPy)){ctx2.restore();return;}
+          ctx2.beginPath();ctx2.moveTo(xAx.left,rlPy);ctx2.lineTo(xAx.right,rlPy);ctx2.stroke();
+          ctx2.setLineDash([]);
+          ctx2.fillStyle=rl.color||'#fbbf24';
+          ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif';
+          ctx2.textAlign='left';ctx2.textBaseline='bottom';
+          ctx2.textAlign='right';ctx2.textBaseline='bottom';ctx2.fillText(rl.label||'',xAx.right-4,rlPy-3);ctx2.textAlign='left';ctx2.textBaseline='alphabetic';
+        } else {
+          var rlPx=(rl._pxX!==undefined)?rl._pxX:xAx.getPixelForValue(rl.value);
+          if(!isFinite(rlPx)){ctx2.restore();return;}
+          ctx2.beginPath();ctx2.moveTo(rlPx,yAx.top);ctx2.lineTo(rlPx,yAx.bottom);ctx2.stroke();
+          ctx2.setLineDash([]);
+          ctx2.fillStyle=rl.color||'#fbbf24';
+          ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif';
+          ctx2.textAlign='left';ctx2.textBaseline='top';
+          ctx2.fillText(rl.label||'',rlPx+4,yAx.top+4);
+        }
+        ctx2.restore();
+      });
+      _cgAnnotations.forEach(function(an){
+        var anPx=(an._pxX!==undefined)?an._pxX:xAx.getPixelForValue(an.x);
+        var anPy=(an._pxY!==undefined)?an._pxY:yAx.getPixelForValue(an.y);
+        if(!isFinite(anPx)||!isFinite(anPy)) return;
+        ctx2.save();
+        ctx2.globalAlpha=1;
+        var aFs=(an.fontSize&&an.fontSize>0)?an.fontSize:11;
+        ctx2.font='bold '+aFs+'px sans-serif';
+        ctx2.fillStyle=an.color||'#ec4899';
+        if(an.orientation==='vertical'){
+          ctx2.translate(anPx+6,anPy-6);
+          ctx2.rotate(-Math.PI/2);
+          ctx2.textAlign='left';ctx2.textBaseline='bottom';
+          ctx2.fillText(an.text||'',0,0);
+        } else {
+          ctx2.textAlign='left';ctx2.textBaseline='bottom';
+          ctx2.fillText(an.text||'',anPx+6,anPy-6);
+        }
+        if(an.showDot!==false){ ctx2.beginPath();ctx2.arc(anPx,anPy,4,0,Math.PI*2); ctx2.fillStyle=an.color||'#ec4899';ctx2.fill(); }
+        ctx2.restore();
+      });
+      ctx2.restore();
+    }};
+}
+
 function _cgUpdateChartRaw(){
   try{ cgMakeSlidersTypeable(); }catch(e){}
   var chartType    = (document.getElementById('cgChartType')||{}).value||'scatter';
@@ -59865,18 +59935,24 @@ function _cgUpdateChartRaw(){
             // valor único) para respeitar a cor individual escolhida por duplo-clique na barra;
             // senão usa a cor personalizada escolhida pelo usuário.
             ctx5.fillStyle = blColorMatch ? (Array.isArray(ds.borderColor)?(ds.borderColor[idx]||ds._color||tv.titleColor):(ds.borderColor||ds._color||tv.titleColor)) : blCustomColor;
+            // ov.1.1.2: posição da etiqueta segue o SINAL do valor. Em barra negativa o "topo"
+            // (extremidade do valor) fica embaixo/à esquerda e a base fica em cima/à direita.
+            //  • Topo  → logo além da extremidade do valor (fora da barra)
+            //  • Base  → junto à base (linha do zero / base do empilhamento), dentro da barra
+            //  • Centro→ meio da barra
+            var _neg=(parseFloat(val)<0);
             if(isHorizontal){
-              var atEnd=(blPos==='end');
-              var px3=bar.x+(atEnd?6:-6);
-              ctx5.textAlign=atEnd?'left':'right';
+              var _bx=isFinite(bar.base)?bar.base:bar.x;
               ctx5.textBaseline='middle';
-              ctx5.fillText(lbl,px3,bar.y);
+              if(blPos==='center'){ ctx5.textAlign='center'; ctx5.fillText(lbl,(bar.x+_bx)/2,bar.y); }
+              else if(blPos==='start'){ ctx5.textAlign=_neg?'right':'left'; ctx5.fillText(lbl,_bx+(_neg?-6:6),bar.y); }
+              else { ctx5.textAlign=_neg?'right':'left'; ctx5.fillText(lbl,bar.x+(_neg?-6:6),bar.y); }
             } else {
-              var atTop=(blPos==='end');
-              var py3=bar.y+(atTop?-6:6);
+              var _by=isFinite(bar.base)?bar.base:bar.y;
               ctx5.textAlign='center';
-              ctx5.textBaseline=atTop?'bottom':'top';
-              ctx5.fillText(lbl,bar.x,py3);
+              if(blPos==='center'){ ctx5.textBaseline='middle'; ctx5.fillText(lbl,bar.x,(bar.y+_by)/2); }
+              else if(blPos==='start'){ ctx5.textBaseline=_neg?'top':'bottom'; ctx5.fillText(lbl,bar.x,_by+(_neg?6:-6)); }
+              else { ctx5.textBaseline=_neg?'top':'bottom'; ctx5.fillText(lbl,bar.x,bar.y+(_neg?6:-6)); }
             }
           });
         });
@@ -59935,7 +60011,7 @@ function _cgUpdateChartRaw(){
     _cgChart=new Chart(barContainer,{
       type:'bar',
       data:{labels:barLabels,datasets:barDatasets},
-      plugins:[cgSeriesFadeStartPlugin,shapesPlugin,barAfterDraw,barInsideLegendPlugin,cgLegendBgPlugin,cgSeriesFadeEndPlugin],
+      plugins:[cgSeriesFadeStartPlugin,shapesPlugin,barAfterDraw,_cgMakeRefAnnotPlugin('cgBarRefAnnot'),barInsideLegendPlugin,cgLegendBgPlugin,cgSeriesFadeEndPlugin],
       options:{
         indexAxis: isHorizontal?'y':'x',
         responsive:false,
@@ -60176,61 +60252,7 @@ function _cgUpdateChartRaw(){
     }};
 
     // Ref lines + annotations — drawn exactly like the boxplot (free pixel-based drag support)
-    var hRefAnnotPlugin={id:'cgHistRefAnnot',afterDraw:function(chart){
-      var ctx2=chart.ctx,xAx=chart.scales.x,yAx=chart.scales.y;
-      if(!xAx||!yAx) return;
-      ctx2.save();
-      _cgClipToArea(ctx2,chart);   // ov.1.1.2
-      _cgRefLines.forEach(function(rl){
-        ctx2.save();
-        ctx2.strokeStyle=rl.color||'#fbbf24';
-        ctx2.lineWidth=(rl.width||2);
-        ctx2.setLineDash(_cgRefLineDashArray(rl));
-        ctx2.globalAlpha=1;
-        if(rl.axis==='y'){
-          var rlPy=yAx.getPixelForValue(rl.value);
-          if(!isFinite(rlPy)){ctx2.restore();return;}
-          ctx2.beginPath();ctx2.moveTo(xAx.left,rlPy);ctx2.lineTo(xAx.right,rlPy);ctx2.stroke();
-          ctx2.setLineDash([]);
-          ctx2.fillStyle=rl.color||'#fbbf24';
-          ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif';
-          ctx2.textAlign='left';ctx2.textBaseline='bottom';
-          ctx2.textAlign='right';ctx2.textBaseline='bottom';ctx2.fillText(rl.label||'',xAx.right-4,rlPy-3);ctx2.textAlign='left';ctx2.textBaseline='alphabetic';
-        } else {
-          var rlPx=(rl._pxX!==undefined)?rl._pxX:xAx.getPixelForValue(rl.value);
-          if(!isFinite(rlPx)){ctx2.restore();return;}
-          ctx2.beginPath();ctx2.moveTo(rlPx,yAx.top);ctx2.lineTo(rlPx,yAx.bottom);ctx2.stroke();
-          ctx2.setLineDash([]);
-          ctx2.fillStyle=rl.color||'#fbbf24';
-          ctx2.font='bold '+((rl&&rl.fontSize)||11)+'px sans-serif';
-          ctx2.textAlign='left';ctx2.textBaseline='top';
-          ctx2.fillText(rl.label||'',rlPx+4,yAx.top+4);
-        }
-        ctx2.restore();
-      });
-      _cgAnnotations.forEach(function(an){
-        var anPx=(an._pxX!==undefined)?an._pxX:xAx.getPixelForValue(an.x);
-        var anPy=(an._pxY!==undefined)?an._pxY:yAx.getPixelForValue(an.y);
-        if(!isFinite(anPx)||!isFinite(anPy)) return;
-        ctx2.save();
-        ctx2.globalAlpha=1;
-        var aFs=(an.fontSize&&an.fontSize>0)?an.fontSize:11;
-        ctx2.font='bold '+aFs+'px sans-serif';
-        ctx2.fillStyle=an.color||'#ec4899';
-        if(an.orientation==='vertical'){
-          ctx2.translate(anPx+6,anPy-6);
-          ctx2.rotate(-Math.PI/2);
-          ctx2.textAlign='left';ctx2.textBaseline='bottom';
-          ctx2.fillText(an.text||'',0,0);
-        } else {
-          ctx2.textAlign='left';ctx2.textBaseline='bottom';
-          ctx2.fillText(an.text||'',anPx+6,anPy-6);
-        }
-        if(an.showDot!==false){ ctx2.beginPath();ctx2.arc(anPx,anPy,4,0,Math.PI*2); ctx2.fillStyle=an.color||'#ec4899';ctx2.fill(); }
-        ctx2.restore();
-      });
-      ctx2.restore();
-    }};
+    var hRefAnnotPlugin=_cgMakeRefAnnotPlugin('cgHistRefAnnot');
 
     _cgChart=new Chart(container2,{type:'bar',data:{labels:hLabels,datasets:hDatasets.concat(hKdeDatasets)},options:hOpts,
       plugins:[cgSeriesFadeStartPlugin,shapesPlugin,hMinorGridPlugin,hInsideLegendPlugin,hRefAnnotPlugin,cgLegendBgPlugin,cgSeriesFadeEndPlugin]});
@@ -77298,6 +77320,150 @@ function tecSetP(key,val,kind){
   _tecDirty(tab); tecRenderResults();
 }
 
+/* ══════════ ov.1.1.2: download dos RESULTADOS (aba atual ou todas as abas) ══════════
+   Exporta o que a técnica calcula (indicadores, tabelas, conclusões/notas), não os dados de
+   entrada. Reaproveita o próprio render() de cada técnica: o HTML é montado num elemento
+   DESCONECTADO (sem gráficos — out.after() não é chamado) e lido em ordem, convertendo
+   cartões → "rótulo: valor", tabelas → linhas/colunas, títulos de seção e notas → texto.
+   Assim qualquer técnica (atual ou futura) exporta sem código específico, no idioma ativo.
+   TXT = relatório em texto alinhado · XLSX = 1 planilha por aba. */
+function _tecFileBase(s){ return String(s||'').replace(/[\\\/:*?"<>|\[\]]+/g,'_').replace(/\s+/g,'_').replace(/^_+|_+$/g,'')||'resultados'; }
+function _tecSaveText(name,txt){
+  var a=document.createElement('a'), url=URL.createObjectURL(new Blob(['\ufeff'+txt],{type:'text/plain;charset=utf-8'}));
+  a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); },1500);
+}
+function _tecSheetName(name,used){
+  var b=String(name||'Sheet').replace(/[\\\/:*?\[\]]/g,'_').substring(0,31)||'Sheet', nm=b, k=2;
+  while(used[nm.toLowerCase()]){ var suf=' ('+(k++)+')'; nm=b.substring(0,31-suf.length)+suf; }
+  used[nm.toLowerCase()]=true; return nm;
+}
+// Resultado de uma aba, com o MESMO cache usado na tela (não recalcula se nada mudou).
+function _tecResultFor(tech,tab){
+  var key=_tecCur+':'+tab.id, sig=JSON.stringify([tab.rev,tab.sel,tab.x,tab.y,tab.p]), c=_tecCache[key], res;
+  if(c&&c.sig===sig) return c.res;
+  try{ res=tech.compute(tab); }
+  catch(e){ console.error('tec compute',e); res={msg:_tL('Não foi possível calcular com estes dados: ','Could not compute with this data: ')+_tEsc(e&&e.message||e),kind:'err'}; }
+  _tecCache[key]={sig:sig,res:res};
+  return res;
+}
+// texto do elemento com ESPAÇO entre elementos vizinhos (textContent colaria "Decisão● Rejeita")
+var _TEC_INLINE={B:1,STRONG:1,I:1,EM:1,SUB:1,SUP:1,KBD:1,CODE:1,A:1,U:1,SMALL:1};
+function _tecTxt(el){
+  if(!el) return '';
+  var t='';
+  (function w(n){ for(var c=n.firstChild;c;c=c.nextSibling){
+    if(c.nodeType===3) t+=c.nodeValue;
+    else if(c.nodeType===1){ var sp=!_TEC_INLINE[c.tagName]; if(sp) t+=' '; w(c); if(sp) t+=' '; }
+  } })(el);
+  return t.replace(/\s+/g,' ').trim();
+}
+// HTML de resultados → lista de blocos {t:'h'|'kv'|'tbl'|'note'|'text', ...}
+function _tecResBlocks(html){
+  var root=document.createElement('div'), out=[]; root.innerHTML=html;
+  var SKIP={CANVAS:1,SCRIPT:1,STYLE:1,BUTTON:1,INPUT:1,SVG:1,svg:1,IMG:1};
+  (function walk(node){
+    Array.prototype.forEach.call(node.children,function(el){
+      var tg=el.tagName, cl=el.classList;
+      if(SKIP[tg]||cl.contains('chart-box')) return;
+      if(cl.contains('tec-vsel')){ var lb=_tecTxt(el.querySelector('label')), sl=el.querySelector('select'), op=sl&&sl.options[sl.selectedIndex]; out.push({t:'text',s:lb+' '+(op?_tecTxt(op):'')}); return; }
+      if(tg==='SELECT') return;
+      if(cl.contains('stat-card')||cl.contains('stats-grid')){
+        var cards=cl.contains('stat-card')?[el]:el.querySelectorAll('.stat-card');
+        var kv=Array.prototype.map.call(cards,function(c){ return [_tecTxt(c.querySelector('.lbl')),_tecTxt(c.querySelector('.val'))]; });
+        if(kv.length) out.push({t:'kv',rows:kv}); return;
+      }
+      if(tg==='TABLE'){
+        var rows=Array.prototype.map.call(el.rows,function(r){ return Array.prototype.map.call(r.cells,_tecTxt); }).filter(function(r){ return r.some(function(c){ return c!==''; }); });
+        if(rows.length) out.push({t:'tbl',rows:rows}); return;
+      }
+      if(cl.contains('section-title')||/^H[1-6]$/.test(tg)||tg==='SUMMARY'){ var h=_tecTxt(el); if(h) out.push({t:'h',s:h}); return; }
+      if(cl.contains('tec-note')){ var n=_tecTxt(el); if(n) out.push({t:'note',s:n}); return; }
+      if(el.querySelector('div,table,p,ul,ol,li,details,section,h3,h4,canvas,select,.stat-card')){ walk(el); return; }
+      var s=_tecTxt(el); if(s) out.push({t:'text',s:(tg==='LI'?'• ':'')+s});
+    });
+  })(root);
+  return out;
+}
+// Cabeçalho (técnica, aba, fonte, parâmetros) + blocos de resultado de UMA aba.
+function _tecTabReport(tech,tab){
+  var d=new Date(), lang=_tL('pt-BR','en-US');
+  var head=[[_tL('Técnica','Technique'),_tL(tech.pt.n,tech.en.n)],[_tL('Aba','Tab'),_tTabName(tab)],
+    [_tL('Fonte dos dados','Data source'),_tSrcLabel(tab.src)],[_tL('Gerado em','Generated on'),d.toLocaleDateString(lang)+' '+d.toLocaleTimeString(lang)]];
+  (tech.params||[]).forEach(function(sp){
+    var v=_tP(tab,tech,sp.k), txt=(v==null?'–':String(v));
+    if(sp.t==='sel'&&sp.opts){ var o=sp.opts.filter(function(o){ return String(o[0])===String(v); })[0]; if(o) txt=_tL(o[1],o[2]); }
+    head.push([_tL(sp.pt,sp.en),txt]);
+  });
+  var blocks;
+  if(!tab.cols||!tab.cols.length) blocks=[{t:'note',s:_tL('Aba sem dados — nenhum resultado.','Tab without data — no results.')}];
+  else {
+    var res=_tecResultFor(tech,tab);
+    if(res&&res.msg) blocks=[{t:'note',s:_tecTxt((function(){ var x=document.createElement('div'); x.innerHTML=res.msg; return x; })())}];
+    else { try{ blocks=_tecResBlocks(tech.render(res,tab).html); }catch(e){ blocks=[{t:'note',s:_tL('Erro ao gerar os resultados: ','Error generating the results: ')+(e&&e.message||e)}]; } }
+  }
+  return {name:_tTabName(tab),head:head,blocks:blocks};
+}
+function _tecPadRows(rows){
+  var w=[]; rows.forEach(function(r){ r.forEach(function(c,i){ w[i]=Math.max(w[i]||0,String(c).length); }); });
+  return rows.map(function(r){ return r.map(function(c,i){ return i<r.length-1?String(c).padEnd(w[i]+2):String(c); }).join('').replace(/\s+$/,''); });
+}
+function _tecReportTxt(rep){
+  var L=[], sep='='.repeat(72);
+  L.push(sep,'STATLAB Pro '+APP_VERSION+' — '+_tL('Técnicas de análise · Resultados','Analysis techniques · Results'),sep);
+  _tecPadRows(rep.head.map(function(h){ return [h[0]+':',h[1]]; })).forEach(function(l){ L.push(l); });
+  rep.blocks.forEach(function(b){
+    if(b.t==='h'){ L.push('',b.s.toUpperCase(),'-'.repeat(Math.min(72,Math.max(8,b.s.length)))); }
+    else if(b.t==='kv'){ L.push(''); _tecPadRows(b.rows.map(function(r){ return [r[0]+':',r[1]]; })).forEach(function(l){ L.push(l); }); }
+    else if(b.t==='tbl'){ L.push(''); _tecPadRows(b.rows).forEach(function(l){ L.push(l); }); }
+    else if(b.t==='note'){ L.push('',_tL('Nota: ','Note: ')+b.s); }
+    else L.push(b.s);
+  });
+  return L.join('\r\n');
+}
+// número "puro" (ponto decimal) vira número no Excel; o resto fica como texto
+function _tecCell(v){ var s=String(v); return /^-?\d+(\.\d+)?(e[+-]?\d+)?$/i.test(s)?Number(s):s; }
+function _tecReportAoa(rep){
+  var aoa=[['STATLAB Pro '+APP_VERSION+' — '+_tL('Resultados','Results')]];
+  rep.head.forEach(function(h){ aoa.push([h[0],h[1]]); });
+  rep.blocks.forEach(function(b){
+    if(b.t==='h'){ aoa.push([],[b.s]); }
+    else if(b.t==='kv'){ aoa.push([]); b.rows.forEach(function(r){ aoa.push([r[0],_tecCell(r[1])]); }); }
+    else if(b.t==='tbl'){ aoa.push([]); b.rows.forEach(function(r,i){ aoa.push(i===0?r:r.map(_tecCell)); }); }
+    else if(b.t==='note'){ aoa.push([_tL('Nota: ','Note: ')+b.s]); }
+    else aoa.push([b.s]);
+  });
+  return aoa;
+}
+function _tecExportResults(tabs,fmt,base){
+  var tech=_tecTech(_tecCur); if(!tech) return;
+  tabs=tabs.filter(function(t){ return t.cols&&t.cols.length; });
+  if(!tabs.length){ notify(_tL('Não há resultados para baixar — insira dados em ao menos uma aba.','There are no results to download — add data to at least one tab.')); return; }
+  var reps=tabs.map(function(t){ return _tecTabReport(tech,t); });
+  if(fmt==='xlsx'){
+    if(typeof XLSX==='undefined'){ notify(_tL('Biblioteca XLSX não carregada (verifique a conexão).','XLSX library not loaded (check your connection).')); return; }
+    var wb=XLSX.utils.book_new(), used={};
+    reps.forEach(function(r){
+      var aoa=_tecReportAoa(r), ws=XLSX.utils.aoa_to_sheet(aoa), w=[];
+      aoa.forEach(function(row){ if(row.length<2) return; row.forEach(function(c,i){ w[i]=Math.max(w[i]||8,Math.min(45,String(c==null?'':c).length+2)); }); });
+      ws['!cols']=w.map(function(x){ return {wch:x}; });
+      XLSX.utils.book_append_sheet(wb,ws,_tecSheetName(r.name,used));
+    });
+    try{ XLSX.writeFile(wb,base+'.xlsx'); }catch(e){ notify(_tL('Falha ao gerar o .xlsx: ','Failed to create the .xlsx: ')+(e&&e.message)); }
+  } else {
+    _tecSaveText(base+'.txt', reps.map(_tecReportTxt).join('\r\n\r\n\r\n'));
+  }
+}
+function _tecTechName(){ var tech=_tecTech(_tecCur); return tech?_tL(tech.pt.n,tech.en.n):'Tecnica'; }
+function tecDownloadTab(fmt){
+  var tab=_tecActiveTab(); if(!tab) return;
+  _tecExportResults([tab], fmt, _tecFileBase(_tecTechName()+'_'+_tTabName(tab)+'_'+_tL('resultados','results')));
+}
+function tecDownloadAll(fmt){
+  if(!_tecCur) return;
+  _tecExportResults(_tecTS(_tecCur).tabs.slice(), fmt, _tecFileBase(_tecTechName()+'_'+_tL('resultados_todas_as_abas','results_all_tabs')));
+}
+
 /* ══════════ abas de estudo ══════════ */
 function tecTabNew(){
   var ts=_tecTS(_tecCur), t=_tNewTab(ts); ts.tabs.push(t); ts.active=t.id;
@@ -77489,6 +77655,13 @@ function _tRenderHeader(){
   if(sb) sb.textContent=tech?_tL(tech.pt.d,tech.en.d):_tL('Escolha o método, insira seus dados e veja os parâmetros e gráficos do estudo','Pick a method, add your data and see the study’s parameters and charts');
   if(ic) ic.textContent=tech?tech.icon:'🧬';
   if(bk){ bk.style.display=tech?'inline-flex':'none'; bk.innerHTML='← <span>'+_tL('Técnicas','Techniques')+'</span>'; }
+  // ov.1.1.2: downloads do conjunto completo de abas — visíveis só dentro de uma técnica
+  [['tecDlAllTxt','TXT'],['tecDlAllXlsx','XLSX']].forEach(function(d){
+    var b=document.getElementById(d[0]); if(!b) return;
+    b.style.display=tech?'inline-flex':'none';
+    b.textContent='⬇ '+d[1]+' '+_tL('(todas as abas)','(all tabs)');
+    b.title=_tL('Baixar os resultados de todas as abas desta técnica em .'+d[1].toLowerCase(),'Download the results of every tab of this technique as .'+d[1].toLowerCase());
+  });
   var cl=document.getElementById('tecCloseBtn'); if(cl) cl.title=_tL('Fechar','Close');
 }
 function _tNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
@@ -77644,17 +77817,20 @@ function tecRenderIntake(){
   }
   if(_tecMsg) h+=_tNote('ℹ️ '+_tEsc(_tecMsg),'info');
   if(has){
+    // ov.1.1.2: download dos RESULTADOS desta aba — à direita da linha de variáveis
+    var _dlRes='<span class="tec-dl-res"><button class="tec-btn tec-btn-sm" onclick="tecDownloadTab(\'txt\')" title="'+_tEsc(_tL('Baixar os resultados desta aba em .txt','Download this tab’s results as .txt'))+'">⬇ TXT</button>'+
+      '<button class="tec-btn tec-btn-sm" onclick="tecDownloadTab(\'xlsx\')" title="'+_tEsc(_tL('Baixar os resultados desta aba em .xlsx','Download this tab’s results as .xlsx'))+'">⬇ XLSX</button></span>';
     if(tech.shape==='xy'){
       var opt=function(sel){ return tab.cols.map(function(c,i){ return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+_tEsc(c.n)+'</option>'; }).join(''); };
       h+='<div class="tec-cols"><span class="tec-cols-l">'+_tL('Variáveis:','Variables:')+'</span>'+
         '<label class="tec-xy">'+(tech.xy?_tL(tech.xy.x[0],tech.xy.x[1]):'X')+' <select onchange="tecSetXY(\'x\',this.value)">'+opt(tab.x)+'</select></label>'+
-        '<label class="tec-xy">'+(tech.xy?_tL(tech.xy.y[0],tech.xy.y[1]):'Y')+' <select onchange="tecSetXY(\'y\',this.value)">'+opt(tab.y)+'</select></label></div>';
+        '<label class="tec-xy">'+(tech.xy?_tL(tech.xy.y[0],tech.xy.y[1]):'Y')+' <select onchange="tecSetXY(\'y\',this.value)">'+opt(tab.y)+'</select></label>'+_dlRes+'</div>';
     } else if(tab.cols.length>1 || true){
       h+='<div class="tec-cols"><span class="tec-cols-l">'+_tL(tech.shape==='groups'?'Grupos analisados:':'Variáveis analisadas:',tech.shape==='groups'?'Groups analyzed:':'Variables analyzed:')+'</span>'+
         tab.cols.map(function(c,i){ var on=tab.sel.indexOf(i)>-1, col=on?studyColor(tab.sel.indexOf(i)).solid:'var(--border3)';
           return '<button class="tec-col'+(on?' on':'')+'" style="'+(on?'border-color:'+col+';color:var(--text)':'')+'" onclick="tecToggleCol('+i+')"><span class="tec-col-dot" style="background:'+col+'"></span>'+_tEsc(c.n)+'<span class="tec-col-n">'+c.v.filter(function(v){ return v!==null; }).length+'</span></button>';
         }).join('')+
-        '<button class="tec-link" onclick="tecSelAll(true)">'+_tL('todas','all')+'</button><button class="tec-link" onclick="tecSelAll(false)">'+_tL('nenhuma','none')+'</button></div>';
+        '<button class="tec-link" onclick="tecSelAll(true)">'+_tL('todas','all')+'</button><button class="tec-link" onclick="tecSelAll(false)">'+_tL('nenhuma','none')+'</button>'+_dlRes+'</div>';
     }
     // pré-visualização
     var maxR=Math.min(8,nRows);
@@ -77679,13 +77855,7 @@ function tecRenderResults(){
     box.innerHTML='<div class="empty-state tec-empty-state"><div class="icon">'+tech.icon+'</div><h3>'+_tL('Aguardando os dados','Waiting for data')+'</h3><p>'+_tL('Os parâmetros e gráficos aparecem aqui assim que você inserir os dados.','Parameters and charts appear here as soon as you add the data.')+'</p></div>';
     return;
   }
-  var key=_tecCur+':'+tab.id, sig=JSON.stringify([tab.rev,tab.sel,tab.x,tab.y,tab.p]), c=_tecCache[key], res;
-  if(c&&c.sig===sig) res=c.res;
-  else {
-    try{ res=tech.compute(tab); }
-    catch(e){ console.error('tec compute',e); res={msg:_tL('Não foi possível calcular com estes dados: ','Could not compute with this data: ')+_tEsc(e&&e.message||e),kind:'err'}; }
-    _tecCache[key]={sig:sig,res:res};
-  }
+  var res=_tecResultFor(tech,tab);
   if(res&&res.msg){ box.innerHTML=_tNote(res.msg,res.kind||'warn'); return; }
   try{
     var out=tech.render(res,tab);
