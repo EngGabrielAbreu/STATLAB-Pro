@@ -1018,6 +1018,9 @@ body.light-theme .btn-topbar.btn-topbar-treat-clear:hover{background:rgba(248,11
 #pasteModal.open{display:flex!important}
 .paste-modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:24px;width:min(640px,94vw);max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:14px}
 .paste-modal-title{font-size:16px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px}
+.paste-treat-opts{display:flex;flex-wrap:wrap;gap:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 13px}
+.paste-treat-opts .pto-f{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;color:var(--text3);flex:1;min-width:160px}
+.paste-treat-opts select,.paste-treat-opts input{background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit}
 .paste-modal-hint{font-size:12px;color:var(--text4);line-height:1.65;background:var(--bg3);border-radius:8px;padding:10px 13px;border-left:3px solid #60a5fa}
 #pasteTextarea{width:100%;min-height:200px;resize:vertical;background:var(--input-bg);border:1.5px solid var(--border2);color:var(--text);border-radius:8px;padding:10px 12px;font-size:12px;font-family:monospace;line-height:1.6;box-sizing:border-box}
 #pasteTextarea:focus{outline:none;border-color:#60a5fa}
@@ -22932,6 +22935,17 @@ function openPasteModal(target, slotId){
           + '<strong>• Column 1 = X</strong> (independent variable)<br>'
           + '<strong>• Column 2 = Y</strong> (this series values)<br>'
           + '<strong>• Row 1</strong> = headers · <strong>Delimiter</strong>: tab, comma or semicolon';
+    } else if(_pasteTarget === 'treat'){
+      // ov.1.1.2: no Tratamento a 1ª linha colada é DADO (linha 1), não cabeçalho.
+      hint = isPT
+        ? 'Cole os dados copiados do Excel, Google Sheets, CSV ou texto.<br>'
+          + '<strong>• Todas as linhas</strong> entram como dados — a <strong>1ª linha colada vira a linha 1</strong> (não é tratada como cabeçalho)<br>'
+          + '<strong>• Colunas</strong> recebem nomes automáticos (Coluna 1, Coluna 2…) e podem ser renomeadas depois<br>'
+          + '<strong>• Separador</strong> e <strong>separador decimal</strong>: escolha abaixo e confira na pré-visualização'
+        : 'Paste data copied from Excel, Google Sheets, CSV or plain text.<br>'
+          + '<strong>• Every row</strong> is loaded as data — the <strong>1st pasted row becomes row 1</strong> (it is not treated as a header)<br>'
+          + '<strong>• Columns</strong> get automatic names (Column 1, Column 2…) and can be renamed later<br>'
+          + '<strong>• Delimiter</strong> and <strong>decimal separator</strong>: choose below and check the preview';
     } else if(_pasteTarget === 'compare'){
       hint = isPT
         ? 'Cole os dados de <strong>uma ou mais séries</strong> copiados do Excel/planilha.<br>'
@@ -22955,6 +22969,10 @@ function openPasteModal(target, slotId){
     }
     el('pasteModalHint').innerHTML = hint;
   }
+
+  // ov.1.1.2: opções de separador/decimal só no Tratamento de Dados
+  if(el('pasteTreatOpts')) el('pasteTreatOpts').style.display = (_pasteTarget === 'treat') ? 'flex' : 'none';
+  if(_pasteTarget === 'treat'){ _pasteTreatOptsLang(); _pasteTreatSepUI(); }
 
   // Clear textarea and preview
   if(el('pasteTextarea')) el('pasteTextarea').value = '';
@@ -23010,6 +23028,69 @@ function _parsePasteText(text){
   return {data: data, fields: headers};
 }
 
+/* ov.1.1.2 — COLAR no TRATAMENTO DE DADOS
+   Diferente dos demais destinos: (1) o usuário escolhe o separador de colunas; (2) a 1ª linha
+   é DADO (linha 1) — as colunas recebem nomes automáticos; (3) opção de trocar o separador
+   decimal ("," → "." ou "." → ","). A troca é aplicada célula a célula DEPOIS de separar as
+   colunas, então usar vírgula como separador de colunas e como decimal não se confunde. */
+var _PTO_I18N={
+  ptoSepLbl:['Separador das colunas','Column delimiter'], ptoSepAuto:['Detectar automaticamente','Detect automatically'],
+  ptoSepTab:['Tabulação (Excel)','Tab (Excel)'], ptoSepComma:['Vírgula ( , )','Comma ( , )'],
+  ptoSepSemi:['Ponto e vírgula ( ; )','Semicolon ( ; )'], ptoSepSpace:['Espaço (um ou mais)','Space (one or more)'],
+  ptoSepPipe:['Barra vertical ( | )','Vertical bar ( | )'], ptoSepCustom:['Outro…','Other…'],
+  ptoSepCustomLbl:['Caractere separador','Delimiter character'], ptoDecLbl:['Separador decimal','Decimal separator'],
+  ptoDecNone:['Não alterar','Keep as is'], ptoDecC2D:['Trocar "," por "."','Replace "," with "."'], ptoDecD2C:['Trocar "." por ","','Replace "." with ","']
+};
+function _pasteTreatOptsLang(){
+  var en=getCurrentLang()==='en';
+  Object.keys(_PTO_I18N).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=_PTO_I18N[id][en?1:0]; });
+}
+function _pasteTreatSepUI(){
+  var w=document.getElementById('ptoSepCustomWrap'), sel=document.getElementById('ptoSep');
+  if(w) w.style.display=(sel&&sel.value==='custom')?'flex':'none';
+}
+var _PTO_SEP_NAMES={'\t':['tabulação','tab'],',':['vírgula','comma'],';':['ponto e vírgula','semicolon'],' ':['espaço','space'],'|':['barra vertical','vertical bar']};
+// Auto: mesmo critério do detector geral (tab > ; > ,) + espaço/barra quando não há nenhum dos três.
+function _pasteTreatAutoSep(lines){
+  var sample=lines.slice(0,20).join('\n'), c=function(re){ return (sample.match(re)||[]).length; };
+  var tab=c(/\t/g), semi=c(/;/g), comma=c(/,/g), pipe=c(/\|/g);
+  if(tab) return '\t';
+  if(semi && semi>=comma) return ';';
+  if(comma) return ',';
+  if(pipe) return '|';
+  return /\S\s+\S/.test(sample) ? ' ' : '\t';
+}
+function _parsePasteTextTreat(text){
+  text=String(text||'').replace(/\r\n?/g,'\n');
+  var lines=text.split('\n').filter(function(l){ return l.trim()!==''; });
+  if(!lines.length) return null;
+  var mode=(document.getElementById('ptoSep')||{}).value||'auto';
+  var dec=(document.getElementById('ptoDec')||{}).value||'none';
+  var sep;
+  if(mode==='auto') sep=_pasteTreatAutoSep(lines);
+  else if(mode==='custom'){ sep=(document.getElementById('ptoSepCustomVal')||{}).value||''; if(!sep) return {err:'nosep'}; }
+  else sep={tab:'\t',comma:',',semi:';',space:' ',pipe:'|'}[mode]||'\t';
+  var split=(sep===' ') ? function(l){ return l.trim().split(/ +|\t+/); } : function(l){ return l.split(sep); };
+  var cellsRows=lines.map(split), nCols=cellsRows.reduce(function(m,r){ return Math.max(m,r.length); },0);
+  var base=getCurrentLang()==='en'?'Column ':'Coluna ', fields=[];
+  for(var j=0;j<nCols;j++) fields.push(base+(j+1));
+  var NUM=/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+  var data=cellsRows.map(function(cells){
+    var row={};
+    fields.forEach(function(f,j){
+      var cell=String(cells[j]==null?'':cells[j]).trim().replace(/^["']|["']$/g,'');
+      if(dec==='c2d') cell=cell.replace(/,/g,'.');
+      else if(dec==='d2c') cell=cell.replace(/\./g,',');
+      // número só quando a célula INTEIRA é numérica (ponto decimal). Com "." → "," o valor
+      // fica como texto com vírgula, exatamente como pedido — o Tratamento ainda o reconhece
+      // como numérico (treatColTypes aceita vírgula decimal).
+      row[f]=(cell==='') ? null : (NUM.test(cell) ? Number(cell) : cell);
+    });
+    return row;
+  });
+  return {data:data, fields:fields, sep:sep};
+}
+
 function pastePreview(){
   var text = document.getElementById('pasteTextarea').value;
   var isPT = getCurrentLang() !== 'en';
@@ -23024,7 +23105,14 @@ function pastePreview(){
     return;
   }
 
-  var result = _parsePasteText(text);
+  var result = (_pasteTarget === 'treat') ? _parsePasteTextTreat(text) : _parsePasteText(text);
+  if(result && result.err === 'nosep'){
+    previewWrap.style.display = 'none';
+    statusMsg.textContent = isPT ? '⚠️ Informe o caractere separador.' : '⚠️ Enter the delimiter character.';
+    statusMsg.style.color = '#fbbf24';
+    _parsedPasteData = null;
+    return;
+  }
   if(!result || !result.data.length){
     previewWrap.style.display = 'none';
     statusMsg.textContent = isPT ? '⚠️ Não foi possível interpretar os dados. Verifique o formato.' : '⚠️ Could not parse the data. Check the format.';
@@ -23037,11 +23125,12 @@ function pastePreview(){
   _parsedPasteFields = result.fields;
 
   // Build preview table (first 6 rows)
-  var html = '<thead><tr>' + result.fields.map(function(f){return '<th>'+escapeHtml(f)+'</th>';}).join('') + '</tr></thead><tbody>';
-  result.data.slice(0,6).forEach(function(row){
-    html += '<tr>' + result.fields.map(function(f){
+  var _isTreat = (_pasteTarget === 'treat');
+  var html = '<thead><tr>' + (_isTreat?'<th>#</th>':'') + result.fields.map(function(f){return '<th>'+escapeHtml(f)+'</th>';}).join('') + '</tr></thead><tbody>';
+  result.data.slice(0,6).forEach(function(row,ri){
+    html += '<tr>' + (_isTreat?'<td style="color:var(--text4)">'+(ri+1)+'</td>':'') + result.fields.map(function(f){
       var v = row[f];
-      return '<td>'+(v===null||v===undefined?'–':v)+'</td>';
+      return '<td>'+(v===null||v===undefined?'–':escapeHtml(String(v)))+'</td>';
     }).join('') + '</tr>';
   });
   html += '</tbody>';
@@ -23050,6 +23139,10 @@ function pastePreview(){
 
   var rows = result.data.length, cols = result.fields.length;
   statusMsg.textContent = '✓ ' + rows + (isPT?' linhas × ':' rows × ') + cols + (isPT?' colunas detectadas':' columns detected');
+  if(_isTreat && result.sep!=null){
+    var _sn=_PTO_SEP_NAMES[result.sep];
+    statusMsg.textContent += ' · ' + (isPT?'separador: ':'delimiter: ') + (_sn ? _sn[isPT?0:1] : '"'+result.sep+'"');
+  }
   statusMsg.style.color = '#4ade80';
 }
 
@@ -45658,6 +45751,31 @@ function cgGoHome(ev){
     <textarea id="pasteTextarea" spellcheck="false" id="pasteModalTextarea"
       placeholder="Cole aqui os dados copiados do Excel...&#10;Exemplo:&#10;X&#9;Y&#10;1&#9;45.2&#10;2&#9;46.8&#10;3&#9;44.9"
       oninput="pastePreview()"></textarea>
+    <!-- ov.1.1.2: opções de importação exibidas SÓ quando o destino é o Tratamento de Dados.
+         Rótulos/opções traduzidos em _pasteTreatOptsLang() (chamada por openPasteModal). -->
+    <div id="pasteTreatOpts" class="paste-treat-opts" style="display:none">
+      <label class="pto-f"><span id="ptoSepLbl">Separador das colunas</span>
+        <select id="ptoSep" onchange="_pasteTreatSepUI();pastePreview()">
+          <option value="auto" id="ptoSepAuto">Detectar automaticamente</option>
+          <option value="tab" id="ptoSepTab">Tabulação (Excel)</option>
+          <option value="comma" id="ptoSepComma">Vírgula ( , )</option>
+          <option value="semi" id="ptoSepSemi">Ponto e vírgula ( ; )</option>
+          <option value="space" id="ptoSepSpace">Espaço (um ou mais)</option>
+          <option value="pipe" id="ptoSepPipe">Barra vertical ( | )</option>
+          <option value="custom" id="ptoSepCustom">Outro…</option>
+        </select>
+      </label>
+      <label class="pto-f" id="ptoSepCustomWrap" style="display:none"><span id="ptoSepCustomLbl">Caractere separador</span>
+        <input type="text" id="ptoSepCustomVal" maxlength="5" oninput="pastePreview()">
+      </label>
+      <label class="pto-f"><span id="ptoDecLbl">Separador decimal</span>
+        <select id="ptoDec" onchange="pastePreview()">
+          <option value="none" id="ptoDecNone">Não alterar</option>
+          <option value="c2d" id="ptoDecC2D">Trocar "," por "."</option>
+          <option value="d2c" id="ptoDecD2C">Trocar "." por ","</option>
+        </select>
+      </label>
+    </div>
     <div class="paste-preview-wrap" id="pastePreviewWrap">
       <table class="paste-preview-table" id="pastePreviewTable"></table>
     </div>
