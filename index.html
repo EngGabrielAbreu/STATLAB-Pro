@@ -2817,6 +2817,10 @@ body.colorblind-theme .cg-sup-row .sup-chk input{accent-color:#E69F00!important}
   background:var(--bg);border:1px solid var(--border2);border-radius:6px}
 .sup-ix .ix-dots{display:flex;gap:3px;flex-shrink:0}
 .sup-ix .ix-dots i{width:9px;height:9px;border-radius:50%;display:block}
+.sup-ix .ix-eye{margin-left:auto;flex-shrink:0;background:none;border:1px solid var(--border2);border-radius:5px;cursor:pointer;font-size:12px;line-height:1;padding:2px 5px}
+.sup-ix.ix-off .ix-eye{opacity:.35;filter:grayscale(1)}
+.sup-ix.ix-off .ix-val{opacity:.45;text-decoration:line-through}
+.cg-sup-row .sup-pal{flex-shrink:0;padding:2px 6px;background:var(--bg);border:1px solid var(--border2);color:var(--text4);border-radius:4px;cursor:pointer;font-size:11px;line-height:1}
 .sup-ix .ix-val{font-size:10.5px;color:var(--text2);font-family:ui-monospace,monospace;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -48163,6 +48167,12 @@ function cgGoHome(ev){
                 <input type="checkbox" id="cgSupShowIx" onchange="cgRenderSupIntersections();cgUpdateChart()">
                 <span id="cgSupIxLbl">Marcar interseção das retas</span>
               </label>
+              <!-- ov.1.1.2: tamanho do rótulo das interseções (fonte + fundo) -->
+              <div id="cgSupIxSizeRow" style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--text3)">
+                <span id="cgSupIxSizeLbl" style="flex:1">Tamanho do rótulo (fonte + fundo)</span>
+                <input type="range" id="cgSupIxSize" min="7" max="28" value="11" oninput="document.getElementById('cgSupIxSizeVal').textContent=this.value;cgUpdateChart()" style="width:90px;accent-color:#ec4899">
+                <span id="cgSupIxSizeVal" style="min-width:20px;color:#ec4899;font-weight:700">11</span>
+              </div>
               <div id="cgSupIxList"></div>
             </div>
           </div>
@@ -52678,6 +52688,19 @@ function _cgGroupBegin(kind, obj, mx, my){
 }
 // Aplica o deslocamento (mx,my) a TODOS os selecionados a partir dos snapshots. Idempotente
 // (usa posição-base + delta), então pode ser chamado por mais de um handler no mesmo evento.
+/* ov.1.1.2 — pixel → valor CONTÍNUO do eixo. Em eixo categórico, getValueForPixel encaixa no
+   índice inteiro mais próximo; aqui interpolamos entre as categorias 0 e 1, então o valor
+   devolvido reproduz exatamente o pixel (getPixelForValue aceita índices fracionários). */
+function _cgAxisValCont(ax,px){
+  if(!ax||!isFinite(px)) return NaN;
+  if(ax.type==='category'){
+    var p0=ax.getPixelForValue(0), p1=ax.getPixelForValue(1);
+    return (isFinite(p0)&&isFinite(p1)&&p1!==p0)?(px-p0)/(p1-p0):NaN;
+  }
+  var v=ax.getValueForPixel(px); return (typeof v==='number')?v:NaN;
+}
+// valor exibido = valor guardado (6 algarismos significativos), para a janela e o gráfico baterem
+function _cgRound6(v){ return (isFinite(v)&&v!==0)?parseFloat(v.toPrecision(6)):v; }
 function _cgGroupApply(mx,my){
   if(!_cgGroupDrag.active || !_cgChart) return false;
   var chart=_cgChart, xA=chart.scales&&chart.scales.x, yA=chart.scales&&chart.scales.y;
@@ -52685,8 +52708,9 @@ function _cgGroupApply(mx,my){
   var dx=mx-_cgGroupDrag.startX, dy=my-_cgGroupDrag.startY;
   var sn=_cgGroupDrag.snaps;
   sn.refs.forEach(function(r){
-    if(r.kind==='x'){ var np=r.px+dx; r.o._pxX=np; var v=xA.getValueForPixel(np); if(isFinite(v)) r.o.value=v; }
-    else { var npy=r.py+dy; var vy=yA.getValueForPixel(npy); if(isFinite(vy)) r.o.value=vy; }
+    // ov.1.1.2: guarda o VALOR (contínuo) e descarta o pixel — a janela 📌 mostra o mesmo número
+    if(r.kind==='x'){ var v=_cgAxisValCont(xA,r.px+dx); if(isFinite(v)){ r.o.value=_cgRound6(v); delete r.o._pxX; } }
+    else { var vy=_cgAxisValCont(yA,r.py+dy); if(isFinite(vy)){ r.o.value=_cgRound6(vy); delete r.o._pxY; } }
   });
   sn.annots.forEach(function(a){
     a.o._pxX=a.px+dx; a.o._pxY=a.py+dy;
@@ -54208,7 +54232,7 @@ var _cgI18N={
     showGrid:'Mostrar Grade',showError:'Barras de Erro (\u00b11\u03c3)',chartTitle:'T\u00edtulo do Gr\u00e1fico',
     regression:'Regress\u00e3o',regressionBoxplot:'Liga\u00e7\u00e3o',refLines:'Linhas Refer\u00eancia',annotations:'Anota\u00e7\u00f5es',
     cgSecSupLines:'Retas de suporte',cgBtnAddSupLine:'Reta de suporte',
-    cgSupIxLbl:'Marcar interseção das retas',
+    cgSupIxLbl:'Marcar interseção das retas',cgSupIxSizeLbl:'Tamanho do rótulo (fonte + fundo)',
     cgSupHint:'Crie retas a partir da inclinação e do intercepto (y = a·x + b). Deixe X inicial/final em branco para a reta ser infinita.',
     cvSection:'Detecção',
     cvDetHint:'Escolha o critério de outlier de cada série. A linha de corte aparece na cor da série — dali em diante o ponto é considerado atípico.',
@@ -54519,7 +54543,7 @@ var _cgI18N={
     showGrid:'Show Grid',showError:'Error Bars (\u00b11\u03c3)',chartTitle:'Chart Title',
     regression:'Regression',regressionBoxplot:'Connection',refLines:'Reference Lines',annotations:'Annotations',
     cgSecSupLines:'Support lines',cgBtnAddSupLine:'Support line',
-    cgSupIxLbl:'Mark line intersections',
+    cgSupIxLbl:'Mark line intersections',cgSupIxSizeLbl:'Label size (font + background)',
     cgSupHint:'Create lines from slope and intercept (y = a·x + b). Leave X start/end blank for an infinite line.',
     cvSection:'Detection',
     cvDetHint:'Choose the outlier criterion for each series. The cut-off line appears in the series colour — beyond it the point counts as atypical.',
@@ -55027,15 +55051,30 @@ function cgSupSet(id,key,val){
   } else {
     l[key]=val;
   }
+  // ov.1.1.2: equação do cabeçalho (e placeholder do rótulo) acompanham a digitação
+  if(key==='slope'||key==='intercept'){
+    var _eq=_cgSupEq(l), _eqEl=document.getElementById('cgSupEq_'+id), _lbEl=document.getElementById('cgSupLbl_'+id);
+    if(_eqEl){ _eqEl.textContent=_eq; _eqEl.title=_eq; }
+    if(_lbEl) _lbEl.placeholder=_eq;
+  }
   // ov.1.1.2: a interseção depende de inclinação/intercepto/faixa/visibilidade
   if(key==='slope'||key==='intercept'||key==='visible'||key==='x1'||key==='x2'){
     try{ cgRenderSupIntersections(); }catch(e){}
   }
   cgUpdateChart();
 }
+// ov.1.1.2: 🌈 das retas de suporte — reaproveita o popup genérico de paletas
+function cgSupPickPalette(id,ev){
+  cgOpenGenericPaletteSwatches(ev,function(col){
+    var e=document.getElementById('cgSupCol_'+id); if(e) e.value=col;
+    cgSupSet(id,'color',col);
+    try{ cgRenderSupIntersections(); }catch(_){}   // bolinhas de cor da lista de interseções
+  });
+}
 /* Equação formatada, usada no rótulo automático e no cabeçalho do item. */
 function _cgSupEq(l){
-  var a=l.slope, b=l.intercept;
+  var a=parseFloat(l.slope), b=parseFloat(l.intercept);
+  if(!isFinite(a)) a=0; if(!isFinite(b)) b=0;
   var sa=fmtSmart(a,4);
   var sb=(b<0? ' − '+fmtSmart(Math.abs(b),4) : ' + '+fmtSmart(b,4));
   return 'y = '+sa+'x'+sb;
@@ -55052,8 +55091,10 @@ function cgRenderSupLines(){
     return '<div class="cg-sup-row">'
       +'<div class="sup-hdr">'
         +'<input type="checkbox" '+(l.visible?'checked':'')+' onchange="cgSupSet('+l.id+',\'visible\',this.checked)" title="'+(en?'Show':'Mostrar')+'">'
-        +'<input type="color" value="'+l.color+'" onchange="cgSupSet('+l.id+',\'color\',this.value)" title="'+(en?'Colour':'Cor')+'">'
-        +'<span class="sup-eq">'+escapeHtml(_cgSupEq(l))+'</span>'
+        +'<input type="color" id="cgSupCol_'+l.id+'" value="'+l.color+'" onchange="cgSupSet('+l.id+',\'color\',this.value)" title="'+(en?'Colour':'Cor')+'">'
+        // ov.1.1.2: 🌈 — escolher a cor a partir das paletas salvas
+        +'<button type="button" class="sup-pal" onclick="cgSupPickPalette('+l.id+',event)" title="'+escapeHtml(cgT('cgPalSwatchTitle'))+'">\uD83C\uDF08</button>'
+        +'<span class="sup-eq" id="cgSupEq_'+l.id+'" title="'+escapeHtml(_cgSupEq(l))+'">'+escapeHtml(_cgSupEq(l))+'</span>'
         +'<button type="button" class="sup-del" onclick="cgRemoveSupLine('+l.id+')" title="'+(en?'Remove':'Remover')+'">✕</button>'
       +'</div>'
       +'<div class="sup-grid">'
@@ -55077,7 +55118,7 @@ function cgRenderSupLines(){
         +'<span>'+(en?'Show label on chart':'Mostrar rótulo no gráfico')+'</span></label>'
       +(l.showLabel
         ? '<div class="sup-grid">'
-          +'<label>'+(en?'Text':'Texto')+'<input type="text" value="'+escapeHtml(l.label)+'" placeholder="'+escapeHtml(_cgSupEq(l))+'" oninput="cgSupSet('+l.id+',\'label\',this.value)"></label>'
+          +'<label>'+(en?'Text':'Texto')+'<input type="text" id="cgSupLbl_'+l.id+'" value="'+escapeHtml(l.label)+'" placeholder="'+escapeHtml(_cgSupEq(l))+'" oninput="cgSupSet('+l.id+',\'label\',this.value)"></label>'
           +'<label>'+(en?'Size':'Tamanho')+'<input type="number" min="7" max="28" value="'+l.labelSize+'" oninput="cgSupSet('+l.id+',\'labelSize\',this.value)"></label>'
           +'</div>'
           // ov.1.1.2: fundo e posição do rótulo
@@ -55115,6 +55156,15 @@ function _cgSupRgba(hex,alpha){
    Duas retas y = a₁x + b₁ e y = a₂x + b₂ se cruzam em x = (b₂−b₁)/(a₁−a₂). Quando as
    inclinações são iguais elas são paralelas (ou coincidentes) e não há ponto único —
    por isso o teste de denominador próximo de zero. */
+// ov.1.1.2: interseções ocultas (👁️) — chave estável pelo par de ids das retas; salva por aba
+var _cgSupIxHidden={};
+function _cgSupIxKey(A,B){ return Math.min(A.id,B.id)+'-'+Math.max(A.id,B.id); }
+function cgSupIxToggle(key){
+  if(_cgSupIxHidden[key]) delete _cgSupIxHidden[key]; else _cgSupIxHidden[key]=true;
+  cgRenderSupIntersections(); cgUpdateChart();
+}
+// tamanho (fonte + fundo) do rótulo das interseções no gráfico
+function _cgSupIxFs(){ var v=parseFloat((document.getElementById('cgSupIxSize')||{}).value); return (isFinite(v)&&v>=6)?Math.min(v,32):11; }
 function cgSupIntersections(){
   var out=[];
   var vis=_cgSupLines.filter(function(l){ return l.visible; });
@@ -55136,7 +55186,7 @@ function cgSupIntersections(){
         return true;
       }
       if(!inRange(A)||!inRange(B)) continue;
-      out.push({x:x,y:y,a:A,b:B});
+      out.push({x:x,y:y,a:A,b:B,key:_cgSupIxKey(A,B)});
     }
   }
   return out;
@@ -55151,6 +55201,7 @@ function cgRenderSupIntersections(){
   if(wrap) wrap.style.display=(visCount>=2)?'block':'none';
   if(visCount<2){ box.innerHTML=''; return; }
   var on=(document.getElementById('cgSupShowIx')||{}).checked===true;
+  var _szRow=document.getElementById('cgSupIxSizeRow'); if(_szRow) _szRow.style.display=on?'flex':'none';   // ov.1.1.2
   if(!on){ box.innerHTML=''; return; }
   var ix=cgSupIntersections();
   if(!ix.length){
@@ -55159,9 +55210,13 @@ function cgRenderSupIntersections(){
     return;
   }
   box.innerHTML=ix.map(function(p){
-    return '<div class="sup-ix">'
+    var hid=!!_cgSupIxHidden[p.key];
+    return '<div class="sup-ix'+(hid?' ix-off':'')+'">'
       +'<span class="ix-dots"><i style="background:'+p.a.color+'"></i><i style="background:'+p.b.color+'"></i></span>'
       +'<span class="ix-val">X = '+fmtSmart(p.x,4)+'　Y = '+fmtSmart(p.y,4)+'</span>'
+      // ov.1.1.2: 👁️ mostra/oculta ESTE ponto no gráfico
+      +'<button type="button" class="ix-eye" onclick="cgSupIxToggle(\''+p.key+'\')" title="'
+        +(hid?(en?'Show this point on the chart':'Mostrar este ponto no gráfico'):(en?'Hide this point on the chart':'Ocultar este ponto no gráfico'))+'">\uD83D\uDC41\uFE0F</button>'
       +'</div>';
   }).join('');
 }
@@ -55263,30 +55318,33 @@ var _cgSupLinesPlugin={
           ctx.save();
           ctx.beginPath(); ctx.rect(area.left,area.top,area.right-area.left,area.bottom-area.top); ctx.clip();
           ctx.setLineDash([]);
+          var ixFs=_cgSupIxFs(), ixH=ixFs+5, ixR=Math.max(4,ixFs*0.5);   // ov.1.1.2: tamanho escolhido
           ixs.forEach(function(p){
+            if(_cgSupIxHidden[p.key]) return;                                // ov.1.1.2: ponto oculto (👁️)
             var px=xA.getPixelForValue(p.x), py=yA.getPixelForValue(p.y);
             if(!isFinite(px)||!isFinite(py)) return;
             if(px<area.left||px>area.right||py<area.top||py>area.bottom) return;
             // marcador: miolo claro com anel escuro, legível sobre qualquer fundo
-            ctx.beginPath(); ctx.arc(px,py,5.5,0,Math.PI*2);
+            ctx.beginPath(); ctx.arc(px,py,ixR,0,Math.PI*2);
             ctx.fillStyle='#ffffff'; ctx.fill();
             ctx.lineWidth=2; ctx.strokeStyle='#111111'; ctx.stroke();
             // rótulo com as coordenadas
             var t='('+fmtSmart(p.x,3)+', '+fmtSmart(p.y,3)+')';
-            ctx.font='600 11px '+((chart.options&&chart.options.font&&chart.options.font.family)||'sans-serif');
-            var w=ctx.measureText(t).width;
+            ctx.font='600 '+ixFs+'px '+((chart.options&&chart.options.font&&chart.options.font.family)||'sans-serif');
+            var w=ctx.measureText(t).width, gap=ixR+5;
             // desloca para o lado que tiver espaço, para o texto não sair pela borda
-            var tx=px+10, align='left';
-            if(tx+w+8>area.right){ tx=px-10; align='right'; }
-            var ty=py-10;
-            if(ty-14<area.top) ty=py+20;
+            var tx=px+gap, align='left';
+            if(tx+w+8>area.right){ tx=px-gap; align='right'; }
+            var ty=py-gap;
+            if(ty-ixH<area.top) ty=py+gap+ixH;
             ctx.textAlign=align; ctx.textBaseline='bottom';
             ctx.fillStyle='rgba(0,0,0,.6)';
             var bx=(align==='left')?(tx-4):(tx-w-4);
-            if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(bx,ty-14,w+8,16,3); ctx.fill(); }
-            else ctx.fillRect(bx,ty-14,w+8,16);
+            // fundo proporcional à fonte (altura = fonte + 5 px, 1 px abaixo da linha de base)
+            if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(bx,ty-ixH+1,w+8,ixH+1,3); ctx.fill(); }
+            else ctx.fillRect(bx,ty-ixH+1,w+8,ixH+1);
             ctx.fillStyle='#ffffff';
-            ctx.fillText(t,tx,ty);
+            ctx.fillText(t,tx,ty-1);
           });
           ctx.restore();
         }
@@ -55678,7 +55736,7 @@ function cgApplyLang(){
       if(f2&&f2.nodeType===3) f2.nodeValue=cgT(key)+' '; else e2.textContent=cgT(key); } }
     st('cgSecDetect','cvSection'); st('cgCvDetHint','cvDetHint'); st('cgCvHint','cvHint');
     st('cgSecSupLines','cgSecSupLines'); st('cgBtnAddSupLine','cgBtnAddSupLine'); st('cgSupHint','cgSupHint');
-    st('cgSupIxLbl','cgSupIxLbl');
+    st('cgSupIxLbl','cgSupIxLbl'); st('cgSupIxSizeLbl','cgSupIxSizeLbl');
     try{ cgRenderSupLines(); }catch(e5){}
     st('cgLblCvSort','cvSort');
     st('cgCvSortNone','cvSortNone'); st('cgCvSortAsc','cvSortAsc'); st('cgCvSortDesc','cvSortDesc');
@@ -56517,7 +56575,7 @@ function cgRenderRefLines(){
       +'<select id="cgRLAxis_'+i+'" onchange="_cgRefLines['+i+'].axis=this.value;cgRLUpdateCenter('+i+');cgUpdateChart()" style="width:44px;font-size:11px;padding:3px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text);flex-shrink:0">'
       +'<option value="y"'+(rl.axis==='y'?' selected':'')+'>Y</option>'
       +'<option value="x"'+(rl.axis==='x'?' selected':'')+'>X</option></select>'
-      +'<input type="number" id="cgRLVal_'+i+'" value="'+rl.value+'" placeholder="'+cgT('cgRefValPh')+'" step="any" onchange="_cgRefLines['+i+'].value=parseFloat(this.value);delete _cgRefLines['+i+']._pxX;cgUpdateChart()" style="width:70px;flex-shrink:0;font-size:11px;padding:3px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'
+      +'<input type="number" id="cgRLVal_'+i+'" value="'+rl.value+'" placeholder="'+cgT('cgRefValPh')+'" step="any" onchange="_cgRefLines['+i+'].value=parseFloat(this.value);delete _cgRefLines['+i+']._pxX;delete _cgRefLines['+i+']._pxY;cgUpdateChart()" style="width:70px;flex-shrink:0;font-size:11px;padding:3px;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">'
       +'<input type="color" id="cgRLColor_'+i+'" value="'+rl.color+'" onchange="_cgRefLines['+i+'].color=this.value;cgUpdateChart()" style="width:24px;height:24px;flex-shrink:0;border:none;background:none;cursor:pointer;padding:0">'
       +'<button onclick="cgOpenGenericPaletteSwatches(event,function(col){_cgRefLines['+i+'].color=col;var e=document.getElementById(\'cgRLColor_'+i+'\');if(e)e.value=col;cgUpdateChart();})" title="'+cgT('cgPalSwatchTitle')+'" style="flex-shrink:0;padding:2px 6px;background:var(--bg2);border:1px solid var(--border2);color:var(--text4);border-radius:4px;cursor:pointer;font-size:11px;line-height:1">\uD83C\uDF08</button>'
       +'<span style="flex:1"></span>'
@@ -57998,11 +58056,38 @@ function _cgSigFig(v, n){
    título…) desfazia o zoom que o usuário tinha dado. Este invólucro guarda a faixa visível
    antes de redesenhar e a restaura depois; a função original virou _cgUpdateChartRaw().
    Fica como um único ponto de passagem — nenhum handler precisou ser alterado. */
+/* ov.1.1.2 — ZOOM POR ABA. cgUpdateChart() preserva o zoom do gráfico atual ao redesenhar; mas
+   ao trocar/duplicar/criar aba o gráfico "atual" ainda é o da aba ANTERIOR — e o zoom dela era
+   copiado para a aba nova (por isso o zoom de um gráfico aparecia no outro). Agora:
+   • o zoom só é carregado entre redesenhos da MESMA aba (_cgChartTabId);
+   • cada aba guarda o próprio zoom (_cgTabZoom) ao sair e o recupera ao voltar. */
+var _cgChartTabId=null, _cgTabZoom={};
+function _cgReadZoom(){
+  try{
+    if(!_cgChart||typeof _cgChart.isZoomedOrPanned!=='function'||!_cgChart.isZoomedOrPanned()) return null;
+    var sx=_cgChart.scales&&_cgChart.scales.x, sy=_cgChart.scales&&_cgChart.scales.y, z={};
+    if(sx&&isFinite(sx.min)&&isFinite(sx.max)) z.x={min:sx.min,max:sx.max};
+    if(sy&&isFinite(sy.min)&&isFinite(sy.max)) z.y={min:sy.min,max:sy.max};
+    return (z.x||z.y)?z:null;
+  }catch(e){ return null; }
+}
+function _cgApplyZoom(z){
+  if(!z) return;
+  var apply=function(){
+    try{
+      if(!_cgChart||typeof _cgChart.zoomScale!=='function') return;
+      if(z.x&&_cgChart.scales&&_cgChart.scales.x) _cgChart.zoomScale('x',z.x,'none');
+      if(z.y&&_cgChart.scales&&_cgChart.scales.y) _cgChart.zoomScale('y',z.y,'none');
+    }catch(e){}
+  };
+  if(typeof requestAnimationFrame==='function') requestAnimationFrame(apply); else apply();
+}
 function cgUpdateChart(){
   var args=arguments;
   var savedX=null, savedY=null, wasZoomed=false;
   try{
-    if(_cgChart && typeof _cgChart.isZoomedOrPanned==='function' && _cgChart.isZoomedOrPanned()){
+    var _sameTab=(typeof _cgActiveTabId==='undefined')||(_cgChartTabId===_cgActiveTabId);
+    if(_sameTab && _cgChart && typeof _cgChart.isZoomedOrPanned==='function' && _cgChart.isZoomedOrPanned()){
       wasZoomed=true;
       var sx=_cgChart.scales&&_cgChart.scales.x, sy=_cgChart.scales&&_cgChart.scales.y;
       if(sx&&isFinite(sx.min)&&isFinite(sx.max)) savedX={min:sx.min,max:sx.max};
@@ -58013,6 +58098,7 @@ function cgUpdateChart(){
   try{
     out=_cgUpdateChartRaw.apply(this,args);
   } finally {
+    try{ _cgChartTabId=(typeof _cgActiveTabId!=='undefined')?_cgActiveTabId:null; }catch(e){}
     if(wasZoomed&&(savedX||savedY)){
       try{
         // rAF: o Chart.js só termina o layout no próximo quadro; aplicar antes disso
@@ -67151,6 +67237,8 @@ function _cgBuildConfigObject(includeData){
     y2Min: gv('cgY2Min'), y2Max: gv('cgY2Max'),   // ov.1.1.2
     supLines: _cgSupLines,                        // ov.1.1.2: retas de suporte
     supShowIx: gv('cgSupShowIx'),                 // ov.1.1.2: marcar interseções
+    supIxSize: gv('cgSupIxSize'),                 // ov.1.1.2: tamanho do rótulo das interseções
+    supIxHidden: _cgSupIxHidden,                  // ov.1.1.2: interseções ocultas (👁️)
     xScale: gv('cgXScale'), yScale: gv('cgYScale'),
     hideXValues: gv('cgHideXValues'), hideYValues: gv('cgHideYValues'),
     invertX: gv('cgInvertX'), invertY: gv('cgInvertY'),
@@ -67689,6 +67777,10 @@ function cgApplyConfigObject(cfg, opts){
       _cgSupLines=Array.isArray(cfg.supLines)?cfg.supLines:[];
       _cgSupSeq=_cgSupLines.reduce(function(m,l){ return Math.max(m,l.id||0); },0);
       sv('cgSupShowIx', cfg.supShowIx);   // ov.1.1.2
+      _cgSupIxHidden=(cfg.supIxHidden&&typeof cfg.supIxHidden==='object')?cfg.supIxHidden:{};
+      (function(){ var z=parseFloat(cfg.supIxSize); z=(isFinite(z)&&z>=7)?z:11;
+        var e=document.getElementById('cgSupIxSize'); if(e) e.value=z;
+        var ev=document.getElementById('cgSupIxSizeVal'); if(ev) ev.textContent=z; })();
       try{ cgRenderSupLines(); cgRenderSupIntersections(); }catch(e){}
       sv('cgXScale', cfg.xScale); sv('cgYScale', cfg.yScale);
       sv('cgHideXValues', cfg.hideXValues); sv('cgHideYValues', cfg.hideYValues);
@@ -68150,6 +68242,8 @@ function cgTabsSnapshotActive(){
   if(_cgActiveTabId==null) return;
   try{ _cgUndoFlushPending(); _cgUndoSaveContext(_cgActiveTabId); }catch(e){}
   try{ _cgTabConfigs[_cgActiveTabId]=_cgBuildConfigObject(true); }catch(e){}
+  // ov.1.1.2: guarda o zoom desta aba (ou limpa, se não houver)
+  try{ var _z=_cgReadZoom(); if(_z) _cgTabZoom[_cgActiveTabId]=_z; else delete _cgTabZoom[_cgActiveTabId]; }catch(e){}
 }
 
 function cgTabsApplyConfig(cfg){
@@ -68161,6 +68255,8 @@ function cgTabsApplyConfig(cfg){
   var clone; try{ clone=JSON.parse(JSON.stringify(src)); }catch(e){ clone=src; }
   cgApplyConfigObject(clone,{restoreChartType:true,restoreSeriesData:true});
   try{ _cgUndoLoadContext(_cgActiveTabId); }catch(e){}
+  // ov.1.1.2: restaura o zoom PRÓPRIO da aba de destino (se ela tinha um)
+  try{ _cgApplyZoom(_cgTabZoom[_cgActiveTabId]); }catch(e){}
 }
 
 // cria o elemento DOM de UMA aba (usado tanto para abas soltas quanto dentro de grupos).
@@ -68389,6 +68485,7 @@ function cgTabDuplicate(id){
   var suffix=getCurrentLang()==='en'?' (copy)':' (cópia)';
   _cgTabs.push({id:newId,name:src.name+suffix,color:src.color});
   _cgTabConfigs[newId]=cfg?JSON.parse(JSON.stringify(cfg)):null;
+  if(_cgTabZoom[id]) _cgTabZoom[newId]=JSON.parse(JSON.stringify(_cgTabZoom[id])); // ov.1.1.2: cópia independente
   _cgActiveTabId=newId;
   cgTabsResetTransientState();
   cgTabsApplyConfig(_cgTabConfigs[newId]||_cgBlankTabConfig);
@@ -69562,10 +69659,10 @@ var _cgSuppressNextLabelClick = false;
         if(!pS){ for(var pk2=0;pk2<_cgSidebyPanels.length;pk2++){ var pp=_cgSidebyPanels[pk2]; var _ppMem=pp.memberIdxs||[pp.sIdx]; if(idxsS.length===0||idxsS.some(function(_si){return _ppMem.indexOf(_si)>=0;})){pS=pp;break;} } }
         if(pS){
           var dS=_cgSbyPxToData(pS,mx,my);
-          rlS.value=(rlS.axis==='y')?dS.y:dS.x;
+          rlS.value=_cgRound6((rlS.axis==='y')?dS.y:dS.x);   // ov.1.1.2: modelo = valor exibido
           delete rlS._pxX;
           var elS=document.getElementById('cgRLVal_'+_cgDragRefIdx);
-          if(elS) elS.value=parseFloat(rlS.value.toFixed(4));
+          if(elS) elS.value=rlS.value;
           if(_cgChart) _cgChart.update('none');
         }
         e.preventDefault(); return;
@@ -69611,19 +69708,15 @@ var _cgSuppressNextLabelClick = false;
       // ov.1.1.2: no Cleveland o eixo Y é CATEGÓRICO — getValueForPixel encaixa na observação
       // mais próxima, então a linha só parava "sobre a grade". Guardamos o pixel puro, como já
       // era feito no eixo X, para o arraste ser contínuo.
-      var _cvCat=((document.getElementById('cgChartType')||{}).value==='cleveland');
-      if(rl.axis==='y' && _cvCat){
-        rl._pxY=my;
-        var elCv=document.getElementById('cgRLVal_'+_cgDragRefIdx);
-        if(elCv) elCv.value=parseFloat(my.toFixed(1));
-      } else if(rl.axis==='y'){
-        rl.value=yAxis.getValueForPixel(my);
+      // ov.1.1.2: antes, no eixo X (e no Y categórico do Cleveland) era gravado o PIXEL e a
+      // janela 📌 mostrava esse pixel no lugar do valor. Agora o arraste converte o pixel no
+      // valor CONTÍNUO do eixo (também em eixos categóricos) e grava o mesmo número no modelo
+      // e no campo — o que se vê na janela é exatamente onde a linha está.
+      var _rv=_cgAxisValCont(rl.axis==='y'?yAxis:xAxis, rl.axis==='y'?my:mx);
+      if(isFinite(_rv)){
+        rl.value=_cgRound6(_rv); delete rl._pxX; delete rl._pxY;
         var el=document.getElementById('cgRLVal_'+_cgDragRefIdx);
-        if(el) el.value=parseFloat(rl.value.toFixed(4));
-      } else {
-        rl._pxX=mx;
-        var el=document.getElementById('cgRLVal_'+_cgDragRefIdx);
-        if(el) el.value=parseFloat(mx.toFixed(1));
+        if(el) el.value=rl.value;
       }
       _cgChart.update('none');
       e.preventDefault(); return;
@@ -69795,6 +69888,7 @@ var _cgSuppressNextLabelClick = false;
     if(_cgDragMode){
       _cgDragMode=false;
       var wasAnnot=_cgDragAnnotIdx>=0;
+      var wasRef=_cgDragRefIdx>=0;   // ov.1.1.2
       var wasLabelDrag=!!_cgDragLabelKey;
       // ao SOLTAR o valor da mediana, o navegador ainda dispara um `click` sobre
       // o texto — que caía no "1 clique = ocultar" e fazia o valor sumir logo após ser
@@ -69810,6 +69904,7 @@ var _cgSuppressNextLabelClick = false;
         _cgChart.update('none');
       }
       if(wasAnnot) cgRenderAnnotations();
+      if(wasRef){ try{ cgRenderRefLines(); }catch(e){} }   // ov.1.1.2: sincroniza a janela 📌
     }
   }
   canvas.addEventListener('mouseup',exitDrag);
