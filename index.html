@@ -741,7 +741,10 @@ body.light-theme .btn-topbar.btn-topbar-treat-clear:hover{background:rgba(248,11
 .treat-table.treat-grid .tg-colhead:hover{background:var(--bg3)}
 .treat-table.treat-grid .tg-rowhead{position:sticky;left:0;z-index:2;cursor:pointer;user-select:none;text-align:center;background:var(--bg4);color:var(--text4);font-weight:700;width:34px;min-width:34px}
 .treat-table.treat-grid .tg-rowhead:hover{background:var(--bg3)}
-.treat-table.treat-grid td.tg-cell{cursor:cell}
+.treat-table.treat-grid td.tg-cell{cursor:cell;user-select:none;-webkit-user-select:none}
+.treat-table.treat-grid td.tg-editing,.treat-table.treat-grid td.tg-editing input{user-select:text;-webkit-user-select:text}
+.treat-table.treat-grid td.tg-range{background:rgba(45,212,191,.24)!important}
+.treat-table.treat-grid td.tg-range-anchor{box-shadow:inset 0 0 0 2px #2dd4bf}
 .treat-table.treat-grid .tg-sel-col{background:rgba(45,212,191,.14)!important}
 .treat-table.treat-grid .tg-sel-row td{background:rgba(45,212,191,.14)!important}
 .treat-table.treat-grid .tg-colhead.tg-active,.treat-table.treat-grid .tg-rowhead.tg-active{background:rgba(45,212,191,.32);color:var(--text)}
@@ -1821,6 +1824,8 @@ body.colorblind-theme .treat-btn-op:hover{background:rgba(86,180,233,.24) !impor
 body.colorblind-theme .btn-topbar.btn-topbar-treat:hover{background:rgba(86,180,233,.18) !important;border-color:rgba(86,180,233,.45) !important;color:#56B4E9 !important}
 body.colorblind-theme .btn-topbar.btn-topbar-treat-clear:hover{background:rgba(213,94,0,.16) !important;border-color:rgba(213,94,0,.45) !important;color:#D55E00 !important}
 body.colorblind-theme .treat-table.treat-grid .tg-sel-col{background:rgba(86,180,233,.14) !important}
+body.colorblind-theme .treat-table.treat-grid td.tg-range{background:rgba(86,180,233,.26) !important}
+body.colorblind-theme .treat-table.treat-grid td.tg-range-anchor{box-shadow:inset 0 0 0 2px #56B4E9}
 body.colorblind-theme .treat-table.treat-grid .tg-sel-row td{background:rgba(86,180,233,.14) !important}
 body.colorblind-theme .treat-table.treat-grid .tg-colhead.tg-active,body.colorblind-theme .treat-table.treat-grid .tg-rowhead.tg-active{background:rgba(86,180,233,.32) !important}
 body.colorblind-theme .treat-table.treat-grid .tg-drop-target{outline:2px dashed #56B4E9 !important}
@@ -46142,7 +46147,7 @@ function cgGoHome(ev){
         <span class="section-title" id="treatTitlePreview" style="margin:0">Prévia dos dados <span class="badge" id="treatRowsBadge"></span><span class="treat-sel-badge" id="treatSelBadge" style="display:none"></span></span>
         <button type="button" class="treat-hint-toggle" id="treatHintToggle" onclick="treatToggleHint()" title="Mostrar/ocultar dicas de uso da grade">?</button>
       </div>
-      <div class="treat-grid-hint" id="treatGridHint" style="display:none"><div class="tgh-sec"><b>Seleção</b> — clique no cabeçalho (A, B, C…) ou no número da linha. Segure <kbd>Ctrl</kbd> para marcar várias avulsas e <kbd>Shift</kbd> para marcar uma faixa inteira. Arraste para reposicionar, <kbd>Del</kbd> exclui, e o botão direito traz excluir, inserir e "Mover para outra aba".</div><div class="tgh-sec"><b>Edição</b> — duplo clique numa célula edita o valor; duplo clique no nome da coluna renomeia.</div><div class="tgh-sec"><b>Fórmulas</b> — comece a célula com <kbd>=</kbd>, como no Excel, usando a letra da coluna e o número da linha: <code>=A2+B3</code>. Operadores: <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>^</code> (potência) e <code>%</code> (posposto: <code>=50%</code> vale 0,5). Parênteses funcionam normalmente.<div class="tgh-fns"><b>Funções sobre intervalos</b> (aceitam <code>A1:A20</code> e vários argumentos separados por <code>;</code>):<br><code>=media(A1:A20)</code> · <code>=mediana(A1:A20)</code> · <code>=soma(A1:A20)</code> · <code>=min(…)</code> · <code>=max(…)</code> · <code>=cont(…)</code><br><b>Funções de um valor:</b> <code>=ln(A1)</code> · <code>=log(A1)</code> (base 10) · <code>=log(A1;2)</code> (base 2) · <code>=raiz(A1)</code> · <code>=abs(A1)</code><br>Os nomes em inglês também valem: <code>average</code>, <code>mean</code>, <code>median</code>, <code>sum</code>, <code>count</code>, <code>sqrt</code>.</div><div class="tgh-note">⚠️ O resultado é gravado como <b>valor</b>. Diferente do Excel, não há recálculo automático: se uma célula referenciada mudar depois, o resultado já calculado permanece. A fórmula digitada fica registrada no histórico de transformações.</div></div></div>
+      <div class="treat-grid-hint" id="treatGridHint" style="display:none"><div class="tgh-sec"><b>Seleção</b> — clique no cabeçalho (A, B, C…) ou no número da linha. Segure <kbd>Ctrl</kbd> para marcar várias avulsas e <kbd>Shift</kbd> para marcar uma faixa inteira. Arraste para reposicionar, <kbd>Del</kbd> exclui, e o botão direito traz excluir, inserir e "Mover para outra aba".</div><div class="tgh-sec"><b>Copiar</b> — arraste sobre as células para marcar um bloco (<kbd>Shift</kbd>+clique amplia) ou clique num cabeçalho, e use <kbd>Ctrl</kbd>+<kbd>C</kbd>. Ao colar no Excel, cada valor cai na sua própria célula, como aqui. <kbd>Esc</kbd> limpa a seleção.</div><div class="tgh-sec"><b>Edição</b> — duplo clique numa célula edita o valor (<kbd>Esc</kbd> sai da edição sem salvar, <kbd>Enter</kbd> confirma); duplo clique no nome da coluna renomeia.</div><div class="tgh-sec"><b>Fórmulas</b> — comece a célula com <kbd>=</kbd>, como no Excel, usando a letra da coluna e o número da linha: <code>=A2+B3</code>. Operadores: <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>^</code> (potência) e <code>%</code> (posposto: <code>=50%</code> vale 0,5). Parênteses funcionam normalmente.<div class="tgh-fns"><b>Funções sobre intervalos</b> (aceitam <code>A1:A20</code> e vários argumentos separados por <code>;</code>):<br><code>=media(A1:A20)</code> · <code>=mediana(A1:A20)</code> · <code>=soma(A1:A20)</code> · <code>=min(…)</code> · <code>=max(…)</code> · <code>=cont(…)</code><br><b>Funções de um valor:</b> <code>=ln(A1)</code> · <code>=log(A1)</code> (base 10) · <code>=log(A1;2)</code> (base 2) · <code>=raiz(A1)</code> · <code>=abs(A1)</code><br>Os nomes em inglês também valem: <code>average</code>, <code>mean</code>, <code>median</code>, <code>sum</code>, <code>count</code>, <code>sqrt</code>.</div><div class="tgh-note">⚠️ O resultado é gravado como <b>valor</b>. Diferente do Excel, não há recálculo automático: se uma célula referenciada mudar depois, o resultado já calculado permanece. A fórmula digitada fica registrada no histórico de transformações.</div></div></div>
       <div class="treat-table-wrap" id="treatTableWrap"><table class="treat-table treat-grid" id="treatTable"></table></div>
       <div class="treat-grid-status" id="treatGridStatus"></div>
       <!-- ov.1.1.2: MINI ABAS (planilhas internas). Só aparecem quando a aba do Tratamento
@@ -49794,7 +49799,7 @@ function cgSwitchDataPanel(){
   // not a numeric scale, so a secondary numeric X axis has no meaning here. Y2 still applies (numeric Y).
   var x2RowField=document.getElementById('cgShowX2'); var x2Row=x2RowField?x2RowField.closest('.cg-field'):null;
   var y2RowField=document.getElementById('cgShowY2'); var y2Row=y2RowField?y2RowField.closest('.cg-field'):null;
-  if(x2Row) x2Row.style.display=(ct==='pareto'||ct==='boxplot'||ct==='violin'||ct==='controlchart')?'none':'flex';
+  if(x2Row) x2Row.style.display=(ct==='pareto'||ct==='boxplot'||ct==='violin'||ct==='controlchart'||ct==='bar')?'none':'flex';
   // no tipo Etapas o eixo Y é categórico (uma linha por série), então o Eixo Y2 (direita)
   // não faz sentido — removemos o controle. O Eixo X2 (topo) continua disponível (X é numérico).
   if(y2Row) y2Row.style.display=(ct==='pareto'||ct==='etapas'||ct==='cleveland')?'none':'flex';
@@ -49802,7 +49807,7 @@ function cgSwitchDataPanel(){
     var _etY2=document.getElementById('cgShowY2');
     if(_etY2 && _etY2.value!=='off'){ _etY2.value='off'; if(typeof cgUpdateSecondaryAxisFields==='function') cgUpdateSecondaryAxisFields(); }
   }
-  if(ct==='pareto'||ct==='boxplot'||ct==='violin'){
+  if(ct==='pareto'||ct==='boxplot'||ct==='violin'||ct==='bar'){
     var x2TitleF=document.getElementById('cgX2TitleField');
     if(x2TitleF) x2TitleF.style.display='none';
     var x2Sel2=document.getElementById('cgShowX2');
@@ -58244,6 +58249,104 @@ try{
   });
 }catch(e){ console.warn('cgPerAxisColors register',e); }
 
+// 🎯 Y2 "Retenção" — força o tick do valor de referência (100%) e remove qualquer
+// tick vizinho que caia perto o bastante para colidir visualmente com ele (o problema fica
+// pior quando o usuário aumenta o "Tamanho dos valores eixo Y2": textos maiores precisam de
+// mais espaço vertical entre ticks). O 100% sempre prevalece; o vizinho que colidiria some.
+function _cgY2ForceRefTick(refVal){
+  return function(axis){
+    var span=(axis.max-axis.min)||1;
+    var tol=span*0.001;
+    var alreadyThere=axis.ticks.some(function(tk){ return Math.abs(tk.value-refVal) < tol; });
+    var vals=axis.ticks.map(function(tk){return tk.value;}).sort(function(a,b){return a-b;});
+    var avgStep=span;
+    if(vals.length>1){
+      var diffs=[]; for(var vi=1;vi<vals.length;vi++) diffs.push(vals[vi]-vals[vi-1]);
+      avgStep=diffs.reduce(function(a,b){return a+b;},0)/diffs.length;
+    }
+    // raio de exclusão ao redor do 100% — qualquer tick auto dentro dele é removido
+    var exclR=Math.max(avgStep*0.45, span*0.035);
+    axis.ticks=axis.ticks.filter(function(tk){ return Math.abs(tk.value-refVal) > exclR; });
+    axis.ticks.push({value:refVal});
+    axis.ticks.sort(function(a,b){return a.value-b.value;});
+  };
+}
+
+/* ── EIXO Y2 (direita) para Barras, Boxplot e Violino ──────────────────────────────────────
+   Usa os mesmos controles e modos da Dispersão XY (Linear, Log, Personalizado, Retenção % do máx./mín./Real,
+   rótulo, mín/máx, tamanho/quantidade dos valores, algarismos significativos). Cada série escolhe o eixo
+   (Padrão / Y2) na janela 📊 Informações. Sem nenhuma série no Y2, o Y2 espelha o Y primário, como na Dispersão. */
+function _cgSeriesOnY2(si){ var e=document.getElementById('cgAxis_'+si); return !!e && e.value==='y2'; }
+// nesses tipos o eixo X é categórico: "X2 (topo)" não existe → some da lista e volta a "Padrão"
+function _cgCatAxisSync(){
+  document.querySelectorAll('select[id^="cgAxis_"]').forEach(function(sel){
+    for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value==='x2'){ sel.options[i].hidden=true; sel.options[i].disabled=true; sel.options[i].style.display='none'; } }
+    if(sel.value==='x2') sel.value='default';
+  });
+}
+/* yScale = objeto de opções do eixo Y primário (pode receber min/max fixos p/ alinhar os dois eixos).
+   o = {tv, axisValColor, axisFontSize, boldAxis, yTitle, anyY2, stacked, allVals, refVals, y2Range}
+   Devolve as opções do eixo y2, ou null se o Y2 não está ativo. */
+function _cgCatY2Scale(yScale, o){
+  var g=function(id){ return (document.getElementById(id)||{}).value; };
+  var mode=g('cgShowY2')||'off', anyY2=!!o.anyY2;
+  if(mode==='off' && !anyY2) return null;
+  var tv=o.tv, y2Title=g('cgY2Title')||'', cnt=parseInt(g('cgY2TickCount'))||0, vals=o.allVals||[];
+  var wgt=o.boldAxis?'bold':'normal';
+  var tickFont={family:tv.fontFamily,size:(parseInt(g('cgY2TickFontSize'))||12),weight:wgt};
+  var opts={type:(mode==='logarithmic'?'logarithmic':'linear'),display:true,position:'right',
+    title:{display:!!(y2Title||o.yTitle),text:y2Title||o.yTitle||'',color:tv.titleColor,font:{family:tv.fontFamily,size:o.axisFontSize,weight:wgt}},
+    ticks:{color:o.axisValColor,font:tickFont,maxTicksLimit:(cnt>0?cnt:undefined)},grid:{display:false}};
+  if(o.stacked) opts.stacked=true;
+  // alinha o Y2 ao Y primário (fixa os dois no mesmo intervalo, como a Dispersão faz nos modos de retenção)
+  var mirror=function(){
+    if(yScale.min===undefined && vals.length) yScale.min=Math.min(0,Math.min.apply(null,vals));
+    if(yScale.max===undefined && vals.length) yScale.max=Math.max.apply(null,vals);
+    if(yScale.min!==undefined) opts.min=yScale.min;
+    if(yScale.max!==undefined) opts.max=yScale.max;
+  };
+  var pctTicks=function(ref){
+    var sig=parseInt(g('cgSecSigFig'))||0;
+    opts.ticks={color:o.axisValColor,font:tickFont,maxTicksLimit:(cnt>0?cnt:undefined),callback:function(v){
+      if(!(ref&&isFinite(ref))) return v+'%';
+      var pct=(v/ref)*100, t=(sig>0)?_cgSigFig(pct,sig):String(Math.round(pct));
+      return (t===null?pct:t)+'%';
+    }};
+    if(ref&&isFinite(ref)) opts.afterBuildTicks=_cgY2ForceRefTick(ref);
+  };
+  if(mode==='custom'){
+    var cv=(g('cgY2CustomVals')||'').split(/\r?\n/).map(function(t){return t.trim();}).filter(function(t){return t!=='';});
+    var ref=o.refVals||[];
+    mirror();
+    if(ref.length&&cv.length){
+      opts.afterBuildTicks=function(axis){ axis.ticks=ref.map(function(v){return {value:v};}); };
+      opts.ticks={color:o.axisValColor,font:tickFont,callback:function(v){
+        var idx=-1,best=Infinity;
+        for(var q=0;q<ref.length;q++){ var d=Math.abs(ref[q]-v); if(d<best){best=d;idx=q;} }
+        return (idx>=0&&idx<cv.length)?cv[idx]:v;
+      }};
+    }
+  } else if(mode==='retention'||mode==='retentionMin'||mode==='retentionReal'){
+    var rf, tk;
+    if(mode==='retention'){ rf=vals.length?Math.max.apply(null,vals):1; tk='y2RetentionTitle'; }
+    else if(mode==='retentionMin'){ rf=vals.length?Math.min.apply(null,vals):1; tk='y2RetentionMinTitle'; }
+    else { rf=parseFloat(g('cgY2RetentionRealRef')); tk='y2RetentionRealTitle'; }
+    mirror();
+    opts.title.display=true; opts.title.text=y2Title||cgT(tk);
+    pctTicks(rf);
+  } else {
+    // Linear / Log (ou "Off" com séries atribuídas ao Y2)
+    if(o.y2Range){ opts.min=o.y2Range.min; opts.max=o.y2Range.max; }
+    if(!anyY2) mirror();
+    var mn=parseFloat(g('cgY2Min')), mx=parseFloat(g('cgY2Max'));
+    if(isFinite(mn)) opts.min=mn;
+    if(isFinite(mx)) opts.max=mx;
+    var sg=parseInt(g('cgSecSigFig'))||0;
+    if(sg>0) opts.ticks.callback=function(v){ var t=_cgSigFig(Number(v),sg); return (t===null)?v:t; };
+  }
+  return opts;
+}
+
 /* ov.1.1.2 — Linhas de referência + Anotações para gráficos de eixo categórico (Histograma
    e Barras). Antes o desenho existia só dentro do ramo do Histograma, e o ramo de Barras não
    tinha nenhum plugin equivalente — por isso, em Barras, linhas e anotações não apareciam.
@@ -59929,6 +60032,8 @@ function _cgUpdateChartRaw(){
     var isHorizontal=(barOrientation==='horizontal');
     var isStacked=(barGroupMode==='stacked'||barGroupMode==='stacked100');
     var is100=(barGroupMode==='stacked100');
+    var _barY2On=!isHorizontal&&!is100;   // Y2 só existe com valores no eixo vertical e fora do 100% empilhado
+    _cgCatAxisSync();
 
     // Build datasets from series data (Y values only, using X as category label)
     var barLabels=null;
@@ -59994,11 +60099,35 @@ function _cgUpdateChartRaw(){
         barPercentage:barWidth/100,
         categoryPercentage:barSpacing/100,
         _rawPts:bParsed.pts,
+        _rawLabels:bParsed.labels,
         _color:bcol,
-        _cgTexture:_bTex
+        _cgTexture:_bTex,
+        yAxisID:(_barY2On&&_cgSeriesOnY2(bi))?'y2':'y'
       });
     }
     if(!barLabels||!barDatasets.length){cgUpdateStats(statsText);cgClearChartCanvas();return;}
+
+    // Barra de valores calculados (👁️): o pré-cálculo comum só entende "X Y" numérico, então séries no formato
+    // "rótulo,valor" (ex.: Gráfico simplificado) ficavam SEM texto. Aqui a barra é refeita com todas as séries:
+    // numéricas → n/μ/σ (como antes); com rótulos → nome da série + valor de cada categoria.
+    (function(){
+      statsText.length=0;
+      var fmt=function(v){ return String(parseFloat(Number(v).toPrecision(6))); };
+      barDatasets.forEach(function(bd){
+        var ys=bd._rawPts.map(function(p){return p.y;}), labs=bd._rawLabels||[];
+        var head='<span style="color:'+bd._color+';font-weight:600">'+bd.label+'</span>: ';
+        var labelled=labs.some(function(l){ return !/^\s*[-+]?\d+([.,]\d+)?\s*$/.test(l); });
+        if(labelled){
+          var items=ys.map(function(y,i){ return (labs[i]!==undefined?labs[i]:(i+1))+'='+fmt(y); });
+          var MAXI=10, extra=items.length-MAXI;
+          statsText.push(head+(extra>0?items.slice(0,MAXI).join(' · ')+' … (+'+extra+')':items.join(' · ')));
+        } else {
+          var n=ys.length, mean=ys.reduce(function(a,b){return a+b;},0)/n;
+          var sd=Math.sqrt(ys.reduce(function(a,v){return a+(v-mean)*(v-mean);},0)/Math.max(1,n-1));
+          statsText.push(head+'n='+n+' μ='+mean.toFixed(3)+' σ='+sd.toFixed(3));
+        }
+      });
+    })();
 
     // Stacked 100%: normalize values
     if(is100){
@@ -60070,6 +60199,17 @@ function _cgUpdateChartRaw(){
     if(is100) bYScale.max=100;
     if(isFinite(yMin)) bYScale.min=yMin;
     if(isFinite(yMax)) bYScale.max=yMax;
+    // Eixo Y2 (direita): mesmos modos da Dispersão XY
+    var bY2Scale=null;
+    if(_barY2On){
+      var _bAll=[];
+      if(isStacked){ barLabels.forEach(function(_,ci){ var ps=0,ng=0; barDatasets.forEach(function(d){ var v=Number(d.data[ci])||0; if(v>=0) ps+=v; else ng+=v; }); _bAll.push(ps,ng); }); }
+      else barDatasets.forEach(function(d){ d.data.forEach(function(v){ if(isFinite(v)) _bAll.push(Number(v)); }); });
+      bY2Scale=_cgCatY2Scale(bYScale,{tv:tv,axisValColor:axisValColor,axisFontSize:axisFontSize,boldAxis:boldAxis,yTitle:yTitle,
+        anyY2:barDatasets.some(function(d){return d.yAxisID==='y2';}),stacked:isStacked,allVals:_bAll,refVals:barDatasets[0].data.slice()});
+    }
+    var _barScales={x:isHorizontal?bYScale:bXScale, y:isHorizontal?bXScale:bYScale};
+    if(bY2Scale) _barScales.y2=bY2Scale;
 
     // afterDraw: error bars + data labels + bar connector lines
     var barConnector=(document.getElementById('cgBarConnector')||{}).checked===true;
@@ -60146,6 +60286,7 @@ function _cgUpdateChartRaw(){
           if(ds._errHi===undefined) return;
           var meta=chart.getDatasetMeta(dsi);
           if(!meta||!meta.data) return;
+          var _yAxD=(ds.yAxisID==='y2'&&chart.scales.y2)?chart.scales.y2:yAx;   // barra de erro usa o eixo da própria série
           ctx5.strokeStyle=ds.borderColor||'#ec4899';
           ctx5.lineWidth=1.5;
           ctx5.setLineDash([]);
@@ -60162,13 +60303,13 @@ function _cgUpdateChartRaw(){
             }
             if(isHorizontal){
               var bY=bar.y, valHi=rawVal+_eHi, valLo=rawVal-_eLo;
-              var px1=yAx.getPixelForValue(valHi), px2=yAx.getPixelForValue(valLo);
+              var px1=_yAxD.getPixelForValue(valHi), px2=_yAxD.getPixelForValue(valLo);
               ctx5.beginPath();ctx5.moveTo(px2,bY);ctx5.lineTo(px1,bY);ctx5.stroke();
               ctx5.beginPath();ctx5.moveTo(px1,bY-capW);ctx5.lineTo(px1,bY+capW);ctx5.stroke();
               ctx5.beginPath();ctx5.moveTo(px2,bY-capW);ctx5.lineTo(px2,bY+capW);ctx5.stroke();
             } else {
               var bX=bar.x, valHi2=rawVal+_eHi, valLo2=rawVal-_eLo;
-              var py1=yAx.getPixelForValue(valHi2), py2=yAx.getPixelForValue(valLo2);
+              var py1=_yAxD.getPixelForValue(valHi2), py2=_yAxD.getPixelForValue(valLo2);
               ctx5.beginPath();ctx5.moveTo(bX,py2);ctx5.lineTo(bX,py1);ctx5.stroke();
               ctx5.beginPath();ctx5.moveTo(bX-capW,py1);ctx5.lineTo(bX+capW,py1);ctx5.stroke();
               ctx5.beginPath();ctx5.moveTo(bX-capW,py2);ctx5.lineTo(bX+capW,py2);ctx5.stroke();
@@ -60305,10 +60446,7 @@ function _cgUpdateChartRaw(){
           tooltip:{enabled:false,external:cgChartTooltipExternal,mode:'point',intersect:true}, // card de hover — SÓ quando o mouse está EM CIMA do ponto
           zoom:{zoom:{drag:{enabled:true,threshold:10,backgroundColor:'rgba(236,72,153,0.15)',borderColor:'#ec4899',borderWidth:1},mode:isHorizontal?'x':'y'}}
         },
-        scales:{
-          x:isHorizontal?bYScale:bXScale,
-          y:isHorizontal?bXScale:bYScale
-        }
+        scales:_barScales
       }
     });
 
@@ -62590,6 +62728,7 @@ function _cgUpdateChartRaw(){
     // Each series textarea may have 1 or N columns of Y values.
     // Format auto-detected: if first line has >1 tab-separated numbers → multi-column mode.
     // Col headers stored in cgColName_{i} as JSON array (set by multi-col import).
+    _cgCatAxisSync();
     var bpSeriesData=[];
     var bpLabels=[];
 
@@ -62751,7 +62890,8 @@ function _cgUpdateChartRaw(){
           seriesIdx:si,
           seriesName:sName,
           colName:colName2,
-          texture:cgGetSeriesTexture(si)
+          texture:cgGetSeriesTexture(si),
+          axis:(_cgSeriesOnY2(si)?'y2':'y')
         });
       });
     }
@@ -62856,12 +62996,16 @@ function _cgUpdateChartRaw(){
     var nBoxesExt = bpDisplayLabelsExt.length;
 
     // ── Y-axis range ──────────────────────────────────────────────────────────
-    var allVals=[];
+    var allVals=[], allVals2=[];           // valores do Y primário e do Y2 (séries atribuídas ao Y2)
     bpSeriesData.forEach(function(s){
-      allVals.push(s.min,s.max);
-      s.outliers.forEach(function(o){allVals.push(o);});
-      if(boxShowData) s.rawVals.forEach(function(v){allVals.push(v);});
+      var t=(s.axis==='y2')?allVals2:allVals;
+      t.push(s.min,s.max);
+      s.outliers.forEach(function(o){t.push(o);});
+      if(boxShowData) s.rawVals.forEach(function(v){t.push(v);});
     });
+    var bpAnyY2=allVals2.length>0, bpYR2=null;
+    if(bpAnyY2){ var _lo2=Math.min.apply(null,allVals2), _hi2=Math.max.apply(null,allVals2), _p2=(_hi2-_lo2)*0.12||1; bpYR2={min:_lo2-_p2,max:_hi2+_p2}; }
+    if(!allVals.length) allVals=allVals2.slice();
     var bpYmin=isFinite(yMin)?yMin:Math.min.apply(null,allVals);
     var bpYmax=isFinite(yMax)?yMax:Math.max.apply(null,allVals);
     var bpPad=(bpYmax-bpYmin)*0.12||1;
@@ -62878,9 +63022,11 @@ function _cgUpdateChartRaw(){
       var ctx2=chart.ctx;
       var xAx=chart.scales.x, yAx=chart.scales.y;
       if(!xAx||!yAx) return;
+      var _yOf=function(sd){ return (sd.axis==='y2'&&chart.scales.y2)?chart.scales.y2:yAx; };   // eixo vertical de cada caixa
       ctx2.save();
 
       bpSeriesData.forEach(function(s,idx){
+        var yAx=_yOf(s);
         var col=s.color;
         var slotW=(xAx.right-xAx.left)/Math.max(nBoxesExt,1);
         // cx = center of this box: shifted base index + column spacing + whole-series shift
@@ -63155,10 +63301,10 @@ function _cgUpdateChartRaw(){
               // Exclusivo pair: every col of siB → the single anchor of siA
               var anchorE=colsA[0];
               var anchorCx=xAx.getPixelForValue(anchorE.globalIdx)+(anchorE.s.colOffset||0)*slotWc+(anchorE.s.hShift||0)*slotWc;
-              var anchorCy=yAx.getPixelForValue(anchorE.s.med);
+              var anchorCy=_yOf(anchorE.s).getPixelForValue(anchorE.s.med);
               colsB.forEach(function(tgt){
                 var tcx=xAx.getPixelForValue(tgt.globalIdx)+(tgt.s.colOffset||0)*slotWc+(tgt.s.hShift||0)*slotWc;
-                var tcy=yAx.getPixelForValue(tgt.s.med);
+                var tcy=_yOf(tgt.s).getPixelForValue(tgt.s.med);
                 ctx2.strokeStyle=tgt.s.color;
                 ctx2.beginPath();ctx2.moveTo(anchorCx,anchorCy);ctx2.lineTo(tcx,tcy);ctx2.stroke();
               });
@@ -63170,8 +63316,8 @@ function _cgUpdateChartRaw(){
                 var eB=colsB[Math.min(ci3,colsB.length-1)];
                 var cxA=xAx.getPixelForValue(eA.globalIdx)+(eA.s.colOffset||0)*slotWc+(eA.s.hShift||0)*slotWc;
                 var cxB=xAx.getPixelForValue(eB.globalIdx)+(eB.s.colOffset||0)*slotWc+(eB.s.hShift||0)*slotWc;
-                var cyA=yAx.getPixelForValue(eA.s.med);
-                var cyB=yAx.getPixelForValue(eB.s.med);
+                var cyA=_yOf(eA.s).getPixelForValue(eA.s.med);
+                var cyB=_yOf(eB.s).getPixelForValue(eB.s.med);
                 ctx2.strokeStyle=eA.s.color;
                 ctx2.beginPath();ctx2.moveTo(cxA,cyA);ctx2.lineTo(cxB,cyB);ctx2.stroke();
               }
@@ -63199,8 +63345,8 @@ function _cgUpdateChartRaw(){
               var cur=grpArr[gi], nxt=grpArr[gi+1];
               var ccx=xAx.getPixelForValue(cur.globalIdx)+(cur.s.colOffset||0)*slotWc+(cur.s.hShift||0)*slotWc;
               var ncx=xAx.getPixelForValue(nxt.globalIdx)+(nxt.s.colOffset||0)*slotWc+(nxt.s.hShift||0)*slotWc;
-              var cyM=yAx.getPixelForValue(cur.s.med);
-              var nyM=yAx.getPixelForValue(nxt.s.med);
+              var cyM=_yOf(cur.s).getPixelForValue(cur.s.med);
+              var nyM=_yOf(nxt.s).getPixelForValue(nxt.s.med);
               ctx2.strokeStyle=cur.s.color;
               ctx2.beginPath();ctx2.moveTo(ccx,cyM);ctx2.lineTo(ncx,nyM);ctx2.stroke();
             }
@@ -63744,6 +63890,9 @@ function _cgUpdateChartRaw(){
     };
     if(isFinite(yMin)) bpOpts.scales.y.min=yMin;
     if(isFinite(yMax)) bpOpts.scales.y.max=yMax;
+    var _bpY2=_cgCatY2Scale(bpOpts.scales.y,{tv:tv,axisValColor:axisValColor,axisFontSize:axisFontSize,boldAxis:boldAxis,yTitle:yTitle,
+      anyY2:bpAnyY2,allVals:allVals.concat(allVals2),refVals:bpSeriesData[0].rawVals.slice(),y2Range:bpYR2});
+    if(_bpY2) bpOpts.scales.y2=_bpY2;
 
     _cgChart=new Chart(bpContainer,{
       type:'bar',
@@ -63842,6 +63991,7 @@ function _cgUpdateChartRaw(){
 
     // ── Parse per-series/column stats — identical convention to the Boxplot's own
     // multi-column format (1ª linha opcional de nomes, TAB/;/, como separador). ──
+    _cgCatAxisSync();
     var vlSeriesData=[];
     var vlLabels=[];
 
@@ -63981,7 +64131,8 @@ function _cgUpdateChartRaw(){
           color:colColor, rawVals:vv, n:vn,
           colOffset:vColOffset, hShift:vsHShift, nCols:vnCols,
           seriesIdx:vsi, seriesName:vsName, colName:colName2,
-          kde:vKde
+          kde:vKde,
+          axis:(_cgSeriesOnY2(vsi)?'y2':'y')
         });
       });
     }
@@ -64049,12 +64200,16 @@ function _cgUpdateChartRaw(){
     for(var vpi2=0;vpi2<vlExtraRight;vpi2++) vlDisplayLabelsExt.push('');
     var vlNBoxesExt=vlDisplayLabelsExt.length;
 
-    var vlAllVals=[];
+    var vlAllVals=[], vlAllVals2=[];       // valores do Y primário e do Y2 (séries atribuídas ao Y2)
     vlSeriesData.forEach(function(s){
-      if(s.kde.xs.length){ vlAllVals.push(s.kde.xs[0], s.kde.xs[s.kde.xs.length-1]); }
-      else { vlAllVals.push(s.min,s.max); }
-      if(vlShowData) s.rawVals.forEach(function(v){vlAllVals.push(v);});
+      var t=(s.axis==='y2')?vlAllVals2:vlAllVals;
+      if(s.kde.xs.length){ t.push(s.kde.xs[0], s.kde.xs[s.kde.xs.length-1]); }
+      else { t.push(s.min,s.max); }
+      if(vlShowData) s.rawVals.forEach(function(v){t.push(v);});
     });
+    var vlAnyY2=vlAllVals2.length>0, vlYR2=null;
+    if(vlAnyY2){ var _vlo2=Math.min.apply(null,vlAllVals2), _vhi2=Math.max.apply(null,vlAllVals2), _vp2=(_vhi2-_vlo2)*0.12||1; vlYR2={min:_vlo2-_vp2,max:_vhi2+_vp2}; }
+    if(!vlAllVals.length) vlAllVals=vlAllVals2.slice();
     var vlYmin=isFinite(yMin)?yMin:Math.min.apply(null,vlAllVals);
     var vlYmax=isFinite(yMax)?yMax:Math.max.apply(null,vlAllVals);
     var vlPad=(vlYmax-vlYmin)*0.12||1;
@@ -64069,6 +64224,7 @@ function _cgUpdateChartRaw(){
       ctx2.save();
 
       vlSeriesData.forEach(function(s,idx){
+        var yAx=(s.axis==='y2'&&chart.scales.y2)?chart.scales.y2:chart.scales.y;   // eixo vertical desta série
         var col=s.color;
         var slotW=(xAx.right-xAx.left)/Math.max(vlNBoxesExt,1);
         var cx=xAx.getPixelForValue(idx+vlIndexOffset)+(s.colOffset||0)*slotW+(s.hShift||0)*slotW;
@@ -64329,6 +64485,9 @@ function _cgUpdateChartRaw(){
     };
     if(isFinite(yMin)) vlOpts.scales.y.min=yMin;
     if(isFinite(yMax)) vlOpts.scales.y.max=yMax;
+    var _vlY2=_cgCatY2Scale(vlOpts.scales.y,{tv:tv,axisValColor:axisValColor,axisFontSize:axisFontSize,boldAxis:boldAxis,yTitle:yTitle,
+      anyY2:vlAnyY2,allVals:vlAllVals.concat(vlAllVals2),refVals:vlSeriesData[0].rawVals.slice(),y2Range:vlYR2});
+    if(_vlY2) vlOpts.scales.y2=_vlY2;
 
     _cgChart=new Chart(vlContainer,{
       type:'bar',
@@ -65407,28 +65566,6 @@ function _cgUpdateChartRaw(){
         return (idx>=0&&idx<x2CustomVals.length)?x2CustomVals[idx]:v;
       }};
     }
-  }
-  // 🎯 Y2 "Retenção" — força o tick do valor de referência (100%) e remove qualquer
-  // tick vizinho que caia perto o bastante para colidir visualmente com ele (o problema fica
-  // pior quando o usuário aumenta o "Tamanho dos valores eixo Y2": textos maiores precisam de
-  // mais espaço vertical entre ticks). O 100% sempre prevalece; o vizinho que colidiria some.
-  function _cgY2ForceRefTick(refVal){
-    return function(axis){
-      var span=(axis.max-axis.min)||1;
-      var tol=span*0.001;
-      var alreadyThere=axis.ticks.some(function(tk){ return Math.abs(tk.value-refVal) < tol; });
-      var vals=axis.ticks.map(function(tk){return tk.value;}).sort(function(a,b){return a-b;});
-      var avgStep=span;
-      if(vals.length>1){
-        var diffs=[]; for(var vi=1;vi<vals.length;vi++) diffs.push(vals[vi]-vals[vi-1]);
-        avgStep=diffs.reduce(function(a,b){return a+b;},0)/diffs.length;
-      }
-      // raio de exclusão ao redor do 100% — qualquer tick auto dentro dele é removido
-      var exclR=Math.max(avgStep*0.45, span*0.035);
-      axis.ticks=axis.ticks.filter(function(tk){ return Math.abs(tk.value-refVal) > exclR; });
-      axis.ticks.push({value:refVal});
-      axis.ticks.sort(function(a,b){return a.value-b.value;});
-    };
   }
   var y2Opts={type:(y2Mode==='logarithmic'?'logarithmic':'linear'),display:allDatasets.some(function(d){return d.yAxisID==='y2';})||y2Mode!=='off',position:'right',
     title:{display:!!(y2Title||yTitle),text:y2Title||(yTitle?yTitle:''),color:tv.titleColor,font:y2TitleFont},
@@ -68594,19 +68731,24 @@ function cgTabRename(id){
   cgRenderTabs();
 }
 
+/* Abre o seletor de cor nativo (input escondido) ancorado num elemento.
+   Bug antigo: o input fica em left:-9999px; reposicioná-lo e chamar click() no mesmo instante fazia o popup
+   abrir ancorado no layout ANTIGO (fora da tela) — por isso só aparecia na 2ª tentativa.
+   Forçar o recálculo de layout antes do click() resolve já na 1ª vez. */
+function _openAnchoredColorPicker(picker, ev){
+  var rect=(ev&&ev.target&&ev.target.getBoundingClientRect)?ev.target.getBoundingClientRect():null;
+  if(rect){ picker.style.left=Math.round(rect.left)+'px'; picker.style.top=Math.round(rect.top)+'px'; }
+  void picker.offsetWidth;            // força o layout com a nova posição
+  picker.click();
+}
 function cgTabPickColor(id, ev){
   var t=_cgTabs.filter(function(x){return x.id===id;})[0];
   if(!t) return;
   var picker=document.getElementById('cgTabColorPicker');
   if(!picker) return;
-  var rect = (ev && ev.target && ev.target.getBoundingClientRect) ? ev.target.getBoundingClientRect() : null;
-  if(rect){
-    picker.style.left = Math.round(rect.left) + 'px';
-    picker.style.top  = Math.round(rect.top) + 'px';
-  }
   picker.value=t.color;
   picker.oninput=function(){ t.color=picker.value; cgRenderTabs(); };
-  picker.click();
+  _openAnchoredColorPicker(picker, ev);
 }
 
 /*    GRUPOS DE ABAS (pastas)
@@ -68668,11 +68810,9 @@ function cgTabGroupRename(groupId){
 function cgTabGroupPickColor(groupId, ev){
   var g=_cgGroupById(groupId); if(!g) return;
   var picker=document.getElementById('cgTabColorPicker'); if(!picker) return;
-  var rect=(ev&&ev.target&&ev.target.getBoundingClientRect)?ev.target.getBoundingClientRect():null;
-  if(rect){ picker.style.left=Math.round(rect.left)+'px'; picker.style.top=Math.round(rect.top)+'px'; }
   picker.value=g.color;
   picker.oninput=function(){ g.color=picker.value; cgRenderTabs(); };
-  picker.click();
+  _openAnchoredColorPicker(picker, ev);
 }
 function cgTabGroupToggle(groupId){
   var g=_cgGroupById(groupId); if(!g) return;
@@ -73751,7 +73891,7 @@ var TREAT_I18N = {
   treatBtnSendTec:['🧬 Técnicas de Análise','🧬 Analysis Techniques'],
   treatStatsTitle:['📈 Estatísticas descritivas','📈 Descriptive statistics'],
   treatTitlePreview:['Prévia dos dados','Data preview'],
-  treatGridHint:['<div class="tgh-sec"><b>Seleção</b> — clique no cabeçalho (A, B, C…) ou no número da linha. Segure <kbd>Ctrl</kbd> para marcar várias avulsas e <kbd>Shift</kbd> para marcar uma faixa inteira. Arraste para reposicionar, <kbd>Del</kbd> exclui, e o botão direito traz excluir, inserir e "Mover para outra aba".</div><div class="tgh-sec"><b>Edição</b> — duplo clique numa célula edita o valor; duplo clique no nome da coluna renomeia.</div><div class="tgh-sec"><b>Fórmulas</b> — comece a célula com <kbd>=</kbd>, como no Excel, usando a letra da coluna e o número da linha: <code>=A2+B3</code>. Operadores: <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>^</code> (potência) e <code>%</code> (posposto: <code>=50%</code> vale 0,5). Parênteses funcionam normalmente.<div class="tgh-fns"><b>Funções sobre intervalos</b> (aceitam <code>A1:A20</code> e vários argumentos separados por <code>;</code>):<br><code>=media(A1:A20)</code> · <code>=mediana(A1:A20)</code> · <code>=soma(A1:A20)</code> · <code>=min(…)</code> · <code>=max(…)</code> · <code>=cont(…)</code><br><b>Funções de um valor:</b> <code>=ln(A1)</code> · <code>=log(A1)</code> (base 10) · <code>=log(A1;2)</code> (base 2) · <code>=raiz(A1)</code> · <code>=abs(A1)</code><br>Os nomes em inglês também valem: <code>average</code>, <code>mean</code>, <code>median</code>, <code>sum</code>, <code>count</code>, <code>sqrt</code>.</div><div class="tgh-note">⚠️ O resultado é gravado como <b>valor</b>. Diferente do Excel, não há recálculo automático: se uma célula referenciada mudar depois, o resultado já calculado permanece. A fórmula digitada fica registrada no histórico de transformações.</div></div>','<div class="tgh-sec"><b>Selection</b> — click a column header (A, B, C…) or a row number. Hold <kbd>Ctrl</kbd> to pick several individually and <kbd>Shift</kbd> to pick a whole range. Drag to reposition, <kbd>Del</kbd> deletes, and right-click offers delete, insert and "Move to another tab".</div><div class="tgh-sec"><b>Editing</b> — double-click a cell to edit its value; double-click a column name to rename it.</div><div class="tgh-sec"><b>Formulas</b> — start the cell with <kbd>=</kbd>, just like Excel, using the column letter and row number: <code>=A2+B3</code>. Operators: <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>^</code> (power) and <code>%</code> (postfix: <code>=50%</code> is 0.5). Parentheses work as expected.<div class="tgh-fns"><b>Range functions</b> (accept <code>A1:A20</code> and several arguments separated by <code>;</code>):<br><code>=average(A1:A20)</code> · <code>=median(A1:A20)</code> · <code>=sum(A1:A20)</code> · <code>=min(…)</code> · <code>=max(…)</code> · <code>=count(…)</code><br><b>Single-value functions:</b> <code>=ln(A1)</code> · <code>=log(A1)</code> (base 10) · <code>=log(A1;2)</code> (base 2) · <code>=sqrt(A1)</code> · <code>=abs(A1)</code><br>Portuguese names also work: <code>media</code>, <code>mediana</code>, <code>soma</code>, <code>cont</code>, <code>raiz</code>.</div><div class="tgh-note">⚠️ The result is stored as a <b>value</b>. Unlike Excel, there is no automatic recalculation: if a referenced cell changes later, the already-computed result stays. The typed formula is recorded in the transformation history.</div></div>'],
+  treatGridHint:['<div class="tgh-sec"><b>Seleção</b> — clique no cabeçalho (A, B, C…) ou no número da linha. Segure <kbd>Ctrl</kbd> para marcar várias avulsas e <kbd>Shift</kbd> para marcar uma faixa inteira. Arraste para reposicionar, <kbd>Del</kbd> exclui, e o botão direito traz excluir, inserir e "Mover para outra aba".</div><div class="tgh-sec"><b>Copiar</b> — arraste sobre as células para marcar um bloco (<kbd>Shift</kbd>+clique amplia) ou clique num cabeçalho, e use <kbd>Ctrl</kbd>+<kbd>C</kbd>. Ao colar no Excel, cada valor cai na sua própria célula, como aqui. <kbd>Esc</kbd> limpa a seleção.</div><div class="tgh-sec"><b>Edição</b> — duplo clique numa célula edita o valor (<kbd>Esc</kbd> sai da edição sem salvar, <kbd>Enter</kbd> confirma); duplo clique no nome da coluna renomeia.</div><div class="tgh-sec"><b>Fórmulas</b> — comece a célula com <kbd>=</kbd>, como no Excel, usando a letra da coluna e o número da linha: <code>=A2+B3</code>. Operadores: <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>^</code> (potência) e <code>%</code> (posposto: <code>=50%</code> vale 0,5). Parênteses funcionam normalmente.<div class="tgh-fns"><b>Funções sobre intervalos</b> (aceitam <code>A1:A20</code> e vários argumentos separados por <code>;</code>):<br><code>=media(A1:A20)</code> · <code>=mediana(A1:A20)</code> · <code>=soma(A1:A20)</code> · <code>=min(…)</code> · <code>=max(…)</code> · <code>=cont(…)</code><br><b>Funções de um valor:</b> <code>=ln(A1)</code> · <code>=log(A1)</code> (base 10) · <code>=log(A1;2)</code> (base 2) · <code>=raiz(A1)</code> · <code>=abs(A1)</code><br>Os nomes em inglês também valem: <code>average</code>, <code>mean</code>, <code>median</code>, <code>sum</code>, <code>count</code>, <code>sqrt</code>.</div><div class="tgh-note">⚠️ O resultado é gravado como <b>valor</b>. Diferente do Excel, não há recálculo automático: se uma célula referenciada mudar depois, o resultado já calculado permanece. A fórmula digitada fica registrada no histórico de transformações.</div></div>','<div class="tgh-sec"><b>Selection</b> — click a column header (A, B, C…) or a row number. Hold <kbd>Ctrl</kbd> to pick several individually and <kbd>Shift</kbd> to pick a whole range. Drag to reposition, <kbd>Del</kbd> deletes, and right-click offers delete, insert and "Move to another tab".</div><div class="tgh-sec"><b>Copy</b> — drag over cells to select a block (<kbd>Shift</kbd>+click extends it) or click a header, then press <kbd>Ctrl</kbd>+<kbd>C</kbd>. Pasted into Excel, each value lands in its own cell, just like here. <kbd>Esc</kbd> clears the selection.</div><div class="tgh-sec"><b>Editing</b> — double-click a cell to edit its value (<kbd>Esc</kbd> leaves editing without saving, <kbd>Enter</kbd> confirms); double-click a column name to rename it.</div><div class="tgh-sec"><b>Formulas</b> — start the cell with <kbd>=</kbd>, just like Excel, using the column letter and row number: <code>=A2+B3</code>. Operators: <code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>^</code> (power) and <code>%</code> (postfix: <code>=50%</code> is 0.5). Parentheses work as expected.<div class="tgh-fns"><b>Range functions</b> (accept <code>A1:A20</code> and several arguments separated by <code>;</code>):<br><code>=average(A1:A20)</code> · <code>=median(A1:A20)</code> · <code>=sum(A1:A20)</code> · <code>=min(…)</code> · <code>=max(…)</code> · <code>=count(…)</code><br><b>Single-value functions:</b> <code>=ln(A1)</code> · <code>=log(A1)</code> (base 10) · <code>=log(A1;2)</code> (base 2) · <code>=sqrt(A1)</code> · <code>=abs(A1)</code><br>Portuguese names also work: <code>media</code>, <code>mediana</code>, <code>soma</code>, <code>cont</code>, <code>raiz</code>.</div><div class="tgh-note">⚠️ The result is stored as a <b>value</b>. Unlike Excel, there is no automatic recalculation: if a referenced cell changes later, the already-computed result stays. The typed formula is recorded in the transformation history.</div></div>'],
   treatAccLogLbl:['Histórico de transformações','Transformation history'],
   treatSheetsLbl:['Planilhas','Sheets'],
   treatLogEmpty:['Nenhuma transformação aplicada ainda nesta sessão.','No transformation applied yet this session.'],
@@ -74623,11 +74763,9 @@ function treatTabPickColor(id, ev){
   if(!t) return;
   var picker=document.getElementById('treatTabColorPicker');
   if(!picker) return;
-  var rect=(ev&&ev.target&&ev.target.getBoundingClientRect)?ev.target.getBoundingClientRect():null;
-  if(rect){ picker.style.left=Math.round(rect.left)+'px'; picker.style.top=Math.round(rect.top)+'px'; }
   picker.value=t.color;
   picker.oninput=function(){ t.color=picker.value; treatRenderTabs(); };
-  picker.click();
+  _openAnchoredColorPicker(picker, ev);
 }
 
 // ── refresh geral (tabela, seletores de coluna, diagnóstico, cards) ─────────
@@ -74655,6 +74793,7 @@ function treatRefreshAll(){
     if(!_keep.length) _treatGridSel=null;
     else _treatGridSel={type:_treatGridSel.type, index:(_keep.indexOf(_treatGridSel.index)>-1?_treatGridSel.index:_keep[0]), list:_keep};
   }
+  if(_treatCellSel && (_treatCellSel.r1>=_treatRows.length||_treatCellSel.r2>=_treatRows.length||_treatCellSel.c1>=_treatFields.length||_treatCellSel.c2>=_treatFields.length)) _treatCellSel=null;
   treatRenderTable();
   treatFillColumnSelects();
   treatRenderDiagnostics();
@@ -74829,7 +74968,9 @@ function _treatGridApplySelectionHighlight(tbl){
   tbl.querySelectorAll('.tg-sel-col').forEach(function(el){el.classList.remove('tg-sel-col');});
   tbl.querySelectorAll('.tg-sel-row').forEach(function(el){el.classList.remove('tg-sel-row');});
   tbl.querySelectorAll('.tg-active').forEach(function(el){el.classList.remove('tg-active');});
-  if(!_treatGridSel) return;
+  if(_treatGridSel) _treatCellSel=null;     // coluna/linha inteira e bloco de células nunca coexistem
+  _treatRangeApply(tbl);
+  if(!_treatGridSel){ var _bd=document.getElementById('treatSelBadge'); if(_bd) _bd.style.display='none'; return; }
   // ov.1.1.2: realca TODOS os indices selecionados (antes era so um)
   var sel=_treatSelList();
   if(_treatGridSel.type==='col'){
@@ -75413,6 +75554,7 @@ function _treatGridWireRows(tbl, fromIdx){
     td._tgWired=true;
     td.addEventListener('dblclick',function(){
       if(td.classList.contains('tg-editing')) return;
+      td._done=false;      // BUG: a flag ficava true após um cancelamento; na edição seguinte ESC/Enter/blur não faziam nada
       var ri=+td.getAttribute('data-row'), f=td.getAttribute('data-col');
       var cur=_treatRows[ri]?_treatRows[ri][f]:'';
       var curStr=(cur===null||cur===undefined)?'':String(cur);
@@ -75428,7 +75570,8 @@ function _treatGridWireRows(tbl, fromIdx){
         if(save){ _treatEditCell(ri,f,inp.value); } // re-renderiza tudo (treatRefreshAll)
         else { td.classList.remove('tg-editing'); td.innerHTML=escapeCell(cur); }
       };
-      inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); done(true); } else if(e.key==='Escape'){ e.preventDefault(); done(false); } });
+      td._cancelEdit=function(){ done(false); };     // usado pelo ESC global (mesmo com o foco fora do campo)
+      inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); done(true); } else if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); done(false); } });
       inp.addEventListener('blur',function(){ done(true); });
     });
   });
@@ -75493,6 +75636,8 @@ function _treatGridWire(tbl){
       // ov.1.1.2: botao direito DENTRO de uma selecao multipla nao a desfaz
       if(!_treatSelHas('col',ci)) _treatSelSet('col',ci,false);
       _treatGridApplySelectionHighlight(tbl);
+      items.push({icon:'📋',label:isPT?'Copiar seleção':'Copy selection',action:treatCopySelection});
+      items.push({sep:true});
       items.push({icon:'⬅️',label:isPT?'Adicionar coluna à esquerda':'Add column to the left',action:function(){ _treatInsertColAt(ci); }});
       items.push({icon:'➡️',label:isPT?'Adicionar coluna à direita':'Add column to the right',action:function(){ _treatInsertColAt(ci+1); }});
       items.push({sep:true});
@@ -75512,6 +75657,8 @@ function _treatGridWire(tbl){
       var ri0=+rowHead.getAttribute('data-rowidx');
       if(!_treatSelHas('row',ri0)) _treatSelSet('row',ri0,false);
       _treatGridApplySelectionHighlight(tbl);
+      items.push({icon:'📋',label:isPT?'Copiar seleção':'Copy selection',action:treatCopySelection});
+      items.push({sep:true});
       items.push({icon:'⬆️',label:isPT?'Adicionar linha acima':'Add row above',action:function(){ _treatInsertRowAt(ri0); }});
       items.push({icon:'⬇️',label:isPT?'Adicionar linha abaixo':'Add row below',action:function(){ _treatInsertRowAt(ri0+1); }});
       items.push({sep:true});
@@ -75529,6 +75676,10 @@ function _treatGridWire(tbl){
     } else if(td){
       var tri=+td.getAttribute('data-row'), tf=td.getAttribute('data-col'), tci=_treatFields.indexOf(tf);
       items.push({icon:'✏️',label:isPT?'Editar valor':'Edit value',action:function(){ var e2=new MouseEvent('dblclick',{bubbles:true}); td.dispatchEvent(e2); }});
+      if(_treatCellSel && (_treatCellSel.r1!==_treatCellSel.r2||_treatCellSel.c1!==_treatCellSel.c2)){
+        var _b=_treatRangeBox();
+        if(tri>=_b.r1&&tri<=_b.r2&&tci>=_b.c1&&tci<=_b.c2) items.push({icon:'📋',label:isPT?'Copiar seleção':'Copy selection',action:treatCopySelection});
+      }
       items.push({icon:'📋',label:isPT?'Copiar valor':'Copy value',action:function(){ try{navigator.clipboard.writeText(td.textContent);}catch(e){} }});
       items.push({sep:true});
       items.push({icon:'⬆️',label:isPT?'Adicionar linha acima':'Add row above',action:function(){ _treatInsertRowAt(tri); }});
@@ -75567,6 +75718,125 @@ function _treatGridSetupDelKey(){
   });
 }
 _treatGridSetupDelKey();
+
+/* ── SELEÇÃO POR ARRASTE (bloco de células) + COPIAR (Ctrl+C) + ESC ─────────────────────────────────────
+   • Arrastar sobre as células marca um bloco retangular; Shift+clique amplia a partir da âncora.
+   • Clicar num cabeçalho (A, B, C… ou nº da linha) continua marcando colunas/linhas inteiras.
+   • Ctrl+C copia a seleção atual em TSV (TAB entre colunas, quebra de linha entre linhas): ao colar no
+     Excel/Planilhas, cada valor cai na sua própria célula, igual ao que se vê no programa. Para colunas
+     inteiras os nomes vêm na 1ª linha (mesmo padrão do "Copiar colunas").
+   • Esc cancela a edição da célula; fora da edição, limpa a seleção. */
+var _treatCellSel=null;      // {r1,c1,r2,c2}: âncora (r1,c1) e ponto atual (r2,c2) — índices reais de _treatRows/_treatFields
+var _treatRangeEls=[];       // células com a classe de realce (para limpar sem varrer a tabela)
+var _treatDragging=false;
+function _treatRangeBox(){
+  if(!_treatCellSel) return null;
+  var a=_treatCellSel;
+  return {r1:Math.min(a.r1,a.r2), r2:Math.max(a.r1,a.r2), c1:Math.min(a.c1,a.c2), c2:Math.max(a.c1,a.c2)};
+}
+function _treatRangeApply(tbl){
+  tbl=tbl||document.getElementById('treatTable'); if(!tbl) return;
+  _treatRangeEls.forEach(function(el){ el.classList.remove('tg-range','tg-range-anchor'); });
+  _treatRangeEls=[];
+  if(!_treatCellSel) return;
+  var a=_treatCellSel;
+  if(a.r1>=_treatRows.length||a.r2>=_treatRows.length||a.c1>=_treatFields.length||a.c2>=_treatFields.length){ _treatCellSel=null; return; }
+  var b=_treatRangeBox(), last=Math.min(b.r2,_treatGridShown-1);
+  for(var r=b.r1;r<=last;r++){
+    var tr=tbl.rows[r+1]; if(!tr) continue;          // rows[0] = cabeçalho; célula 0 de cada linha = nº da linha
+    for(var c=b.c1;c<=b.c2;c++){ var td=tr.cells[c+1]; if(td){ td.classList.add('tg-range'); _treatRangeEls.push(td); } }
+  }
+  var anRow=tbl.rows[a.r1+1], anTd=anRow&&anRow.cells[a.c1+1];
+  if(anTd){ anTd.classList.add('tg-range-anchor'); _treatRangeEls.push(anTd); }
+}
+function _treatCellFromEl(el){
+  if(!el||!el.closest||!el.closest('#treatTable')) return null;
+  var td=el.closest('td.tg-cell'); if(!td) return null;
+  return {r:+td.getAttribute('data-row'), c:+td.getAttribute('data-colidx'), td:td};
+}
+// TAB/quebras dentro do valor virariam colunas/linhas ao colar — viram espaço; nulos viram vazio
+function _treatTsvCell(v){ return (v===null||v===undefined)?'':String(v).replace(/[\t\r\n]+/g,' '); }
+function _treatSelectionTSV(){
+  var F=_treatFields, R=_treatRows, lines=[], nr=0, nc=0, i;
+  if(_treatCellSel){
+    var b=_treatRangeBox(); if(b.r1>=R.length||b.c1>=F.length) return null;
+    var r2=Math.min(b.r2,R.length-1), c2=Math.min(b.c2,F.length-1);
+    for(var r=b.r1;r<=r2;r++){ var line=[]; for(var c=b.c1;c<=c2;c++) line.push(_treatTsvCell(R[r][F[c]])); lines.push(line.join('\t')); }
+    nr=r2-b.r1+1; nc=c2-b.c1+1;
+  } else if(_treatGridSel && _treatGridSel.type==='col'){
+    var cols=_treatSelList().filter(function(x){return x<F.length;}).map(function(x){return F[x];});
+    if(!cols.length) return null;
+    lines.push(cols.map(_treatTsvCell).join('\t'));
+    R.forEach(function(row){ lines.push(cols.map(function(f){ return _treatTsvCell(row[f]); }).join('\t')); });
+    nr=R.length; nc=cols.length;
+  } else if(_treatGridSel && _treatGridSel.type==='row'){
+    var rs=_treatSelList().filter(function(x){return x<R.length;});
+    if(!rs.length) return null;
+    rs.forEach(function(ri){ lines.push(F.map(function(f){ return _treatTsvCell(R[ri][f]); }).join('\t')); });
+    nr=rs.length; nc=F.length;
+  } else return null;
+  return {text:lines.join('\n'), rows:nr, cols:nc};
+}
+function treatCopySelection(){
+  var r=_treatSelectionTSV(); if(!r) return false;
+  var ok=function(){ notify(nbi('Copiado: '+r.rows+' linha(s) × '+r.cols+' coluna(s).','Copied: '+r.rows+' row(s) × '+r.cols+' column(s).'),'success'); };
+  var fail=function(){ notify(nbi('Não foi possível acessar a área de transferência.','Could not access the clipboard.'),'error'); };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(r.text).then(ok,function(){ if(_treatCopyFallback(r.text)) ok(); else fail(); });
+      return true;
+    }
+  }catch(e){}
+  if(_treatCopyFallback(r.text)) ok(); else fail();
+  return true;
+}
+var _treatRangeBound=false;
+function _treatRangeSetup(){
+  if(_treatRangeBound) return; _treatRangeBound=true;
+  document.addEventListener('mousedown',function(e){
+    if(e.button!==0) return;
+    var hit=_treatCellFromEl(e.target);
+    if(!hit || hit.td.classList.contains('tg-editing')) return;     // clique dentro do campo de edição: não mexe
+    _treatGridSel=null; _treatSelAnchor=null;                       // célula → desmarca colunas/linhas inteiras
+    if(e.shiftKey && _treatCellSel){ _treatCellSel.r2=hit.r; _treatCellSel.c2=hit.c; }
+    else _treatCellSel={r1:hit.r,c1:hit.c,r2:hit.r,c2:hit.c};
+    _treatDragging=true;
+    _treatGridApplySelectionHighlight(document.getElementById('treatTable'));
+  },true);
+  document.addEventListener('mousemove',function(e){
+    if(!_treatDragging) return;
+    if(!(e.buttons&1)){ _treatDragging=false; return; }             // soltou o botão fora da janela
+    var wrap=document.getElementById('treatTableWrap');
+    if(wrap){                                                        // rolagem automática perto das bordas
+      var rc=wrap.getBoundingClientRect();
+      if(e.clientY>rc.bottom-28) wrap.scrollTop+=22; else if(e.clientY<rc.top+28) wrap.scrollTop-=22;
+      if(e.clientX>rc.right-28) wrap.scrollLeft+=22; else if(e.clientX<rc.left+28) wrap.scrollLeft-=22;
+    }
+    var hit=_treatCellFromEl(document.elementFromPoint(e.clientX,e.clientY));
+    if(hit && _treatCellSel && (hit.r!==_treatCellSel.r2||hit.c!==_treatCellSel.c2)){ _treatCellSel.r2=hit.r; _treatCellSel.c2=hit.c; _treatRangeApply(); }
+  });
+  document.addEventListener('mouseup',function(){ _treatDragging=false; });
+  document.addEventListener('keydown',function(e){
+    var app=document.getElementById('appTreat'); if(!app || !app.classList.contains('treat-active')) return;
+    var ae=document.activeElement, tag=ae&&ae.tagName;
+    var inField=(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(ae&&ae.isContentEditable));
+    if(e.key==='Escape'){
+      var ed=document.querySelector('#treatTable td.tg-editing');
+      if(ed && ed._cancelEdit){ e.preventDefault(); ed._cancelEdit(); return; }   // sai do modo de edição
+      if(inField) return;
+      if(_treatCellSel||_treatGridSel){ _treatCellSel=null; _treatGridSel=null; _treatSelAnchor=null; _treatGridApplySelectionHighlight(); }
+      return;
+    }
+    if((e.ctrlKey||e.metaKey) && !e.shiftKey && !e.altKey && (e.key==='c'||e.key==='C')){
+      if(inField || (!_treatCellSel && !_treatGridSel)) return;
+      // texto comum marcado fora da grade (ex.: no histórico) continua sendo copiado pelo navegador
+      var sel=window.getSelection(), tb=document.getElementById('treatTable');
+      if(sel && !sel.isCollapsed && sel.anchorNode && tb && !tb.contains(sel.anchorNode)) return;
+      if(treatCopySelection()) e.preventDefault();
+    }
+  });
+}
+_treatRangeSetup();
 function treatFillColumnSelects(){
   var allSel=['treatUnitCol','treatTransfCol','treatSortCol','treatFilterCol','treatColOpsCol','treatInterpCol','treatArithCol',
     'treatExtractCol','treatMergeKeyA','treatGroupByCol','treatPivotIndex','treatPivotCols','treatSigFigCol',
@@ -76769,7 +77039,7 @@ function treatCopyColsConfirm(){
   var incHeader=(document.getElementById('treatCopyIncludeHeader')||{}).checked!==false;
   // Monta o TSV. Cada célula: substitui TAB/quebra de linha internos por espaço para não quebrar o
   // alinhamento das colunas ao colar. Valores nulos/indefinidos viram string vazia.
-  function cell(v){ if(v===null||v===undefined) return ''; return String(v).replace(/[\t\r\n]+/g,' '); }
+  var cell=_treatTsvCell;
   var lines=[];
   if(incHeader) lines.push(cols.map(cell).join('\t'));
   (_treatRows||[]).forEach(function(row){ lines.push(cols.map(function(f){ return cell(row[f]); }).join('\t')); });
@@ -80400,6 +80670,7 @@ wikiTecBuild();
 .sm-item::after{content:attr(data-n);position:absolute;bottom:calc(100% + 9px);white-space:nowrap;padding:5px 10px;border-radius:7px;font-size:12.5px;font-weight:700;color:var(--text);background:var(--bg2);border:1px solid rgba(var(--c-rgb),.75);box-shadow:0 4px 14px rgba(0,0,0,.4);opacity:0;pointer-events:none;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #secMenu.sm-right .sm-item::after{right:-4px}
 #secMenu.sm-left .sm-item::after{left:-4px}
+.sm-key{position:absolute;right:-4px;bottom:-4px;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;line-height:1;font-family:inherit;color:var(--text);background:var(--bg2);border:1.5px solid rgba(var(--c-rgb),.9);pointer-events:none}
 .sm-item.sm-tipb::after{bottom:auto;top:calc(100% + 9px)}
 .sm-item:hover::after,.sm-item:focus-visible::after{opacity:1;transform:none}
 #secMenu.sm-noanim .sm-item,#secMenu.sm-noanim .sm-disc,#secMenu.sm-noanim .sm-hit,#secMenu.sm-noanim #secMenuPanel{transition:none!important}
@@ -80418,22 +80689,24 @@ wikiTecBuild();
      O fundo é a própria seção, desfocado em camadas que se dissolvem para fora (backdrop-filter + máscara radial, sem borda e sem escurecer).
    • Borda/brilho do botão seguem a cor da seção atual (branco no tema escuro / preto no claro na Tela Inicial e na Wiki).
    • Além das seções, o leque abre o pop-up 🧬 Técnicas de análise por cima da seção atual (sem ir à Tela Inicial).
+   • Teclado: Ctrl+Enter abre/fecha. Com o leque aberto: I início · S simples · C comparativa · E engenharia ·
+     P projeto · G gerador de gráficos · T tratamento de dados · W wiki · A técnicas de análise (Esc fecha).
    • Trocar de seção reaproveita as funções originais (launchX) depois de reiniciar a tela (_goHomeApply),
      sem animação intermediária e sem passar visualmente pela Tela Inicial. Textos PT/EN via isEn(). */
 (function(){
   /* c:null = cor neutra (branco no tema escuro, preto no claro) */
   var SECS=[
-    {k:'home', r:'in',    ic:'🏠', c:null,      pt:'Tela inicial',           en:'Home'},
-    {k:'simple', r:'out',  ic:'📊', c:'#5a7aff', pt:'Análise Simples',        en:'Simple Analysis'},
-    {k:'compare', r:'out', ic:'📈', c:'#4ade80', pt:'Análise Comparativa',    en:'Comparative Analysis'},
-    {k:'eng', r:'out',     ic:'⚙️', c:'#f59e0b', pt:'Análise de Engenharia',  en:'Engineering Analysis'},
-    {k:'project', r:'out', ic:'🔩', c:'#f87171', pt:'Análise de Projeto',     en:'Project Analysis'},
-    {k:'chartgen', r:'out',ic:'📐', c:'#ec4899', pt:'Gerador de Gráficos',    en:'Chart Generator'},
-    {k:'treat', r:'out',   ic:'🧹', c:'#2dd4bf', pt:'Tratamento de Dados',    en:'Data Treatment'},
-    {k:'wiki', r:'in',    ic:'📖', c:null,      pt:'Wiki',                   en:'Wiki'},
-    {k:'tec', r:'in',     ic:'🧬', c:'#22d3ee', pt:'Técnicas de análise',    en:'Analysis techniques'}
+    {k:'home', r:'in', key:'i',    ic:'🏠', c:null,      pt:'Tela inicial',           en:'Home'},
+    {k:'simple', r:'out', key:'s',  ic:'📊', c:'#5a7aff', pt:'Análise Simples',        en:'Simple Analysis'},
+    {k:'compare', r:'out', key:'c', ic:'📈', c:'#4ade80', pt:'Análise Comparativa',    en:'Comparative Analysis'},
+    {k:'eng', r:'out', key:'e',     ic:'⚙️', c:'#f59e0b', pt:'Análise de Engenharia',  en:'Engineering Analysis'},
+    {k:'project', r:'out', key:'p', ic:'🔩', c:'#f87171', pt:'Análise de Projeto',     en:'Project Analysis'},
+    {k:'chartgen', r:'out', key:'g',ic:'📐', c:'#ec4899', pt:'Gerador de Gráficos',    en:'Chart Generator'},
+    {k:'treat', r:'out', key:'t',   ic:'🧹', c:'#2dd4bf', pt:'Tratamento de Dados',    en:'Data Treatment'},
+    {k:'wiki', r:'in', key:'w',    ic:'📖', c:null,      pt:'Wiki',                   en:'Wiki'},
+    {k:'tec', r:'in', key:'a',     ic:'🧬', c:'#22d3ee', pt:'Técnicas de análise',    en:'Analysis techniques'}
   ];
-  var BY={}; SECS.forEach(function(s){ BY[s.k]=s; });
+  var BY={}, BY_KEY={}; SECS.forEach(function(s){ BY[s.k]=s; BY_KEY[s.key]=s.k; });
   var ENG_IDS=['appEngineering','appFTIR','appDRX','appTGA','appEDS','appMC','appPO','appDC'];
   var SEC_IDS={appSimple:'simple',appCompare:'compare',appProject:'project',appChartGen:'chartgen',appTreat:'treat'};
   var wrap, btn, panel;
@@ -80548,9 +80821,9 @@ wikiTecBuild();
     SECS.forEach(function(s){
       var inner=(s.r==='in'), p=inner?L.inn[ii]:L.out[io], idx=inner?ii:(n.i+io);
       if(inner) ii++; else io++;
-      var c=colOf(s), name=en?s.en:s.pt;
-      h+='<button type="button" role="menuitem" class="sm-item'+(s.k===cur?' sm-cur':'')+((cy+p.y<46)?' sm-tipb':'')+'" data-k="'+s.k+'" data-n="'+name+'" aria-label="'+name+'"'
-        +' style="--i:'+idx+';--dx:'+Math.round(dir*p.x)+'px;--dy:'+Math.round(p.y)+'px;--c-rgb:'+rgbOf(c)+'">'+s.ic+'</button>';
+      var c=colOf(s), name=en?s.en:s.pt, K=s.key.toUpperCase();
+      h+='<button type="button" role="menuitem" class="sm-item'+(s.k===cur?' sm-cur':'')+((cy+p.y<46)?' sm-tipb':'')+'" data-k="'+s.k+'" data-n="'+name+'  ('+K+')" aria-label="'+name+' ('+K+')" aria-keyshortcuts="'+K+'"'
+        +' style="--i:'+idx+';--dx:'+Math.round(dir*p.x)+'px;--dy:'+Math.round(p.y)+'px;--c-rgb:'+rgbOf(c)+'">'+s.ic+'<span class="sm-key">'+K+'</span></button>';
     });
     // perto do topo/base o desfoque some suavemente do lado onde não há ícones (sem corte seco)
     var vm=(mode==='down')?'linear-gradient(to bottom,transparent 38%,#000 60%)':(mode==='up')?'linear-gradient(to top,transparent 38%,#000 60%)':'linear-gradient(#000,#000)';
@@ -80658,7 +80931,19 @@ wikiTecBuild();
       if(it) go(it.getAttribute('data-k')); else closePanel();     // clicar no fundo desfocado fecha o leque
     });
     document.addEventListener('click', function(e){ if(isOpen() && !wrap.contains(e.target)) closePanel(); });
-    document.addEventListener('keydown', function(e){ if(e.key==='Escape') closePanel(); });
+    document.addEventListener('keydown', function(e){
+      if(e.key==='Escape'){ closePanel(); return; }
+      if(!wrap.classList.contains('sm-on')) return;
+      var ws=document.getElementById('welcomeScreen');
+      if(ws && ws.isConnected && getComputedStyle(ws).display!=='none') return;       // tela de boas-vindas por cima: sem atalhos
+      // Ctrl+Enter (ou Cmd+Enter) abre/fecha o menu
+      if(e.key==='Enter' && (e.ctrlKey||e.metaKey) && !e.shiftKey && !e.altKey){ e.preventDefault(); e.stopPropagation(); togglePanel(); return; }
+      // com o leque aberto: a letra de cada seção navega até ela (Técnicas de análise abre o pop-up)
+      if(isOpen() && !e.ctrlKey && !e.metaKey && !e.altKey && e.key.length===1){
+        var k=BY_KEY[e.key.toLowerCase()];
+        if(k){ e.preventDefault(); e.stopPropagation(); go(k); }
+      }
+    }, true);
     window.addEventListener('resize', function(){ place(false); if(isOpen()){ wrap.classList.add('sm-noanim'); buildPanel(pickMode()); } });
     return true;
   }
