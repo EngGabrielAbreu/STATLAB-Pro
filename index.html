@@ -4364,7 +4364,7 @@ function settingsSyncUI(){
     b.classList.toggle('active', b.getAttribute('data-uifont')===f);
   });
   // Tour guiado (botão 🧭 nas seções) e auto-disparo na 1ª visita — ambos padrão LIGADO.
-  sw('setSecMenuSwitch', _settingsGet('statlab-secmenu','off')==='on');
+  sw('setSecMenuSwitch', _settingsGet('statlab-secmenu','on')==='on');
   sw('setTourSwitch', _settingsGet('statlab-tour','on')!=='off');
   sw('setTourAutoSwitch', _settingsGet('statlab-tour-auto','on')!=='off');
   // "Mostrar tour ao entrar…" só faz sentido com o Tour guiado ligado.
@@ -4432,7 +4432,7 @@ function settingsApplyGrid(){
 }
 function settingsToggleSecMenu(ev){
   if(ev){ try{ ev.stopPropagation(); }catch(_){} }
-  var on=_settingsGet('statlab-secmenu','off')==='on';
+  var on=_settingsGet('statlab-secmenu','on')==='on';
   _settingsSet('statlab-secmenu', on?'off':'on');
   try{ if(typeof secMenuApply==='function') secMenuApply(); }catch(e){}
   settingsSyncUI();
@@ -80410,7 +80410,7 @@ wikiTecBuild();
 </div>
 <script>
 /* ══ MENU DE SEÇÕES (flutuante) ══
-   • Liga/desliga em ⚙️ → "Menu de seções" (preferência 'statlab-secmenu', padrão: desligado).
+   • Liga/desliga em ⚙️ → "Menu de seções" (preferência 'statlab-secmenu', padrão: LIGADO para qualquer usuário; quem desligar mantém a escolha).
    • Clique no quadradinho = abre/fecha o leque de ícones. 2 cliques seguidos (o 2º segurando) e arrastar = move;
      ao soltar ele gruda na lateral esquerda ou direita mais próxima. Posição salva ('statlab-secmenu-pos').
    • O leque abre para o lado de dentro da tela: meio círculo no meio da lateral e 1/4 de círculo quando o botão
@@ -80442,7 +80442,7 @@ wikiTecBuild();
   var lastDown=0, armed=false, moved=false, offX=0, offY=0, downX=0, downY=0;
 
   function isEn(){ try{ return getCurrentLang()==='en'; }catch(e){ return false; } }
-  function getPref(){ try{ return _settingsGet('statlab-secmenu','off')==='on'; }catch(e){ return false; } }
+  function getPref(){ try{ return _settingsGet('statlab-secmenu','on')==='on'; }catch(e){ return false; } }
   function loadPos(){
     try{ var j=JSON.parse(_settingsGet('statlab-secmenu-pos','')||'null');
       if(j && (j.side==='left'||j.side==='right') && isFinite(j.y)) pos={side:j.side,y:Math.max(0,Math.min(1,j.y))}; }catch(e){}
