@@ -30,10 +30,10 @@
   --border3:#444;
   --text:#e0e0e0;
   --text2:#c0c0c0;
-  --text3:#888;
-  --text4:#777;
-  --text5:#666;
-  --text6:#aaa;
+  --text3:#a8a8a8;
+  --text4:#9c9c9c;
+  --text5:#8e8e8e;
+  --text6:#b4b4b4;
   --text7:#bbb;
   --text8:#ddd;
   --text-inv:#fff;
@@ -51,12 +51,12 @@
   --cmp-th-bg:#222;
   --cmp-row-hover:#2e2e2e;
   --cmp-alt:#252525;
-  --empty-text:#4a4a4a;
-  --empty-h:#666;
+  --empty-text:#7a7a7a;
+  --empty-h:#8e8e8e;
   --report-border:#333;
-  --report-span:#888;
+  --report-span:#a8a8a8;
   --report-strong:#e0e0e0;
-  --dev-color:#555;
+  --dev-color:#8a8a8a;
   --upload-hover-bg:#2a2a2a;
   --badge-ok-bg:#0d2e1a;
   --badge-fail-bg:#2e0d0d;
@@ -3205,6 +3205,13 @@ body.light-theme .prof-hint::before{border-color:#d97706}
 
     <div class="settings-sep"></div>
 
+    <!-- Menu de seções flutuante (quadradinho colado na lateral) -->
+    <button class="settings-item" role="menuitemcheckbox" id="setItemSecMenu" onclick="settingsToggleSecMenu(event)">
+      <span class="si-ic">🧩</span>
+      <span class="si-txt"><b id="setSecMenuLbl">Menu de seções</b><small id="setSecMenuDesc">Mostra um quadradinho na lateral da tela para trocar de seção sem voltar ao início.</small></span>
+      <span class="si-switch" id="setSecMenuSwitch"><span class="si-knob"></span></span>
+    </button>
+
     <button class="settings-item" role="menuitemcheckbox" id="setItemTour" onclick="settingsToggleTour(event)">
       <span class="si-ic">🧭</span>
       <span class="si-txt"><b id="setTourLbl">Tour guiado</b><small id="setTourDesc">Mostra o botão 🧭 em cada seção para iniciar o tour quando quiser.</small></span>
@@ -3328,7 +3335,6 @@ body.light-theme .prof-hint::before{border-color:#d97706}
     </div>
   </div>
 
-  <div class="prof-toast-wrap" id="profToastWrap"></div>
   <!--  os tooltips flutuantes (#cgSbyTooltip e #cgChartTooltip) foram MOVIDOS para
             o fim do <body> (fora do #homeScreen). Motivo: um elemento position:fixed NÃO é renderizado
             quando um ancestral está com display:none — e o #homeScreen fica oculto enquanto o Gerador
@@ -4358,6 +4364,7 @@ function settingsSyncUI(){
     b.classList.toggle('active', b.getAttribute('data-uifont')===f);
   });
   // Tour guiado (botão 🧭 nas seções) e auto-disparo na 1ª visita — ambos padrão LIGADO.
+  sw('setSecMenuSwitch', _settingsGet('statlab-secmenu','off')==='on');
   sw('setTourSwitch', _settingsGet('statlab-tour','on')!=='off');
   sw('setTourAutoSwitch', _settingsGet('statlab-tour-auto','on')!=='off');
   // "Mostrar tour ao entrar…" só faz sentido com o Tour guiado ligado.
@@ -4423,6 +4430,13 @@ function settingsApplyGrid(){
     }catch(e){}
   }
 }
+function settingsToggleSecMenu(ev){
+  if(ev){ try{ ev.stopPropagation(); }catch(_){} }
+  var on=_settingsGet('statlab-secmenu','off')==='on';
+  _settingsSet('statlab-secmenu', on?'off':'on');
+  try{ if(typeof secMenuApply==='function') secMenuApply(); }catch(e){}
+  settingsSyncUI();
+}
 function settingsToggleTour(ev){
   if(ev){ try{ ev.stopPropagation(); }catch(_){} }
   var on=_settingsGet('statlab-tour','on')!=='off';
@@ -4460,6 +4474,7 @@ function settingsApplyUiFont(){
   var size=_settingsGet('statlab-ui-font','normal');
   var z=(size==='small')?0.9:(size==='large')?1.15:1;
   try{ document.documentElement.style.setProperty('--ui-zoom', z); }catch(e){}
+  try{ if(typeof secMenuApplyZoom==='function') secMenuApplyZoom(); }catch(e){}
   // Zoom INVERSO nas duas exceções, para que continuem em escala real (1:1).
   var inv=(1/z);
   try{
@@ -4496,6 +4511,9 @@ function settingsApplyLang(){
   s('setLeaveDesc','Pede confirmação ao fechar a página com análises abertas.','Asks for confirmation when closing the page with open analyses.');
   s('setGridLbl','Fundo interativo','Interactive background');
   s('setGridDesc','Grade animada que reage ao mouse na tela inicial.','Animated grid that reacts to the mouse on the home screen.');
+  s('setSecMenuLbl','Menu de seções','Sections menu');
+  s('setSecMenuDesc','Mostra um quadradinho na lateral da tela para trocar de seção sem voltar ao início.','Shows a small square on the side of the screen to switch sections without returning home.');
+  try{ if(typeof secMenuRefreshLang==='function') secMenuRefreshLang(); }catch(e){}
   s('setTourLbl','Tour guiado','Guided tour');
   s('setTourDesc','Mostra o botão 🧭 em cada seção para iniciar o tour quando quiser.','Shows the 🧭 button in each section so you can start the tour anytime.');
   s('setTourAutoLbl','Mostrar tour ao entrar em uma seção pela primeira vez','Show the tour the first time you open a section');
@@ -9045,7 +9063,7 @@ function cAddStudySlot(){
   // rendered (just hidden via CSS when not applicable) and kept in sync by
   // cRefreshRemoveButtons(), called after every add/remove.
   const removeBtnVisible=cSlots.length>2;
-  const removeBtn=`<span style="cursor:pointer;color:#555;font-size:15px;display:${removeBtnVisible?'inline':'none'}" id="removeBtn_${id}">✕</span>`;
+  const removeBtn=`<span style="cursor:pointer;color:var(--text5);font-size:15px;display:${removeBtnVisible?'inline':'none'}" id="removeBtn_${id}">✕</span>`;
   div.innerHTML=`
     <div class="study-slot-header">
       <input type="color" id="colorPick_${id}" value="${_colorToHex(color.solid)}" title="Alterar cor" style="width:22px;height:22px;border:none;border-radius:50%;padding:0;cursor:pointer;background:none;flex-shrink:0">
@@ -9131,8 +9149,8 @@ function cRenderDadosSummary(){
     <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #2a2a2a">
       <div style="width:13px;height:13px;border-radius:50%;background:${s.color.solid};flex-shrink:0"></div>
       <strong style="color:#c0c0c0;min-width:110px">${escapeHtml(s.name)}</strong>
-      <span style="color:#777;font-size:12px">${escapeHtml(s.fileName)}</span>
-      <span style="color:#555;font-size:11px;margin-left:auto">${s.rawData?s.rawData.length+' obs.':'sem dados'}</span>
+      <span style="color:var(--text4);font-size:12px">${escapeHtml(s.fileName)}</span>
+      <span style="color:var(--text5);font-size:11px;margin-left:auto">${s.rawData?s.rawData.length+' obs.':'sem dados'}</span>
     </div>`).join('');
   // Data previews: table + scatter side by side
   const pv=document.getElementById('cDadosPreviews');
@@ -10590,10 +10608,10 @@ function cRenderComparativo(){
     testsHTML+=`<div class="test-card" style="width:100%">
       <h4 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span style="color:${ra.color.solid}">● ${escapeHtml(ra.name)}</span>
-        <span style="color:#555;font-size:13px">→</span>
+        <span style="color:var(--text5);font-size:13px">→</span>
         <span style="color:${rb.color.solid}">● ${escapeHtml(rb.name)}</span>
       </h4>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;font-size:11px;font-weight:700;color:#666;padding:4px 0;border-bottom:1px solid #333;margin-bottom:4px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;font-size:11px;font-weight:700;color:var(--text5);padding:4px 0;border-bottom:1px solid #333;margin-bottom:4px">
         <span>${t('cmp.metric')}</span><span style="color:${ra.color.solid}">${ra.name}</span><span style="color:${rb.color.solid}">${rb.name}</span><span>${t('cmp.variation')||'Variação'}</span>
       </div>
       ${row2(t('stat.media'),sa.mean,sb.mean)}
@@ -10610,7 +10628,7 @@ function cRenderComparativo(){
         <div class="test-row"><span class="test-key">${t('cmp.pval')}</span><span class="test-val">${cFmtP(tt.p)}</span></div>
         <div class="test-row"><span class="test-key">${t('cmp.diffMeans')}</span><span class="test-val">${fmtSmart(tt.diff)}</span></div>
         <div class="test-row"><span class="test-key">${t('cmp.cohen')}${tip('cohend')}</span><span class="test-val">${fmtSmart(cd.d)} <span style="color:#aaa;font-size:11px">(${t(cd.interpKey)})</span></span></div>
-        <div class="test-row"><span class="test-key">${t('cmp.fAnova')}${tip('anova')}</span><span class="test-val">${fmtSmart(anova2.f)} <span style="color:#666;font-size:11px">crit: ${fmtSmart(anova2.critical)}</span></span></div>
+        <div class="test-row"><span class="test-key">${t('cmp.fAnova')}${tip('anova')}</span><span class="test-val">${fmtSmart(anova2.f)} <span style="color:var(--text5);font-size:11px">crit: ${fmtSmart(anova2.critical)}</span></span></div>
         <div class="test-row"><span class="test-key">${t('cmp.result')}</span><span class="test-val">${tt.significant?`<span class="badge-sig">● ${t('cmp.sig')}</span>`:`<span class="badge-notsig">● ${t('cmp.nsig')}</span>`}</span></div>
       </div>
     </div>`;
@@ -24190,7 +24208,7 @@ function _buildEditTable(fields, rows){
   tbody.innerHTML='';
   rows.forEach(function(row,i){
     var tr=document.createElement('tr');
-    tr.innerHTML='<td style="color:#666;font-size:11px;text-align:center">'+(i+1)+'</td>'+
+    tr.innerHTML='<td style="color:var(--text5);font-size:11px;text-align:center">'+(i+1)+'</td>'+
       fields.map(function(f){return'<td><input type="text" value="'+((row[f]===null||row[f]===undefined)?'':row[f])+'" data-field="'+f+'"></td>';}).join('');
     tbody.appendChild(tr);
   });
@@ -24228,7 +24246,7 @@ function dataEditAddRow(){
   var fields=Array.from(firstRow.querySelectorAll('input')).map(function(inp){return inp.getAttribute('data-field');});
   var tr=document.createElement('tr');
   var idx=tbody.querySelectorAll('tr').length+1;
-  tr.innerHTML='<td style="color:#666;font-size:11px;text-align:center">'+idx+'</td>'+
+  tr.innerHTML='<td style="color:var(--text5);font-size:11px;text-align:center">'+idx+'</td>'+
     fields.map(function(f){return'<td><input type="text" value="" data-field="'+f+'"></td>';}).join('');
   tbody.appendChild(tr);
 }
@@ -24521,8 +24539,14 @@ var _profRestored = false;
 function profT(pt, en){ return getCurrentLang()==='en' ? en : pt; }
 
 // ════════════════════════════════════════════════════════════════════════════
+// contêiner único dos avisos; recria-se sozinho caso ainda não exista (chamada muito cedo no boot).
+function _toastWrap(){
+  var w=document.getElementById('profToastWrap');
+  if(!w && document.body){ w=document.createElement('div'); w.className='prof-toast-wrap'; w.id='profToastWrap'; document.body.appendChild(w); }
+  return w;
+}
 function notify(msg, type){
-  var wrap=document.getElementById('profToastWrap');
+  var wrap=_toastWrap();
   var m=String(msg);
   if(!wrap){ console.warn('[notify] profToastWrap não encontrado:', m); return; }
   if(!type){
@@ -24625,7 +24649,7 @@ function tip(key){
 // toast de confirmação, sincronizado com o idioma atual (via profT). Usado após
 // salvar/criar e após excluir o perfil, para o usuário saber que a ação realmente aconteceu.
 function profShowToast(pt, en, danger){
-  var wrap=document.getElementById('profToastWrap'); if(!wrap) return;
+  var wrap=_toastWrap(); if(!wrap) return;
   var el=document.createElement('div');
   el.className='prof-toast'+(danger?' prof-toast-danger':'');
   el.innerHTML='<span class="pt-icon">'+(danger?'🗑️':'✅')+'</span><span>'+profT(pt,en)+'</span>';
@@ -46274,7 +46298,6 @@ function cgGoHome(ev){
       <div id="cgTabsList" style="display:flex;align-items:center;gap:4px;overflow-x:auto;min-width:0"></div>
       <button onclick="cgTabNew()" id="cgBtnTabNew" title="Novo gráfico" style="flex-shrink:0;padding:5px 11px;background:rgba(236,72,153,.12);border:1px solid rgba(236,72,153,.4);color:#ec4899;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;line-height:1">+</button>
       <input type="color" id="cgTabColorPicker" value="#ec4899" style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none">
-      <input type="color" id="cgBarColorPicker" value="#ec4899" style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none">
     </div>
     <!--  Templates menu — sits immediately to the LEFT of the 👁️ button. -->
     <div style="position:relative">
@@ -47218,8 +47241,8 @@ function cgGoHome(ev){
             <!-- ══ BARRAS ══ -->
             <div id="cgDataPanel_bar" style="display:none">
               <div class="cg-field" id="cgBarColorResetWrap" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--border2)">
-                <div style="font-size:10.5px;color:var(--text4);line-height:1.5;margin-bottom:6px" id="cgBarColorHint">🎨 Dê <b>2 cliques</b> em uma barra do gráfico para mudar a cor dela individualmente.</div>
-                <button type="button" id="cgBtnResetBarColors" onclick="cgResetBarColors()" style="width:100%;padding:7px;background:var(--bg3);border:1px solid var(--border2);color:var(--text3);border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">↺ <span id="cgBtnResetBarColorsLbl">Restaurar cores das barras</span></button>
+                <div style="font-size:10.5px;color:var(--text4);line-height:1.5;margin-bottom:6px" id="cgBarColorHint">🎨 Dê <b>2 cliques</b> em uma barra do gráfico para mudar a cor ou a textura dela individualmente.</div>
+                <button type="button" id="cgBtnResetBarColors" onclick="cgResetBarColors()" style="width:100%;padding:7px;background:var(--bg3);border:1px solid var(--border2);color:var(--text3);border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">↺ <span id="cgBtnResetBarColorsLbl">Restaurar cores e texturas das barras</span></button>
               </div>
               <!-- Largura da barra -->
               <div class="cg-field">
@@ -48561,6 +48584,17 @@ function cgGoHome(ev){
       </div>
       <div style="padding:8px 18px;font-size:11.5px;color:var(--text4);border-bottom:1px solid var(--border2)" id="cgBulkHint">Aplique uma operação (somar, subtrair, multiplicar ou dividir) a um valor W sobre os dados importados. Escolha a série, o eixo (X ou Y) e, opcionalmente, uma faixa de linhas.</div>
       <div id="cgBulkBody" style="padding:14px 18px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px">
+
+        <!-- Formato numérico (Excel PT/EN) — atua em TODAS as caixas de dados das séries -->
+        <div style="background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 12px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px" id="cgBulkLblFmt">Corrigir formato numérico (todas as séries)</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" onclick="cgBulkFixDecimal()" id="cgBulkBtnDec" style="flex:1;min-width:200px;padding:8px 10px;background:rgba(236,72,153,.1);border:1px solid rgba(236,72,153,.45);color:var(--text);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;text-align:left;line-height:1.35">🔢 <span id="cgBulkBtnDecTxt">Vírgula decimal → ponto</span><br><span id="cgBulkBtnDecEx" style="font-size:10.5px;font-weight:500;color:var(--text3)">16,5 → 16.5 (Excel em português)</span></button>
+            <button type="button" onclick="cgBulkFixThousands()" id="cgBulkBtnTho" style="flex:1;min-width:200px;padding:8px 10px;background:rgba(236,72,153,.1);border:1px solid rgba(236,72,153,.45);color:var(--text);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;text-align:left;line-height:1.35">🔢 <span id="cgBulkBtnThoTxt">Remover vírgula de milhar</span><br><span id="cgBulkBtnThoEx" style="font-size:10.5px;font-weight:500;color:var(--text3)">1,000 → 1000 (Excel em inglês)</span></button>
+          </div>
+          <div style="font-size:10.5px;color:var(--text4);margin-top:6px;line-height:1.4" id="cgBulkFmtNote">Só mexe em números (vírgulas entre dígitos). Aplica em todas as caixas de dados e atualiza o gráfico.</div>
+          <div id="cgBulkFmtStatus" role="status" aria-live="polite" style="display:none"></div>
+        </div>
 
         <!-- Série -->
         <div>
@@ -51626,6 +51660,7 @@ var _cgHiddenYCols = {};
 // destacar um ponto de interesse sem alterar a cor das demais. Chave: "<série>_<índice>".
 // Guardado por aba (serializado na config, como as demais personalizações).
 var _cgBarColors = {};
+var _cgBarTextures = {};   // textura individual por barra ('none' = sem textura; ausente = igual à série)
 var _cgBarColorHooked = false;
 var _cgHiddenDataLabels = {};
 var _cgIndividualLabelColors = {};
@@ -51898,14 +51933,15 @@ function cgOpenIndividualLabelColorPicker(di, pi){
 // A reversão é feita pelo botão "↺ Restaurar cores das barras" na janela 📋 Dados.
 function _cgBarKey(di,pi){ return di+'_'+pi; }
 // Quantas barras têm cor manual no momento (usado para habilitar/rotular o botão de reverter).
-function cgBarColorCount(){ try{ return Object.keys(_cgBarColors).length; }catch(e){ return 0; } }
+function cgBarColorCount(){ try{ var o={}; Object.keys(_cgBarColors).forEach(function(k){o[k]=1;}); Object.keys(_cgBarTextures).forEach(function(k){o[k]=1;}); return Object.keys(o).length; }catch(e){ return 0; } }
 // Restaura TODAS as barras à cor da própria série.
 function cgResetBarColors(){
   if(!cgBarColorCount()) return;
-  _cgBarColors={};
+  _cgBarColors={}; _cgBarTextures={};
+  try{ cgCloseBarMenu(); }catch(e){}
   try{ cgUpdateChart(); }catch(e){}
   try{ cgUpdateBarColorResetBtn(); }catch(e){}
-  try{ if(typeof notify==='function') notify(nbi('Cores das barras restauradas.','Bar colors restored.')); }catch(e){}
+  try{ if(typeof notify==='function') notify(nbi('Cores e texturas das barras restauradas.','Bar colors and textures restored.'),'success'); }catch(e){}
 }
 // Mostra/esconde e atualiza o rótulo do botão de reverter (só faz sentido no tipo Barras).
 function cgUpdateBarColorResetBtn(){
@@ -51917,7 +51953,7 @@ function cgUpdateBarColorResetBtn(){
   var btn=document.getElementById('cgBtnResetBarColors');
   var lbl=document.getElementById('cgBtnResetBarColorsLbl');
   var en=(typeof getCurrentLang==='function' && getCurrentLang()==='en');
-  if(lbl) lbl.textContent=(en?'Restore bar colors':'Restaurar cores das barras')+(n?(' ('+n+')'):'');
+  if(lbl) lbl.textContent=(en?'Restore bar colors and textures':'Restaurar cores e texturas das barras')+(n?(' ('+n+')'):'');
   if(btn){ btn.disabled=(n===0); btn.style.opacity=n?'1':'0.45'; btn.style.cursor=n?'pointer':'not-allowed'; }
 }
 // Liga o duplo-clique de recolorir barra (uma única vez).
@@ -51939,25 +51975,63 @@ function cgSetupBarColorDblClick(){
     var sIdx=(ds._cgSeriesIdx!=null)?ds._cgSeriesIdx:(di+1);
     var key=_cgBarKey(sIdx,pi);
     var cur=_cgBarColors[key] || ds._color || '#ec4899';
-    var picker=document.getElementById('cgBarColorPicker');
-    if(!picker) return;
-    // Ancora o seletor (invisível) sobre a barra clicada — vários navegadores posicionam o
-    // popup nativo a partir do input, então isso mantém o seletor perto do que foi clicado.
-    try{
-      var r=canvas.getBoundingClientRect();
-      var bar=els[0].element;
-      picker.style.left=Math.round(r.left+(bar.x||0))+'px';
-      picker.style.top =Math.round(r.top +(bar.y||0))+'px';
-    }catch(_){}
-    picker.value=cur;
-    picker.oninput=function(){
-      _cgBarColors[key]=picker.value;
-      try{ cgUpdateChart(); }catch(_){}
-      try{ cgUpdateBarColorResetBtn(); }catch(_){}
-    };
-    picker.click();
+    var catLbl=''; try{ var _l=(_cgChart.data.labels||[])[pi]; catLbl=(_l!=null)?String(_l):''; }catch(_){}
+    cgOpenBarMenu({key:key, cur:cur, serColor:(ds._color||'#ec4899'), title:(ds.label||'')+(catLbl?' · '+catLbl:'')}, e.clientX, e.clientY);
     e.preventDefault(); e.stopPropagation();
   });
+}
+/* ── Menu da barra (2 cliques): cor livre, cores das paletas salvas e textura individual ── */
+function _cgBarMenuEsc(t){ return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function _cgBarMenuOutside(e){ var m=document.getElementById('cgBarMenu'); if(m && !m.contains(e.target)) cgCloseBarMenu(); }
+function _cgBarMenuKey(e){ if(e.key==='Escape') cgCloseBarMenu(); }
+function cgCloseBarMenu(){
+  var m=document.getElementById('cgBarMenu'); if(m) m.remove();
+  document.removeEventListener('mousedown',_cgBarMenuOutside,true);
+  document.removeEventListener('keydown',_cgBarMenuKey,true);
+}
+function cgOpenBarMenu(ctx, x, y){
+  cgCloseBarMenu();
+  var key=ctx.key;
+  var cur=/^#[0-9a-f]{6}$/i.test(ctx.cur||'')?ctx.cur:'#ec4899';
+  var texList=[['','barMenuTexInherit',''],['none','cgTexNone',''],['diagonal','cgTexDiagonal',' ╱'],['diagonal2','cgTexDiagonal2',' ╲'],
+               ['horizontal','cgTexHorizontal',' ═'],['vertical','cgTexVertical',' ║'],['grid','cgTexGrid',' ▦'],['crosshatch','cgTexCrosshatch',' ╳'],['dots','cgTexDots',' ⁙']];
+  var curTex=(_cgBarTextures[key]!==undefined)?_cgBarTextures[key]:'';
+  var lblSt='font-size:10px;font-weight:700;color:var(--text4);margin:8px 0 3px';
+  var h='<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'
+     +'<span style="flex:1;min-width:0;font-size:12px;font-weight:700;color:#ec4899;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+_cgBarMenuEsc(ctx.title)+'">🎨 '+cgT('barMenuTitle')+(ctx.title?': '+_cgBarMenuEsc(ctx.title):'')+'</span>'
+     +'<button type="button" id="cgBarMenuX" style="padding:1px 7px;background:var(--bg3);border:1px solid var(--border2);color:var(--text3);border-radius:5px;cursor:pointer;font-size:12px">✕</button></div>'
+     +'<div style="'+lblSt+'">'+cgT('barMenuColor')+'</div>'
+     +'<div style="display:flex;align-items:center;gap:8px"><input type="color" id="cgBarMenuColor" value="'+cur+'" style="width:38px;height:26px;padding:0;border:1px solid var(--border2);border-radius:5px;background:none;cursor:pointer"><span id="cgBarMenuHex" style="font-family:monospace;font-size:11px;color:var(--text3)">'+cur.toUpperCase()+'</span></div>'
+     +'<div style="'+lblSt+'">🌈 '+cgT('barMenuPalettes')+'</div><div id="cgBarMenuPals" style="max-height:130px;overflow-y:auto">';
+  if(!_cgPalettes.length) h+='<div style="font-size:10.5px;color:var(--text4);line-height:1.4">'+cgT('cgPalEmptyHint')+'</div>';
+  else _cgPalettes.forEach(function(p){
+    h+='<div style="font-size:10px;color:var(--text4);margin:3px 0 2px">'+_cgBarMenuEsc(p.builtin?cgT(p.nameKey):p.name)+'</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:3px">';
+    p.colors.forEach(function(c){ h+='<div data-c="'+c+'" title="'+c+'" style="width:20px;height:20px;border-radius:4px;background:'+c+';border:1px solid rgba(255,255,255,.25);cursor:pointer"></div>'; });
+    h+='</div>';
+  });
+  h+='</div><div style="'+lblSt+'">'+cgT('barMenuTexture')+'</div><select id="cgBarMenuTex" style="width:100%;font-size:11px;padding:4px;background:var(--bg);border:1px solid var(--border2);border-radius:5px;color:var(--text)">';
+  texList.forEach(function(t){ h+='<option value="'+t[0]+'"'+(t[0]===curTex?' selected':'')+'>'+cgT(t[1])+t[2]+'</option>'; });
+  h+='</select><div style="display:flex;gap:6px;margin-top:10px"><button type="button" id="cgBarMenuReset" style="flex:1;padding:6px;background:var(--bg3);border:1px solid var(--border2);color:var(--text3);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">↺ '+cgT('barMenuReset')+'</button>'
+     +'<button type="button" id="cgBarMenuOk" style="padding:6px 14px;background:rgba(236,72,153,.14);border:1px solid rgba(236,72,153,.5);color:#ec4899;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+cgT('barMenuClose')+'</button></div>';
+  var m=document.createElement('div'); m.id='cgBarMenu';
+  m.style.cssText='position:fixed;z-index:10070;width:240px;max-height:88vh;overflow-y:auto;background:var(--bg2);border:1px solid rgba(236,72,153,.45);border-radius:10px;box-shadow:0 12px 36px rgba(0,0,0,.5);padding:10px 12px;color:var(--text);font-size:11.5px';
+  m.innerHTML=h; document.body.appendChild(m);
+  var colorEl=m.querySelector('#cgBarMenuColor'), hexEl=m.querySelector('#cgBarMenuHex'), texEl=m.querySelector('#cgBarMenuTex');
+  function refresh(){ try{ cgUpdateChart(); }catch(_){} try{ cgUpdateBarColorResetBtn(); }catch(_){} }
+  function setColor(c){ _cgBarColors[key]=c; colorEl.value=c; hexEl.textContent=c.toUpperCase(); refresh(); }
+  colorEl.addEventListener('input',function(){ setColor(colorEl.value); });
+  m.querySelector('#cgBarMenuPals').addEventListener('click',function(e){ var sw=e.target.closest&&e.target.closest('[data-c]'); if(sw) setColor(sw.getAttribute('data-c')); });
+  texEl.addEventListener('change',function(){ if(texEl.value==='') delete _cgBarTextures[key]; else _cgBarTextures[key]=texEl.value; refresh(); });
+  m.querySelector('#cgBarMenuReset').addEventListener('click',function(){
+    delete _cgBarColors[key]; delete _cgBarTextures[key];
+    colorEl.value=/^#[0-9a-f]{6}$/i.test(ctx.serColor||'')?ctx.serColor:'#ec4899'; hexEl.textContent=colorEl.value.toUpperCase(); texEl.value=''; refresh();
+  });
+  m.querySelector('#cgBarMenuX').addEventListener('click',cgCloseBarMenu);
+  m.querySelector('#cgBarMenuOk').addEventListener('click',cgCloseBarMenu);
+  var w=m.offsetWidth, hh=m.offsetHeight;
+  m.style.left=Math.max(6,Math.min(x+10,window.innerWidth-w-6))+'px';
+  m.style.top=Math.max(6,Math.min(y+10,window.innerHeight-hh-6))+'px';
+  setTimeout(function(){ document.addEventListener('mousedown',_cgBarMenuOutside,true); document.addEventListener('keydown',_cgBarMenuKey,true); },0);
 }
 function cgSetupDataLabelClick(){
   var canvas=document.getElementById('cgMainCanvas');
@@ -53867,7 +53941,6 @@ function cgAddSeries(){
     +'<div class="cg-bp-field" style="display:none;margin-bottom:4px"><label id="cgLblBpHShift_'+i+'" style="font-size:10px;color:var(--text4)">'+cgT('bpHShift')+' <span id="cgHShift_val_'+i+'" ondblclick="cgInlineNumEdit(event,\'cgHShift_'+i+'\',\'cgHShift_val_'+i+'\',2)" title="'+cgT('bpDblClickType')+'" style="color:#ec4899;cursor:text;text-decoration:underline dotted;text-underline-offset:2px">0.00</span></label><input type="range" id="cgHShift_'+i+'" min="-5" max="10" step="0.01" value="0" oninput="document.getElementById(\'cgHShift_val_'+i+'\').textContent=parseFloat(this.value).toFixed(2);cgUpdateChart()" ondblclick="this.value=0;document.getElementById(\'cgHShift_val_'+i+'\').textContent=\'0.00\';cgUpdateChart()" title="'+cgT('bpDblClickReset')+'" style="width:100%;accent-color:#ec4899"></div>'
     // Dynamic per-column controls (rendered by cgUpdateColUI)
     +'<div id="cgColCtrl_'+i+'" style="display:none"></div>'
-    +'<div class="cg-label-pos-field" style="display:none;margin-bottom:4px"><label id="cgLblBpLblPos_'+i+'" style="font-size:10px;color:var(--text4)">'+cgT('bpLblPos')+'</label><select id="cgLabelPos_'+i+'" onchange="cgUpdateChart()" style="font-size:10px;padding:2px 4px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text);width:100%"><option id="cgBpLblOptAbove_'+i+'" value="above">'+cgT('bpLblAbove')+'</option><option id="cgBpLblOptBelow_'+i+'" value="below">'+cgT('bpLblBelow')+'</option><option id="cgBpLblOptLeft_'+i+'" value="left">'+cgT('bpLblLeft')+'</option><option id="cgBpLblOptRight_'+i+'" value="right">'+cgT('bpLblRight')+'</option></select></div>'
     +'<div class="cg-field" style="margin-bottom:6px"><label id="cgLblAxis_'+i+'">'+cgT('axisLabel')+'</label><select id="cgAxis_'+i+'" onchange="cgUpdateSecondaryAxisFields();cgUpdateChart()" style="font-size:11px;padding:3px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;color:var(--text)"><option value="default">'+cgT('cgDefault')+'</option><option value="x2">X2 ('+cgT('cgTop')+')</option><option value="y2">Y2 ('+cgT('cgRight')+')</option></select></div>'
     // "Jitter de dados" — desloca levemente os pontos na direcao X (apenas visual).
     // So aparece para Dispersao XY, Linha, Dispersao lado a lado, Weibull e FDA. Range -1..1.
@@ -54172,7 +54245,7 @@ function cgClearAllData(){
   if(hmTa1) hmTa1.value='';
   if(hmTa2) hmTa2.value='';
   // sem dados, as cores individuais de barra perdem o sentido (os índices mudam).
-  try{ _cgBarColors={}; cgUpdateBarColorResetBtn(); }catch(e){}
+  try{ _cgBarColors={}; _cgBarTextures={}; cgUpdateBarColorResetBtn(); }catch(e){}
   cgUpdateChart();
 }
 
@@ -54206,7 +54279,7 @@ function cgToggleSeries(i){
 
 // ── CG Translation helper ───────────────────────────────
 var _cgI18N={
-  pt:{series:'S\u00e9rie',seriesNamePh:'Nome da s\u00e9rie',marker:'Marcador',line:'Linha',cgTextureLabel:'Textura',cgTexNone:'Nenhuma',cgTexDiagonal:'Diagonal',cgTexDiagonal2:'Diagonal inv.',cgTexHorizontal:'Horizontal',cgTexVertical:'Vertical',cgTexGrid:'Grade',cgTexCrosshatch:'Cruzada',cgTexDots:'Pontos',cgLegendShowTextures:'Mostrar Texturas na Legenda',
+  pt:{series:'S\u00e9rie',seriesNamePh:'Nome da s\u00e9rie',marker:'Marcador',line:'Linha',cgTextureLabel:'Textura',cgTexNone:'Nenhuma',cgTexDiagonal:'Diagonal',cgTexDiagonal2:'Diagonal inv.',cgTexHorizontal:'Horizontal',cgTexVertical:'Vertical',cgTexGrid:'Grade',cgTexCrosshatch:'Cruzada',cgTexDots:'Pontos',barMenuTitle:'Barra',barMenuColor:'Cor',barMenuPalettes:'Paletas',barMenuTexture:'Textura',barMenuTexInherit:'Igual à série',barMenuReset:'Restaurar barra',barMenuClose:'Fechar',cgLegendShowTextures:'Mostrar Texturas na Legenda',
     noLine:'Sem linha',solid:'S\u00f3lida',dashed:'Tracejada',dotted:'Pontilhada',dashdot:'Tra\u00e7o-ponto',doubleLine:'Dupla',none:'Nenhum',
     markerSize:'Tamanho marcador',opacity:'Opacidade',importFile:'Importar',
     pastePlaceholder:'Cole aqui: X tab Y (ou s\u00f3 Y)\nou arraste um arquivo .csv/.txt/.xlsx aqui\nEx:\n1\t23.4\n2\t31.2\n3\t28.5',
@@ -54341,7 +54414,7 @@ var _cgI18N={
     vlShowWhiskers:'Mostrar Whiskers (Min–Máx)',vlShowData:'Mostrar Dados',
     vlJitter:'Jitter (espalhamento X)',vlPtSize:'Tamanho do ponto',vlPtOpacity:'Opacidade dos pontos',
     vlBorderThick:'Espessura da Borda',vlFillOpacity:'Opacidade do Preenchimento',
-    bpLblPos:'Posição Etiqueta',bpLblAbove:'Acima',bpLblBelow:'Abaixo',bpLblLeft:'Esquerda',bpLblRight:'Direita',
+    
     bpConnHint:'Liga as medianas das séries com uma linha.',bpConnActivate:'Ativar Ligação',
     bpConnStyle:'Estilo da Linha',bpConnThick:'Espessura',
     bpConnSolid:'Contínua',bpConnDash:'Tracejada',bpConnDot:'Pontilhada',bpConnDashdot:'Traço-ponto',
@@ -54517,7 +54590,7 @@ var _cgI18N={
     cgZiAlertUnsupported:'Zoom de destaque disponível apenas para Dispersão, Linha, Boxplot e Dispersão lado a lado.',
     cgZiAlertNoChart:'Gere o gráfico antes de selecionar uma região.'
   },
-  en:{series:'Series',seriesNamePh:'Series name',marker:'Marker',line:'Line',cgTextureLabel:'Texture',cgTexNone:'None',cgTexDiagonal:'Diagonal',cgTexDiagonal2:'Diagonal inv.',cgTexHorizontal:'Horizontal',cgTexVertical:'Vertical',cgTexGrid:'Grid',cgTexCrosshatch:'Crosshatch',cgTexDots:'Dots',cgLegendShowTextures:'Show Textures in Legend',
+  en:{series:'Series',seriesNamePh:'Series name',marker:'Marker',line:'Line',cgTextureLabel:'Texture',cgTexNone:'None',cgTexDiagonal:'Diagonal',cgTexDiagonal2:'Diagonal inv.',cgTexHorizontal:'Horizontal',cgTexVertical:'Vertical',cgTexGrid:'Grid',cgTexCrosshatch:'Crosshatch',cgTexDots:'Dots',barMenuTitle:'Bar',barMenuColor:'Color',barMenuPalettes:'Palettes',barMenuTexture:'Texture',barMenuTexInherit:'Same as series',barMenuReset:'Reset bar',barMenuClose:'Close',cgLegendShowTextures:'Show Textures in Legend',
     noLine:'No line',solid:'Solid',dashed:'Dashed',dotted:'Dotted',dashdot:'Dash-dot',doubleLine:'Double',none:'None',
     markerSize:'Marker size',opacity:'Opacity',importFile:'Import',
     pastePlaceholder:'Paste here: X tab Y (or Y only)\nor drag a .csv/.txt/.xlsx file here\nEx:\n1\t23.4\n2\t31.2\n3\t28.5',
@@ -54596,7 +54669,7 @@ var _cgI18N={
     vlShowWhiskers:'Show Whiskers (Min–Max)',vlShowData:'Show Data',
     vlJitter:'Jitter (X spread)',vlPtSize:'Point size',vlPtOpacity:'Point opacity',
     vlBorderThick:'Border Thickness',vlFillOpacity:'Fill Opacity',
-    bpLblPos:'Label Position',bpLblAbove:'Above',bpLblBelow:'Below',bpLblLeft:'Left',bpLblRight:'Right',
+    
     bpConnHint:'Connects series medians with a line.',bpConnActivate:'Enable Connection',
     bpConnStyle:'Line Style',bpConnThick:'Thickness',
     bpConnSolid:'Solid',bpConnDash:'Dashed',bpConnDot:'Dotted',bpConnDashdot:'Dash-dot',
@@ -56159,8 +56232,8 @@ function cgApplyLang(){
       var _en=(typeof getCurrentLang==='function' && getCurrentLang()==='en');
       var hint=document.getElementById('cgBarColorHint');
       if(hint) hint.innerHTML=_en
-        ? '🎨 <b>Double-click</b> a bar in the chart to change that bar\'s color individually.'
-        : '🎨 Dê <b>2 cliques</b> em uma barra do gráfico para mudar a cor dela individualmente.';
+        ? '🎨 <b>Double-click</b> a bar in the chart to change that bar\'s color or texture individually.'
+        : '🎨 Dê <b>2 cliques</b> em uma barra do gráfico para mudar a cor ou a textura dela individualmente.';
       try{ cgUpdateBarColorResetBtn(); }catch(e){}
     })();
     setTxt('cgLblBarSpacing','barSpacing');
@@ -56221,11 +56294,6 @@ function cgApplyLang(){
       if(fcxj&&fcxj.nodeType===3) fcxj.nodeValue=cgT('xjitterLabel')+' ';
       xjlbl.title=cgT('xjitterHint');
     }
-    var plbl=document.getElementById('cgLblBpLblPos_'+si2);
-    if(plbl) plbl.textContent=cgT('bpLblPos');
-    var popts=[['cgBpLblOptAbove_'+si2,'bpLblAbove'],['cgBpLblOptBelow_'+si2,'bpLblBelow'],
-              ['cgBpLblOptLeft_'+si2,'bpLblLeft'],['cgBpLblOptRight_'+si2,'bpLblRight']];
-    popts.forEach(function(p){var pe=document.getElementById(p[0]);if(pe)pe.textContent=cgT(p[1]);});
     var rbtn=document.getElementById('cgBtnRemoveLbl_'+si2);
     if(rbtn) rbtn.title=cgT('removeSeries2');
   }
@@ -58716,10 +58784,6 @@ function _cgUpdateChartRaw(){
   // Show/hide data label sub-options (scatter)
   var dlOpts=document.getElementById('cgDataLabelOptions');
   if(dlOpts) dlOpts.style.display=showDataLabels?'block':'none';
-  // per-series label position selector is exclusive to Boxplot — never show it for scatter/line
-  document.querySelectorAll('.cg-label-pos-field').forEach(function(f){
-    f.style.display=(showDataLabels&&chartType==='boxplot')?'flex':'none';
-  });
 
   // ═══ LINE CHART MODE removed — 'line' now shares the full scatter pipeline below,
   // which already supports showLine, data labels, error bars, ref lines and annotations.
@@ -58761,10 +58825,6 @@ function _cgUpdateChartRaw(){
     var borderDash = lineStyle==='dash'?[6,4]:lineStyle==='dot'?[2,3]:lineStyle==='dashdot'?[8,4,2,4]:[];
     var axisSelEl = document.getElementById('cgAxis_'+i);
     var axisVal = axisSelEl ? axisSelEl.value : 'default';
-    var labelPosEl = document.getElementById('cgLabelPos_'+i);
-    // cgLabelPos_N is a Boxplot-only control. For scatter/line, leave undefined so the
-    // global "Posição da Etiqueta" selector (cgDataLabelGlobalPos) takes effect instead.
-    var labelPos = (chartType==='boxplot'&&labelPosEl) ? labelPosEl.value : undefined;
     var jitterEl = document.getElementById('cgXJitter_'+i);
     var jitterX = jitterEl ? (parseFloat(jitterEl.value)||0) : 0;
 
@@ -58823,7 +58883,6 @@ function _cgUpdateChartRaw(){
       // marcadores "de traço" (✚ ✖ ━) são desenhados pela borda: sem largura eles sumiriam
       if(isStroke && _mkB.width<=0) ds.pointBorderWidth=0.5;
     }
-    ds._labelPos = labelPos;
     ds._cgSeriesIdx = i;
     ds._cgYCol = _yc;
     ds._cgNY   = _nY;
@@ -59907,15 +59966,22 @@ function _cgUpdateChartRaw(){
       // para que ocultar/reexibir séries não embaralhe as cores já escolhidas.
       var _bBgFinal=_bBg, _bBorderFinal=bcol;
       var _hasOverride=false;
-      for(var _oi=0;_oi<byVals.length;_oi++){ if(_cgBarColors[bi+'_'+_oi]){ _hasOverride=true; break; } }
+      for(var _oi=0;_oi<byVals.length;_oi++){ var _ok=bi+'_'+_oi; if(_cgBarColors[_ok]||_cgBarTextures[_ok]!==undefined){ _hasOverride=true; break; } }
       if(_hasOverride){
-        _bBgFinal=byVals.map(function(_,pi2){
-          var ov=_cgBarColors[bi+'_'+pi2];
-          return ov ? (ov+bHex2) : _bBg;   // override respeita a opacidade global das barras
-        });
-        _bBorderFinal=byVals.map(function(_,pi2){
-          return _cgBarColors[bi+'_'+pi2] || bcol;
-        });
+        // cor e/ou textura próprias por barra; o que não foi alterado segue a série (textura da série é herdada pela cor nova)
+        var _pc={}, _cvO=document.getElementById('cgMainCanvas'), _cxO=_cvO?_cvO.getContext('2d'):null;
+        _bBgFinal=[]; _bBorderFinal=[];
+        for(var pi2=0;pi2<byVals.length;pi2++){
+          var _k2=bi+'_'+pi2, ovC=_cgBarColors[_k2], ovT=_cgBarTextures[_k2];
+          if(!ovC && ovT===undefined){ _bBgFinal.push(_bBg); _bBorderFinal.push(bcol); continue; }
+          var cC=ovC||bcol, cT=(ovT!==undefined)?ovT:_bTex, bg2=cC+bHex2;
+          if(cT!=='none' && _cxO){
+            var _pk=cC+'|'+cT;
+            if(!(_pk in _pc)) _pc[_pk]=_cgTexturePattern(_cxO,cC,cT,barOpacity);
+            if(_pc[_pk]) bg2=_pc[_pk];
+          }
+          _bBgFinal.push(bg2); _bBorderFinal.push(cC);
+        }
       }
       barDatasets.push({
         label:bname,
@@ -64576,7 +64642,7 @@ function _cgUpdateChartRaw(){
         if(!ds.data||!ds.data.length) return;
         ctx.save();
         ctx.font='bold '+dataLabelFontSize+'px '+(tv.fontFamily||'sans-serif');
-        var seriesLabelPos=ds._labelPos||globalLabelPos;
+        var seriesLabelPos=globalLabelPos;
         var isFree = (seriesLabelPos==='free');
         var posAbove = (seriesLabelPos==='above');
         var posRight = (seriesLabelPos==='right');
@@ -67342,6 +67408,7 @@ function _cgBuildConfigObject(includeData){
     hiddenMarkers: (typeof _cgHiddenMarkers!=='undefined') ? JSON.parse(JSON.stringify(_cgHiddenMarkers)) : {}, // marcadores de pontos ocultos por série (CÓPIA — evita referência compartilhada entre abas)
     hiddenDataLabels: (typeof _cgHiddenDataLabels!=='undefined') ? JSON.parse(JSON.stringify(_cgHiddenDataLabels)) : {}, // etiquetas de dados ocultas (clique no ponto) — CÓPIA; persiste ao trocar de aba
     barColors: (typeof _cgBarColors!=='undefined') ? JSON.parse(JSON.stringify(_cgBarColors)) : {},
+    barTextures: (typeof _cgBarTextures!=='undefined') ? JSON.parse(JSON.stringify(_cgBarTextures)) : {},
     fdpCustomPalette: (typeof _cgFdpCustomPalette!=='undefined') ? _cgFdpCustomPalette.slice() : null,
     customSpaceVals: (typeof _cgCustomSpaceVals!=='undefined') ? JSON.parse(JSON.stringify(_cgCustomSpaceVals)) : {},
     highlightRegions: _cgHighlightRegions,
@@ -67931,6 +67998,9 @@ function cgApplyConfigObject(cfg, opts){
       }
       if(typeof _cgHiddenDataLabels!=='undefined'){
         _cgHiddenDataLabels=(cfg.hiddenDataLabels&&typeof cfg.hiddenDataLabels==='object')?cfg.hiddenDataLabels:{};
+      }
+      if(typeof _cgBarTextures!=='undefined'){
+        _cgBarTextures=(cfg.barTextures&&typeof cfg.barTextures==='object')?cfg.barTextures:{};
       }
       if(typeof _cgBarColors!=='undefined'){
         _cgBarColors=(cfg.barColors&&typeof cfg.barColors==='object')?cfg.barColors:{};
@@ -69049,9 +69119,42 @@ function cgRenamePalette(idx, ev){
   p.name=name; p.builtin=false; // renaming a built-in palette makes it a regular one
   cgRenderPalettesMenu();
 }
+/* Copia o código de cor (#RRGGBB) para a área de transferência e avisa o usuário. */
+function _cgCopyFallback(t){
+  var ta=document.createElement('textarea'); ta.value=t; ta.setAttribute('readonly','');
+  ta.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';
+  document.body.appendChild(ta); ta.select();
+  var ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+  ta.remove(); return ok;
+}
+function cgCopyColorHex(c, ev, el){
+  if(ev){ try{ ev.stopPropagation(); ev.preventDefault(); }catch(_){} }
+  var txt=String(c||'').toUpperCase();
+  try{ var sel=window.getSelection&&window.getSelection(); if(sel) sel.removeAllRanges(); }catch(_){}
+  try{ if(el&&el.animate) el.animate([{transform:'scale(1.7)'},{transform:'scale(1)'}],{duration:280,easing:'ease-out'}); }catch(_){}
+  function done(ok){
+    notify(ok ? nbi('Cor '+txt+' copiada para a área de transferência.','Color '+txt+' copied to the clipboard.')
+              : nbi('Não foi possível copiar a cor.','Could not copy the color.'), ok?'success':'error');
+  }
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){ done(true); },function(){ done(_cgCopyFallback(txt)); });
+      return;
+    }
+  }catch(e){}
+  done(_cgCopyFallback(txt));
+}
 function cgRenderPalettesMenu(){
   var list=document.getElementById('cgPalettesList');
   if(!list) return;
+  // delegação única: 2 cliques em qualquer cor copia o código (ligada uma só vez)
+  if(!list._dblCopy){
+    list._dblCopy=true;
+    list.addEventListener('dblclick',function(e){
+      var sw=e.target.closest&&e.target.closest('[data-c]');
+      if(sw) cgCopyColorHex(sw.getAttribute('data-c'),e,sw);
+    });
+  }
   list.innerHTML='';
   if(_cgPalettes.length===0){
     list.innerHTML='<div style="font-size:10.5px;color:var(--text4);line-height:1.5">'+cgT('cgPalEmptyHint')+'</div>';
@@ -69062,7 +69165,7 @@ function cgRenderPalettesMenu(){
     var row=document.createElement('div');
     row.style.cssText='padding:6px 7px;border:1px solid var(--border2);border-radius:6px;background:var(--bg3)';
     var swatches=p.colors.map(function(c){
-      return '<div title="'+c+'" style="width:16px;height:16px;border-radius:3px;background:'+c+';border:1px solid rgba(255,255,255,.2)"></div>';
+      return '<div data-c="'+c+'" title="'+c+' · '+nbi('2 cliques para copiar o código','Double-click to copy the code')+'" style="width:16px;height:16px;border-radius:3px;background:'+c+';border:1px solid rgba(255,255,255,.2);cursor:copy;user-select:none;-webkit-user-select:none"></div>';
     }).join('');
     var nameEsc=String(nm).replace(/</g,'&lt;').replace(/>/g,'&gt;');
     row.innerHTML=
@@ -77077,6 +77180,64 @@ function cgBulkApply(){
   cgBulkOnSeriesChange();
 }
 
+/* Corrige o formato numérico em TODAS as caixas de dados das séries.
+   mode 'dec': "16,5" → "16.5" (vírgula decimal entre dígitos).
+   mode 'tho': "1,000" / "1,234,567" → "1000" / "1234567" (vírgula de milhar, grupos de 3 dígitos). */
+function _cgBulkFixFormat(mode){
+  var changedBoxes=0, changedVals=0;
+  for(var i=1;i<=_cgSeriesCount;i++){
+    var el=document.getElementById('cgData_'+i); if(!el) continue;
+    var src=el.value||''; if(!src) continue;
+    var n=0, out;
+    out=src.replace(/\d[\d.,]*\d|\d/g,function(tok){
+      var r=tok;
+      if(mode==='dec'){
+        var hasDot=tok.indexOf('.')>-1, nCom=(tok.match(/,/g)||[]).length;
+        if(!nCom) return tok;
+        if(hasDot){
+          // misto: se a ÚLTIMA pontuação é vírgula → formato PT (1.234,5 → 1234.5); se é ponto → formato EN, não mexe
+          if(tok.lastIndexOf(',')>tok.lastIndexOf('.')) r=tok.replace(/\./g,'').replace(',','.');
+        } else if(nCom===1){
+          r=tok.replace(',','.');                 // 16,5 → 16.5
+        }                                          // 3,141,592 (várias vírgulas) = milhar EN → não mexe
+      } else {
+        if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(tok)) r=tok.replace(/,/g,'');   // 1,000 → 1000 ; 1,234,567.8 → 1234567.8
+      }
+      if(r!==tok) n++;
+      return r;
+    });
+    if(out!==src){
+      el.value=out; changedBoxes++; changedVals+=n;
+      try{ el.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){}
+      try{ if(typeof cgBpAutoDetect==='function') cgBpAutoDetect(i); }catch(e){}
+    }
+  }
+  if(!changedBoxes){
+    var _none=(mode==='dec'
+      ? _cgBulkT('Nenhuma vírgula decimal encontrada nas caixas de dados.','No decimal comma found in the data boxes.')
+      : _cgBulkT('Nenhuma vírgula de milhar encontrada nas caixas de dados.','No thousands comma found in the data boxes.'));
+    notify(_none,'info'); _cgBulkFmtStatus(_none,false);
+    return;
+  }
+  try{ cgUpdateChart(); }catch(e){}
+  var _ok=_cgBulkT('Convertido: ','Converted: ')+changedVals+' '+_cgBulkT('valor(es) em ','value(s) in ')+changedBoxes+' '+_cgBulkT('série(s).','series.');
+  notify(_ok,'success'); _cgBulkFmtStatus(_ok,true);
+  cgBulkOnSeriesChange();
+}
+// faixa de confirmação dentro da própria janela (some sozinha) — garante que o usuário veja o resultado
+var _cgBulkFmtTimer=null;
+function _cgBulkFmtStatus(msg, ok){
+  var el=document.getElementById('cgBulkFmtStatus'); if(!el) return;
+  el.textContent=(ok?'✅ ':'ℹ️ ')+msg;
+  el.style.cssText='display:block;margin-top:8px;padding:7px 10px;border-radius:7px;font-size:11.5px;font-weight:700;line-height:1.4;'
+    +(ok?'background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.45);color:#4ade80'
+        :'background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.4);color:#f59e0b');
+  clearTimeout(_cgBulkFmtTimer);
+  _cgBulkFmtTimer=setTimeout(function(){ el.style.display='none'; },7000);
+}
+function cgBulkFixDecimal(){ _cgBulkFixFormat('dec'); }
+function cgBulkFixThousands(){ _cgBulkFixFormat('tho'); }
+
 /* i18n do modal (segue o idioma do programa). */
 function _cgBulkApplyLang(){
   var en=(typeof getCurrentLang==='function' && getCurrentLang()==='en');
@@ -77101,6 +77262,12 @@ function _cgBulkApplyLang(){
   s('cgBulkLblTo','Até a linha','To row');
   s('cgBulkCancel','Cancelar','Cancel');
   s('cgBulkApplyBtn','Aplicar','Apply');
+  s('cgBulkLblFmt','Corrigir formato numérico (todas as séries)','Fix number format (all series)');
+  s('cgBulkBtnDecTxt','Vírgula decimal → ponto','Decimal comma → period');
+  s('cgBulkBtnDecEx','16,5 → 16.5 (Excel em português)','16,5 → 16.5 (Portuguese-locale Excel)');
+  s('cgBulkBtnThoTxt','Remover vírgula de milhar','Remove thousands comma');
+  s('cgBulkBtnThoEx','1,000 → 1000 (Excel em inglês)','1,000 → 1000 (English-locale Excel)');
+  s('cgBulkFmtNote','Só mexe em números (vírgulas entre dígitos). Aplica em todas as caixas de dados e atualiza o gráfico.','Only touches numbers (commas between digits). Applies to all data boxes and refreshes the chart.');
   var btn=document.getElementById('cgBtnBulkEdit'); if(btn) btn.title=en?'Bulk-edit series data':'Editar dados das séries em lote';
   if(typeof cgBulkOnOpChange==='function') cgBulkOnOpChange();
 }
@@ -80196,10 +80363,335 @@ wikiTecBuild();
 
 
 
+<!--  ═══ MENU DE SEÇÕES (flutuante) ═══
+      Quadradinho com a logo, colado numa lateral da tela. Ligado/desligado pelo ⚙️ (Tela Inicial).
+      Clique = abre a lista de seções; 2 cliques + arrastar = move (sempre gruda na lateral esquerda/direita). -->
+<style id="secMenuCss">
+#secMenu{--sm-c:var(--accent);--sm-rgb:90,122,255;position:fixed;z-index:9450;top:40%;left:auto;right:0;display:none;user-select:none;-webkit-user-select:none;touch-action:none}
+#secMenu.sm-on{display:block}
+/* cursor da seção atual (definido em JS no #secMenu); mesma regra do app: todo descendente herda, inclusive botões */
+#secMenu *{cursor:inherit!important}
+#secMenu.sm-snap{transition:left .22s cubic-bezier(.2,.8,.2,1),top .12s ease}
+#secMenuBtn{width:46px;height:46px;border:1.5px solid var(--accent);background:var(--bg2);color:var(--text8);display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 6px 20px rgba(0,0,0,.38);transition:background .15s,box-shadow .2s,border-color .2s;position:relative;z-index:2}
+#secMenu.sm-right #secMenuBtn{border-radius:14px 0 0 14px;border-right:none}
+#secMenu.sm-left #secMenuBtn{border-radius:0 14px 14px 0;border-left:none}
+/* borda e brilho seguem a cor da seção atual (--sm-c / --sm-rgb definidas em JS; branco/preto na Tela Inicial e Wiki) */
+#secMenuBtn:hover,#secMenuBtn:focus-visible,#secMenu.sm-open #secMenuBtn{background:var(--bg4);border-color:var(--sm-c);outline:none;box-shadow:0 0 0 1px rgba(var(--sm-rgb),.55),0 0 20px rgba(var(--sm-rgb),.7),0 6px 22px rgba(0,0,0,.38)}
+#secMenu.sm-dragging #secMenuBtn{border-radius:14px;border:1.5px solid var(--sm-c);box-shadow:0 0 26px rgba(var(--sm-rgb),.7),0 10px 30px rgba(0,0,0,.4);transform:scale(1.06)}
+#secMenuBtn .sm-logo{font-family:'Audiowide',sans-serif;font-size:16px;line-height:1;letter-spacing:.5px;color:var(--text8);display:flex;flex-direction:column;align-items:center;gap:2px}
+#secMenuBtn .sm-logo i{font-style:normal;font-size:7.5px;letter-spacing:1.5px;color:var(--accent);transition:color .2s}
+#secMenuBtn:hover .sm-logo i,#secMenu.sm-open .sm-logo i{color:var(--sm-c)}
+/* leque: origem no centro do botão. Camadas de desfoque do próprio fundo que se dissolvem para fora (sem borda e sem tinta de cor) */
+#secMenuPanel{position:absolute;left:23px;top:23px;width:0;height:0;pointer-events:none;visibility:hidden;transition:visibility 0s linear .28s}
+#secMenu.sm-open #secMenuPanel{visibility:visible;transition-delay:0s}
+.sm-disc,.sm-hit{position:absolute;border-radius:50%;transform:scale(.15);opacity:0;pointer-events:none;transition:transform .34s cubic-bezier(.2,.9,.25,1.08),opacity .25s}
+#secMenu.sm-open .sm-disc,#secMenu.sm-open .sm-hit{transform:none;opacity:1}
+.sm-hit{pointer-events:auto}
+.sm-disc{-webkit-mask-composite:source-in;mask-composite:intersect}
+.sm-b1{-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);-webkit-mask-image:radial-gradient(circle closest-side,#000 30%,transparent 68%),var(--vm,linear-gradient(#000,#000));mask-image:radial-gradient(circle closest-side,#000 30%,transparent 68%),var(--vm,linear-gradient(#000,#000))}
+.sm-b2{-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);-webkit-mask-image:radial-gradient(circle closest-side,#000 45%,transparent 84%),var(--vm,linear-gradient(#000,#000));mask-image:radial-gradient(circle closest-side,#000 45%,transparent 84%),var(--vm,linear-gradient(#000,#000))}
+.sm-b3{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);-webkit-mask-image:radial-gradient(circle closest-side,#000 62%,transparent 100%),var(--vm,linear-gradient(#000,#000));mask-image:radial-gradient(circle closest-side,#000 62%,transparent 100%),var(--vm,linear-gradient(#000,#000))}
+/* botões das seções: fundo sólido + anel colorido = legíveis sobre qualquer conteúdo */
+.sm-item{position:absolute;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border-radius:50%;pointer-events:auto;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;font-family:inherit;color:var(--text);background:var(--bg2);border:2px solid rgba(var(--c-rgb),.85);box-shadow:0 4px 14px rgba(0,0,0,.35);transform:translate(0,0) scale(.3);opacity:0;transition:transform .32s cubic-bezier(.2,.9,.25,1.15) calc(var(--i)*26ms),opacity .2s calc(var(--i)*26ms),box-shadow .15s,background .15s}
+#secMenu.sm-open .sm-item{transform:translate(var(--dx),var(--dy)) scale(1);opacity:1}
+.sm-item:hover,.sm-item:focus-visible{transform:translate(var(--dx),var(--dy)) scale(1.15);background:linear-gradient(rgba(var(--c-rgb),.22),rgba(var(--c-rgb),.22)),var(--bg2);box-shadow:0 0 16px rgba(var(--c-rgb),.75),0 4px 14px rgba(0,0,0,.35);z-index:3;outline:none;transition-delay:0s}
+.sm-item.sm-cur{background:linear-gradient(rgba(var(--c-rgb),.40),rgba(var(--c-rgb),.40)),var(--bg2);box-shadow:0 0 0 3px rgba(var(--c-rgb),.35),0 4px 14px rgba(0,0,0,.35);cursor:default}
+/* nome da seção aparece ao passar o mouse (sempre aberto para o lado de dentro da tela) */
+.sm-item::after{content:attr(data-n);position:absolute;bottom:calc(100% + 9px);white-space:nowrap;padding:5px 10px;border-radius:7px;font-size:12.5px;font-weight:700;color:var(--text);background:var(--bg2);border:1px solid rgba(var(--c-rgb),.75);box-shadow:0 4px 14px rgba(0,0,0,.4);opacity:0;pointer-events:none;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#secMenu.sm-right .sm-item::after{right:-4px}
+#secMenu.sm-left .sm-item::after{left:-4px}
+.sm-item.sm-tipb::after{bottom:auto;top:calc(100% + 9px)}
+.sm-item:hover::after,.sm-item:focus-visible::after{opacity:1;transform:none}
+#secMenu.sm-noanim .sm-item,#secMenu.sm-noanim .sm-disc,#secMenu.sm-noanim .sm-hit,#secMenu.sm-noanim #secMenuPanel{transition:none!important}
+</style>
+<div id="secMenu" class="sm-right" aria-label="Menu de seções">
+  <button type="button" id="secMenuBtn" aria-haspopup="true" aria-expanded="false" title="Menu de seções — 2 cliques e arraste para mover"><span class="sm-logo">SL<i>PRO</i></span></button>
+  <div id="secMenuPanel" role="menu"></div>
+</div>
+<script>
+/* ══ MENU DE SEÇÕES (flutuante) ══
+   • Liga/desliga em ⚙️ → "Menu de seções" (preferência 'statlab-secmenu', padrão: desligado).
+   • Clique no quadradinho = abre/fecha o leque de ícones. 2 cliques seguidos (o 2º segurando) e arrastar = move;
+     ao soltar ele gruda na lateral esquerda ou direita mais próxima. Posição salva ('statlab-secmenu-pos').
+   • O leque abre para o lado de dentro da tela: meio círculo no meio da lateral e 1/4 de círculo quando o botão
+     está perto do topo ou da base. Anel externo = seções; anel interno = Início, Wiki e Técnicas de análise.
+     O fundo é a própria seção, desfocado em camadas que se dissolvem para fora (backdrop-filter + máscara radial, sem borda e sem escurecer).
+   • Borda/brilho do botão seguem a cor da seção atual (branco no tema escuro / preto no claro na Tela Inicial e na Wiki).
+   • Além das seções, o leque abre o pop-up 🧬 Técnicas de análise por cima da seção atual (sem ir à Tela Inicial).
+   • Trocar de seção reaproveita as funções originais (launchX) depois de reiniciar a tela (_goHomeApply),
+     sem animação intermediária e sem passar visualmente pela Tela Inicial. Textos PT/EN via isEn(). */
+(function(){
+  /* c:null = cor neutra (branco no tema escuro, preto no claro) */
+  var SECS=[
+    {k:'home', r:'in',    ic:'🏠', c:null,      pt:'Tela inicial',           en:'Home'},
+    {k:'simple', r:'out',  ic:'📊', c:'#5a7aff', pt:'Análise Simples',        en:'Simple Analysis'},
+    {k:'compare', r:'out', ic:'📈', c:'#4ade80', pt:'Análise Comparativa',    en:'Comparative Analysis'},
+    {k:'eng', r:'out',     ic:'⚙️', c:'#f59e0b', pt:'Análise de Engenharia',  en:'Engineering Analysis'},
+    {k:'project', r:'out', ic:'🔩', c:'#f87171', pt:'Análise de Projeto',     en:'Project Analysis'},
+    {k:'chartgen', r:'out',ic:'📐', c:'#ec4899', pt:'Gerador de Gráficos',    en:'Chart Generator'},
+    {k:'treat', r:'out',   ic:'🧹', c:'#2dd4bf', pt:'Tratamento de Dados',    en:'Data Treatment'},
+    {k:'wiki', r:'in',    ic:'📖', c:null,      pt:'Wiki',                   en:'Wiki'},
+    {k:'tec', r:'in',     ic:'🧬', c:'#22d3ee', pt:'Técnicas de análise',    en:'Analysis techniques'}
+  ];
+  var BY={}; SECS.forEach(function(s){ BY[s.k]=s; });
+  var ENG_IDS=['appEngineering','appFTIR','appDRX','appTGA','appEDS','appMC','appPO','appDC'];
+  var SEC_IDS={appSimple:'simple',appCompare:'compare',appProject:'project',appChartGen:'chartgen',appTreat:'treat'};
+  var wrap, btn, panel;
+  var pos={side:'right', y:0.40};          // y = fração (0..1) da altura útil
+  var DBL_MS=380, MOVE_PX=4, GAP=52, ITEM=44;
+  var lastDown=0, armed=false, moved=false, offX=0, offY=0, downX=0, downY=0;
+
+  function isEn(){ try{ return getCurrentLang()==='en'; }catch(e){ return false; } }
+  function getPref(){ try{ return _settingsGet('statlab-secmenu','off')==='on'; }catch(e){ return false; } }
+  function loadPos(){
+    try{ var j=JSON.parse(_settingsGet('statlab-secmenu-pos','')||'null');
+      if(j && (j.side==='left'||j.side==='right') && isFinite(j.y)) pos={side:j.side,y:Math.max(0,Math.min(1,j.y))}; }catch(e){}
+  }
+  function savePos(){ try{ _settingsSet('statlab-secmenu-pos', JSON.stringify(pos)); }catch(e){} }
+
+  /* Zoom inverso: a interface usa `zoom` no <body> (tamanho da interface); o widget fica sempre 1:1. */
+  function applyZoom(){
+    if(!wrap) return;
+    var z=1; try{ z=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-zoom'))||1; }catch(e){}
+    wrap.style.zoom=(z===1?'':String(1/z));
+    place(false);
+  }
+  /* Posiciona o widget: x colado numa lateral, y pela fração salva. */
+  function place(animate){
+    if(!wrap) return;
+    var w=wrap.offsetWidth||46, h=wrap.offsetHeight||46;
+    var vw=window.innerWidth, vh=window.innerHeight;
+    var maxTop=Math.max(0,vh-h);
+    var top=Math.round(pos.y*maxTop);
+    var left=(pos.side==='right')? (vw-w) : 0;
+    wrap.classList.toggle('sm-snap', !!animate);
+    wrap.style.right='auto';
+    wrap.style.left=left+'px';
+    wrap.style.top=top+'px';
+    wrap.classList.toggle('sm-right', pos.side==='right');
+    wrap.classList.toggle('sm-left', pos.side==='left');
+  }
+
+  /* ── Seção atual ── */
+  function current(){
+    try{
+      var wp=document.getElementById('wikiPage');
+      if(wp && getComputedStyle(wp).display!=='none') return 'wiki';
+      var el=(typeof _activeSection==='function')?_activeSection():null;
+      if(el){
+        if(ENG_IDS.indexOf(el.id)>-1) return 'eng';
+        return SEC_IDS[el.id]||'home';
+      }
+    }catch(e){}
+    return 'home';
+  }
+
+  /* ── Cores ── */
+  function colOf(s){ return s.c || (document.body.classList.contains('light-theme') ? '#000000' : '#ffffff'); }
+  function rgbOf(hex){
+    var h=String(hex).replace('#',''); if(h.length===3) h=h.replace(/./g,'$&$&');
+    var n=parseInt(h,16)||0; return ((n>>16)&255)+','+((n>>8)&255)+','+(n&255);
+  }
+  /* pinta borda/brilho do botão (e o tom do leque) com a cor da seção atual */
+  /* mesmo cursor que a seção atual usa (applyCustomCursors): seta colorida por seção; branca/escura na Tela Inicial e Wiki */
+  var CUR_KEY={simple:'simple',compare:'compare',eng:'engineering',project:'project',chartgen:'chartgen',treat:'treat'};
+  function curFor(k){
+    try{
+      var cc=(typeof CURSOR_COLORS!=='undefined')?CURSOR_COLORS[CUR_KEY[k]]:null;
+      var svg=cc ? _cursorSVG(cc[0],cc[1]) : _cursorSVGSolid(document.body.classList.contains('light-theme')?'#1A1D29':'#FFFFFF');
+      return 'url("'+svg+'") 4 2, auto';
+    }catch(e){ return ''; }
+  }
+  function paint(k){
+    if(!wrap) return;
+    k=k||current();
+    wrap.style.cursor=curFor(k);
+    var c=colOf(BY[k]||BY.home);
+    wrap.style.setProperty('--sm-c',c);
+    wrap.style.setProperty('--sm-rgb',rgbOf(c));
+  }
+
+  /* ── Geometria do leque ──
+     Dois anéis: por fora as 6 seções de análise/ferramentas; por dentro Início, Wiki e Técnicas de análise.
+     mode: 'full' = meio círculo · 'down'/'up' = 1/4 de círculo (botão perto do topo/base). */
+  function ringPts(n,r,a0,a1){
+    var out=[];
+    for(var j=0;j<n;j++){
+      var deg=(n===1)?(a0+a1)/2:a0+j*(a1-a0)/(n-1), rad=deg*Math.PI/180;
+      out.push({x:Math.cos(rad)*r, y:Math.sin(rad)*r});
+    }
+    return out;                                  // y crescente = de cima para baixo
+  }
+  function layout(nOut,nIn,mode){
+    var full=(mode==='full'), ys=(mode==='up')?-1:1;
+    var oa0=full?-80:8, oa1=full?80:82, ia0=full?-58:12, ia1=full?58:78;
+    var so=(oa1-oa0)*Math.PI/180, si=(ia1-ia0)*Math.PI/180;
+    var rOut=Math.max(138,Math.ceil((nOut-1)*GAP/so));
+    var rIn=Math.max(74,Math.ceil((nIn-1)*GAP/si));
+    if(rOut-rIn<60) rOut=rIn+60;
+    function fix(a){ a=a.map(function(p){ return {x:p.x,y:ys*p.y}; }); a.sort(function(p,q){ return p.y-q.y; }); return a; }
+    return {out:fix(ringPts(nOut,rOut,oa0,oa1)), inn:fix(ringPts(nIn,rIn,ia0,ia1)),
+            R:rOut+ITEM/2+34, ext:rOut*Math.sin(oa1*Math.PI/180)+ITEM/2+8};
+  }
+  function counts(){ var o=0,i=0; SECS.forEach(function(s){ if(s.r==='in') i++; else o++; }); return {o:o,i:i}; }
+
+  /* ── Leque ── */
+  function buildPanel(mode){
+    var en=isEn(), cur=current(), right=(pos.side==='right'), dir=right?-1:1, n=counts();
+    var L=layout(n.o,n.i,mode);
+    var rc=btn.getBoundingClientRect(), cy=rc.top+rc.height/2;
+    var geo='width:'+(2*L.R)+'px;height:'+(2*L.R)+'px;left:'+(-L.R)+'px;top:'+(-L.R)+'px';
+    var hitR=L.R-20;
+    var h='<div class="sm-disc sm-b1" style="'+geo+'"></div><div class="sm-disc sm-b2" style="'+geo+'"></div><div class="sm-disc sm-b3" style="'+geo+'"></div>'
+         +'<div class="sm-hit" style="width:'+(2*hitR)+'px;height:'+(2*hitR)+'px;left:'+(-hitR)+'px;top:'+(-hitR)+'px"></div>';
+    var io=0, ii=0;
+    SECS.forEach(function(s){
+      var inner=(s.r==='in'), p=inner?L.inn[ii]:L.out[io], idx=inner?ii:(n.i+io);
+      if(inner) ii++; else io++;
+      var c=colOf(s), name=en?s.en:s.pt;
+      h+='<button type="button" role="menuitem" class="sm-item'+(s.k===cur?' sm-cur':'')+((cy+p.y<46)?' sm-tipb':'')+'" data-k="'+s.k+'" data-n="'+name+'" aria-label="'+name+'"'
+        +' style="--i:'+idx+';--dx:'+Math.round(dir*p.x)+'px;--dy:'+Math.round(p.y)+'px;--c-rgb:'+rgbOf(c)+'">'+s.ic+'</button>';
+    });
+    // perto do topo/base o desfoque some suavemente do lado onde não há ícones (sem corte seco)
+    var vm=(mode==='down')?'linear-gradient(to bottom,transparent 38%,#000 60%)':(mode==='up')?'linear-gradient(to top,transparent 38%,#000 60%)':'linear-gradient(#000,#000)';
+    panel.style.setProperty('--vm',vm);
+    panel.innerHTML=h;
+  }
+  function pickMode(){
+    var n=counts(), need=layout(n.o,n.i,'full').ext, rc=btn.getBoundingClientRect();
+    var cy=rc.top+rc.height/2, vh=window.innerHeight;
+    return (cy>=need && vh-cy>=need) ? 'full' : (cy<vh/2 ? 'down' : 'up');
+  }
+  function isOpen(){ return !!wrap && wrap.classList.contains('sm-open'); }
+  function openPanel(){
+    paint();
+    wrap.classList.toggle('sm-noanim', (typeof _animEnabled!=='undefined' && _animEnabled===false));
+    buildPanel(pickMode());
+    void panel.offsetWidth;                  // garante o estado inicial antes da animação de abertura
+    wrap.classList.add('sm-open'); btn.setAttribute('aria-expanded','true');
+  }
+  function closePanel(){ if(!wrap) return; wrap.classList.remove('sm-open'); btn.setAttribute('aria-expanded','false'); }
+  function togglePanel(){ isOpen()?closePanel():openPanel(); }
+
+  /* ── Navegação ── */
+  function go(key){
+    closePanel();
+    if(key==='tec'){                                        // pop-up por cima da seção atual, sem trocar de tela
+      try{ if(typeof tecOpen==='function') tecOpen(); }catch(e){ console.error('secmenu tec',e); }
+      return;
+    }
+    if(key===current()) return;
+    var prev=_animEnabled; _animEnabled=false;           // sem círculo de transição / sem flash da Tela Inicial
+    try{
+      try{ _goHomeApply(); }catch(e){ console.error('secmenu reset',e); }
+      var cg=document.getElementById('appChartGen');
+      if(cg){ cg.style.display='none'; cg.classList.remove('radial-anim-open'); }
+      switch(key){
+        case 'simple':   launchSimple(null); break;
+        case 'compare':  launchCompare(null); break;
+        case 'eng':      launchEngineering(null); break;
+        case 'project':  launchProject(null); break;
+        case 'chartgen': launchChartGen(null); break;
+        case 'treat':    launchTreat(null); break;
+        case 'wiki':     goWiki(null); break;
+        default: break;                                   // 'home': o reset acima já mostrou a Tela Inicial
+      }
+    } catch(e){ console.error('secmenu go',e); }
+    finally{ _animEnabled=prev; }
+    try{ window.scrollTo(0,0); }catch(e){}
+  }
+
+  /* ── Arrastar (2 cliques + segurar + mover) ── */
+  function onDown(e){
+    if(e.button!==undefined && e.button!==0) return;
+    var now=Date.now();
+    downX=e.clientX; downY=e.clientY; moved=false;
+    if(now-lastDown<DBL_MS){                // 2º clique → arma o arrasto
+      armed=true; lastDown=0; closePanel();
+      var r=wrap.getBoundingClientRect();
+      offX=e.clientX-r.left; offY=e.clientY-r.top;
+      wrap.classList.add('sm-dragging'); wrap.classList.remove('sm-snap');
+      try{ btn.setPointerCapture(e.pointerId); }catch(_){}
+      e.preventDefault();
+    } else { armed=false; lastDown=now; }
+  }
+  function onMove(e){
+    if(!armed) return;
+    if(Math.abs(e.clientX-downX)>MOVE_PX||Math.abs(e.clientY-downY)>MOVE_PX) moved=true;
+    var w=wrap.offsetWidth, h=wrap.offsetHeight, vw=window.innerWidth, vh=window.innerHeight;
+    var x=Math.max(0,Math.min(vw-w,e.clientX-offX)), y=Math.max(0,Math.min(vh-h,e.clientY-offY));
+    wrap.style.left=x+'px'; wrap.style.top=y+'px';
+  }
+  function onUp(e){
+    if(!armed) return;
+    armed=false; wrap.classList.remove('sm-dragging');
+    try{ btn.releasePointerCapture(e.pointerId); }catch(_){}
+    if(moved){
+      var w=wrap.offsetWidth, h=wrap.offsetHeight, vw=window.innerWidth, vh=window.innerHeight;
+      var cx=parseFloat(wrap.style.left)+w/2, top=parseFloat(wrap.style.top);
+      pos.side=(cx<vw/2)?'left':'right';
+      pos.y=(vh-h)>0 ? Math.max(0,Math.min(1,top/(vh-h))) : 0;
+      savePos(); place(true);              // gruda na lateral com uma animação curta
+    } else place(false);
+    lastDown=0;                            // 2 cliques sem mover: não abre o painel
+    // evita que o "click" sintético desse 2º toque abra o painel
+    wrap._swallowClick=true; setTimeout(function(){ wrap._swallowClick=false; },0);
+  }
+  function onClick(e){
+    if(wrap._swallowClick){ wrap._swallowClick=false; return; }
+    e.stopPropagation(); togglePanel();
+  }
+
+  function build(){
+    wrap=document.getElementById('secMenu'); btn=document.getElementById('secMenuBtn'); panel=document.getElementById('secMenuPanel');
+    if(!wrap||!btn||!panel) return false;
+    btn.addEventListener('pointerdown', onDown);
+    btn.addEventListener('pointermove', onMove);
+    btn.addEventListener('pointerup', onUp);
+    btn.addEventListener('pointercancel', onUp);
+    btn.addEventListener('click', onClick);
+    btn.addEventListener('pointerenter', function(){ paint(); });   // cor da seção só precisa estar certa quando o brilho aparece
+    btn.addEventListener('focus', function(){ paint(); });
+    panel.addEventListener('click', function(e){
+      e.stopPropagation();
+      var it=e.target.closest?e.target.closest('.sm-item'):null;
+      if(it) go(it.getAttribute('data-k')); else closePanel();     // clicar no fundo desfocado fecha o leque
+    });
+    document.addEventListener('click', function(e){ if(isOpen() && !wrap.contains(e.target)) closePanel(); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') closePanel(); });
+    window.addEventListener('resize', function(){ place(false); if(isOpen()){ wrap.classList.add('sm-noanim'); buildPanel(pickMode()); } });
+    return true;
+  }
+
+  /* API pública usada pelo ⚙️ e pelo idioma */
+  window.secMenuApply=function(){
+    if(!wrap && !build()) return;
+    loadPos();
+    var on=getPref();
+    wrap.classList.toggle('sm-on', on);
+    if(!on) closePanel();
+    applyZoom();
+    if(btn) btn.title=isEn()?'Sections menu — double-click and drag to move':'Menu de seções — 2 cliques e arraste para mover';
+  };
+  window.secMenuApplyZoom=function(){ applyZoom(); };
+  window.secMenuRefreshLang=function(){
+    if(!btn) return;
+    btn.title=isEn()?'Sections menu — double-click and drag to move':'Menu de seções — 2 cliques e arraste para mover';
+    if(wrap) wrap.setAttribute('aria-label',isEn()?'Sections menu':'Menu de seções');
+    if(isOpen()){ wrap.classList.add('sm-noanim'); buildPanel(pickMode()); }
+  };
+  window.secMenuGo=go;
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', window.secMenuApply);
+  else window.secMenuApply();
+})();
+</script>
+
 <!--  tooltips flutuantes do Gerador de Gráficos, agora como filhos DIRETOS do <body>
         (fora de qualquer contêiner que possa receber display:none). Um elemento position:fixed deixa
         de ser renderizado se um ancestral estiver com display:none — por isso, quando estavam dentro
         do #homeScreen (oculto durante o Gerador), a caixa de informações nunca aparecia. -->
+<div class="prof-toast-wrap" id="profToastWrap"></div><!-- avisos (toasts): filho direto do <body>, pois dentro do #homeScreen (display:none nas outras seções) nunca apareciam -->
 <div id="cgSbyTooltip"></div><!-- hover da Dispersão lado a lado -->
 <div id="cgChartTooltip"></div><!-- card de hover sobre pontos (todos os tipos) -->
 </body>
