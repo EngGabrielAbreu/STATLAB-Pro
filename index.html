@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  STATLAB Pro — versão ov.1.1.2
+  STATLAB Pro — versão ov.1.2
   Arquivo único (HTML + CSS + JS), sem etapa de build.
   Bibliotecas por CDN: Chart.js 4.4.1 (+ chartjs-plugin-zoom 2.0.1) · PapaParse 5.4.1 · SheetJS (xlsx) 0.18.5 · jsPDF 2.5.1 · fonte Audiowide (Google Fonts).
   Telas: Boas-vindas → Home → Análise Simples · Comparativa · Engenharia · Projeto · Gerador de Gráficos · Tratamento de Dados · Wiki
@@ -14,7 +14,7 @@
 <meta charset="UTF-8">
 <link rel="icon" type="image/png" href="favicon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StatLab Pro ov.1.1.2</title>
+<title>StatLab Pro ov.1.2</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
 /* ══ THEME VARIABLES ══ */
@@ -3056,6 +3056,629 @@ body.light-theme .prof-hint::before{border-color:#d97706}
 .wiki-tec-extra a{color:var(--accent);text-decoration:none;margin-right:8px}
 .wiki-p kbd{background:var(--bg4);border:1px solid var(--border2);border-bottom-width:2px;border-radius:5px;padding:1px 6px;font-size:11px;font-family:inherit;color:var(--text2)}
 </style>
+<!-- ov.1.2: camadas de estilo carregadas no <head> para não piscar o visual antigo na abertura -->
+<style id="secMenuCss">
+#secMenu{--sm-c:var(--accent);--sm-rgb:90,122,255;position:fixed;z-index:9450;top:40%;left:auto;right:0;display:none;user-select:none;-webkit-user-select:none;touch-action:none}
+#secMenu.sm-on{display:block}
+/* cursor da seção atual (definido em JS no #secMenu); mesma regra do app: todo descendente herda, inclusive botões */
+#secMenu *{cursor:inherit!important}
+#secMenu.sm-snap{transition:left .22s cubic-bezier(.2,.8,.2,1),top .12s ease}
+#secMenuBtn{width:46px;height:46px;border:1.5px solid var(--accent);background:var(--bg2);color:var(--text8);display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 6px 20px rgba(0,0,0,.38);transition:background .15s,box-shadow .2s,border-color .2s;position:relative;z-index:2}
+#secMenu.sm-right #secMenuBtn{border-radius:14px 0 0 14px;border-right:none}
+#secMenu.sm-left #secMenuBtn{border-radius:0 14px 14px 0;border-left:none}
+/* borda e brilho seguem a cor da seção atual (--sm-c / --sm-rgb definidas em JS; branco/preto na Tela Inicial e Wiki) */
+#secMenuBtn:hover,#secMenuBtn:focus-visible,#secMenu.sm-open #secMenuBtn{background:var(--bg4);border-color:var(--sm-c);outline:none;box-shadow:0 0 0 1px rgba(var(--sm-rgb),.55),0 0 20px rgba(var(--sm-rgb),.7),0 6px 22px rgba(0,0,0,.38)}
+#secMenu.sm-dragging #secMenuBtn{border-radius:14px;border:1.5px solid var(--sm-c);box-shadow:0 0 26px rgba(var(--sm-rgb),.7),0 10px 30px rgba(0,0,0,.4);transform:scale(1.06)}
+#secMenuBtn .sm-logo{font-family:'Audiowide',sans-serif;font-size:16px;line-height:1;letter-spacing:.5px;color:var(--text8);display:flex;flex-direction:column;align-items:center;gap:2px}
+#secMenuBtn .sm-logo i{font-style:normal;font-size:7.5px;letter-spacing:1.5px;color:var(--accent);transition:color .2s}
+#secMenuBtn:hover .sm-logo i,#secMenu.sm-open .sm-logo i{color:var(--sm-c)}
+/* leque: origem no centro do botão. Camadas de desfoque do próprio fundo que se dissolvem para fora (sem borda e sem tinta de cor) */
+#secMenuPanel{position:absolute;left:23px;top:23px;width:0;height:0;pointer-events:none;visibility:hidden;transition:visibility 0s linear .28s}
+#secMenu.sm-open #secMenuPanel{visibility:visible;transition-delay:0s}
+.sm-disc,.sm-hit{position:absolute;border-radius:50%;transform:scale(.15);opacity:0;pointer-events:none;transition:transform .34s cubic-bezier(.2,.9,.25,1.08),opacity .25s}
+#secMenu.sm-open .sm-disc,#secMenu.sm-open .sm-hit{transform:none;opacity:1}
+.sm-hit{pointer-events:auto}
+.sm-disc{-webkit-mask-composite:source-in;mask-composite:intersect}
+.sm-b1{-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);-webkit-mask-image:radial-gradient(circle closest-side,#000 30%,transparent 68%),var(--vm,linear-gradient(#000,#000));mask-image:radial-gradient(circle closest-side,#000 30%,transparent 68%),var(--vm,linear-gradient(#000,#000))}
+.sm-b2{-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);-webkit-mask-image:radial-gradient(circle closest-side,#000 45%,transparent 84%),var(--vm,linear-gradient(#000,#000));mask-image:radial-gradient(circle closest-side,#000 45%,transparent 84%),var(--vm,linear-gradient(#000,#000))}
+.sm-b3{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);-webkit-mask-image:radial-gradient(circle closest-side,#000 62%,transparent 100%),var(--vm,linear-gradient(#000,#000));mask-image:radial-gradient(circle closest-side,#000 62%,transparent 100%),var(--vm,linear-gradient(#000,#000))}
+/* botões das seções: fundo sólido + anel colorido = legíveis sobre qualquer conteúdo */
+.sm-item{position:absolute;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border-radius:50%;pointer-events:auto;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;font-family:inherit;color:var(--text);background:var(--bg2);border:2px solid rgba(var(--c-rgb),.85);box-shadow:0 4px 14px rgba(0,0,0,.35);transform:translate(0,0) scale(.3);opacity:0;transition:transform .32s cubic-bezier(.2,.9,.25,1.15) calc(var(--i)*26ms),opacity .2s calc(var(--i)*26ms),box-shadow .15s,background .15s}
+#secMenu.sm-open .sm-item{transform:translate(var(--dx),var(--dy)) scale(1);opacity:1}
+.sm-item:hover,.sm-item:focus-visible{transform:translate(var(--dx),var(--dy)) scale(1.15);background:linear-gradient(rgba(var(--c-rgb),.22),rgba(var(--c-rgb),.22)),var(--bg2);box-shadow:0 0 16px rgba(var(--c-rgb),.75),0 4px 14px rgba(0,0,0,.35);z-index:3;outline:none;transition-delay:0s}
+.sm-item.sm-cur{background:linear-gradient(rgba(var(--c-rgb),.40),rgba(var(--c-rgb),.40)),var(--bg2);box-shadow:0 0 0 3px rgba(var(--c-rgb),.35),0 4px 14px rgba(0,0,0,.35);cursor:default}
+/* nome da seção aparece ao passar o mouse (sempre aberto para o lado de dentro da tela) */
+.sm-item::after{content:attr(data-n);position:absolute;bottom:calc(100% + 9px);white-space:nowrap;padding:5px 10px;border-radius:7px;font-size:12.5px;font-weight:700;color:var(--text);background:var(--bg2);border:1px solid rgba(var(--c-rgb),.75);box-shadow:0 4px 14px rgba(0,0,0,.4);opacity:0;pointer-events:none;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#secMenu.sm-right .sm-item::after{right:-4px}
+#secMenu.sm-left .sm-item::after{left:-4px}
+.sm-key{position:absolute;right:-4px;bottom:-4px;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;line-height:1;font-family:inherit;color:var(--text);background:var(--bg2);border:1.5px solid rgba(var(--c-rgb),.9);pointer-events:none}
+.sm-item.sm-tipb::after{bottom:auto;top:calc(100% + 9px)}
+.sm-item:hover::after,.sm-item:focus-visible::after{opacity:1;transform:none}
+#secMenu.sm-noanim .sm-item,#secMenu.sm-noanim .sm-disc,#secMenu.sm-noanim .sm-hit,#secMenu.sm-noanim #secMenuPanel{transition:none!important}
+</style>
+<style id="v12Design">
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap');
+/* ════════════════════════════════════════════════════════════════════════════════
+   ov.1.2 — CAMADA VISUAL (redesign)
+   Bloco único, carregado POR ÚLTIMO, que moderniza a interface inteira sem tocar na
+   lógica: só redefine tokens de tema (cores, raios, sombras, tipografia) e o
+   acabamento dos componentes compartilhados. Superfícies calmas com leve tom
+   verde-grafite, cartões com cantos amplos, rótulos em CAIXA-ALTA espaçada, números
+   grandes e sombras suaves (sem brilhos). Cores de identidade das seções e Tema
+   Daltônico preservados. Para reverter o visual, basta remover este bloco.
+   ════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. TOKENS ─────────────────────────────────────────────────────────────── */
+:root{
+  --font-ui:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --font-display:"Manrope","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
+  --r-xs:6px; --r-sm:8px; --r-md:10px; --r-lg:14px; --r-xl:18px; --r-pill:999px;
+  /* ov.1.2: base NEUTRA (preto/branco). Cores só dentro de cada seção (ver item 11). */
+  --bg:#111213; --bg-rgb:17,18,19;
+  --bg2:#151618; --bg3:#1a1b1e; --bg4:#1d1e21; --bg5:#141517; --bg6:#17181a;
+  --border:#26282b; --border2:#2d2f33; --border3:#3b3e43;
+  --text:#ececed; --text2:#d4d5d8; --text3:#a9abb0; --text4:#909298; --text5:#888a90;
+  --text6:#b8babe; --text7:#c0c2c6; --text8:#e8e9eb;
+  --home-ver-bg:#18191b; --input-bg:#131416;
+  --tab-active-bg:#25272a; --tab-hover-bg:#1e1f22;
+  --btn-home-bg:#1f2023; --btn-home-hover:#2a2c30;
+  --card-bg:#17181b; --card-hover-shadow:rgba(0,0,0,.45);
+  --preview-hover:#1e1f22; --quartil-th-bg:#16171a; --cmp-th-bg:#16171a;
+  --cmp-row-hover:#1e1f22; --cmp-alt:#161719;
+  --empty-text:#7c7e83; --empty-h:#9fa1a6;
+  --report-border:#27292c; --report-span:#a9abb0; --report-strong:#ececed; --dev-color:#83858a;
+  --upload-hover-bg:#1b1c1f;
+  --badge-ok-bg:rgba(74,222,128,.12); --badge-fail-bg:rgba(248,113,113,.12);
+  --badge-warn-bg:rgba(251,191,36,.12); --outlier-bg:rgba(251,146,60,.13);
+  --hm-th-color:#d4d5d8; --hm-axis-color:#888a90;
+  --gc-tick:#9a9ca1; --gc-grid:#383a3e; --gc-axis:#808287; --chart-legend:#a9abb0;
+  --scrollbar-track:transparent; --scrollbar-thumb:#2f3135; --scrollbar-thumb-hover:#3f4247;
+  --accent:#e6e6e8; --accent-rgb:230,230,232; --accent-text:#f2f2f3; --on-accent:#111213;
+  --accent-soft:rgba(230,230,232,.10); --accent-line:rgba(230,230,232,.35);
+  --focus-ring:0 0 0 3px rgba(230,230,232,.16);
+  --surface-glass:rgba(20,21,23,.86);
+  --sh-1:0 1px 2px rgba(0,0,0,.28);
+  --sh-2:0 10px 28px rgba(0,0,0,.34);
+  --sh-3:0 28px 70px rgba(0,0,0,.55);
+  --overlay:rgba(6,6,7,.62);
+  --eyebrow:#909298;
+}
+body.light-theme{
+  --bg:#f4f4f5; --bg-rgb:244,244,245;
+  --bg2:#efeff1; --bg3:#eaeaec; --bg4:#ffffff; --bg5:#fcfcfc; --bg6:#f2f2f3;
+  --border:#e2e2e5; --border2:#d8d8dc; --border3:#c1c1c7;
+  --text:#18181b; --text2:#27272a; --text3:#57575e; --text4:#6b6b72; --text5:#505057;
+  --text6:#3f3f46; --text7:#505057; --text8:#1c1c1f;
+  --home-ver-bg:#ffffff; --input-bg:#ffffff;
+  --tab-active-bg:#ffffff; --tab-hover-bg:#e7e7ea;
+  --btn-home-bg:#ffffff; --btn-home-hover:#efeff1;
+  --card-bg:#ffffff; --card-hover-shadow:rgba(0,0,0,.10);
+  --preview-hover:#f2f2f3; --quartil-th-bg:#f2f2f3; --cmp-th-bg:#f2f2f3;
+  --cmp-row-hover:#f2f2f3; --cmp-alt:#f9f9fa;
+  --empty-text:#8d8d94; --empty-h:#5f5f66;
+  --report-border:#e2e2e5; --report-span:#57575e; --report-strong:#18181b; --dev-color:#8d8d94;
+  --upload-hover-bg:#f3f3f5;
+  --badge-ok-bg:#dcf5e4; --badge-fail-bg:#fde4e4; --badge-warn-bg:#fdf1cf; --outlier-bg:#ffedd8;
+  --hm-th-color:#202024; --hm-axis-color:#6b6b72;
+  --gc-tick:#505057; --gc-grid:#d6d6da; --gc-axis:#7c7c83; --chart-legend:#3f3f46;
+  --scrollbar-track:transparent; --scrollbar-thumb:#cbcbd0; --scrollbar-thumb-hover:#b0b0b7;
+  --accent:#1c1c1f; --accent-rgb:28,28,31; --accent-text:#18181b; --on-accent:#ffffff;
+  --accent-soft:rgba(28,28,31,.07); --accent-line:rgba(28,28,31,.30);
+  --focus-ring:0 0 0 3px rgba(28,28,31,.12);
+  --surface-glass:rgba(255,255,255,.86);
+  --sh-1:0 1px 2px rgba(0,0,0,.05),0 1px 1px rgba(0,0,0,.03);
+  --sh-2:0 10px 28px rgba(0,0,0,.08),0 2px 6px rgba(0,0,0,.04);
+  --sh-3:0 28px 70px rgba(0,0,0,.16),0 4px 14px rgba(0,0,0,.06);
+  --overlay:rgba(20,20,22,.34);
+  --eyebrow:#78787f;
+}
+body.colorblind-theme{}
+body.light-theme.colorblind-theme{}
+
+/* ── 2. BASE ───────────────────────────────────────────────────────────────── */
+body{font-family:var(--font-ui);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
+  background:var(--bg)}
+button,input,select,textarea{font-family:inherit}
+::selection{background:rgba(var(--accent-rgb),.28)}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{border-radius:999px;border:3px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{border-width:2px}
+:focus-visible{outline:2px solid rgba(var(--accent-rgb),.55);outline-offset:2px}
+input[type=range]{accent-color:var(--accent)}
+.check-item input,.prof-check-row input[type="checkbox"]{accent-color:var(--accent)}
+select,input[type=text],input[type=number],input[type=search],input[type=email],input[type=date],textarea{transition:border-color .15s,box-shadow .15s,background .15s}
+select,input[type=text]{border-radius:var(--r-sm);padding:7px 10px;border-color:var(--border2)}
+select:hover,input[type=text]:hover{border-color:var(--border3)}
+select:focus,input:focus,textarea:focus{border-color:rgba(var(--accent-rgb),.65);box-shadow:var(--focus-ring)}
+input[type=range]:focus,input[type=checkbox]:focus,input[type=radio]:focus,input[type=file]:focus{box-shadow:none}
+input[type=file]{font-size:11.5px;color:var(--text4)}
+input[type=file]::file-selector-button{font:inherit;font-weight:600;font-size:11.5px;color:var(--text2);background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r-sm);padding:6px 12px;margin-right:10px;cursor:pointer;transition:background .15s,border-color .15s}
+input[type=file]::file-selector-button:hover{background:var(--bg3);border-color:var(--border3)}
+.section-title,.home-card h2,.stat-card .val,.test-card h4,.report-section h3,.diag-scorepanel-title,.diag-card h4,.diag-reco h4,
+.guide-question,.guide-intro .gi-h,.guide-result .gr-title,.dev-name,.paste-modal-title,.data-edit-box h3,.upd-news-hdr h2,
+.wiki-section-title,.wiki-subsection-title,.wiki-title,.cvar-kpi .v,.proj-result-highlight .prh-val,.proj-test-card h3,
+.eng-test-card h3,.tec-card h3,#tourBalloon h4,.empty-state h3,.proj-empty h3,.chart-box h4,.stat-lvl-notice .sln-title,.diag-score-ring .num{
+  font-family:var(--font-display);letter-spacing:-.01em}
+.stat-card .val,.cvar-kpi .v,.proj-result-highlight .prh-val,.diag-score-ring .num,.test-val,.report-row strong,.prr-val{font-variant-numeric:tabular-nums}
+
+/* ── 3. BOAS-VINDAS ────────────────────────────────────────────────────────── */
+#welcomeScreen{background:radial-gradient(900px 520px at 50% 18%,rgba(255,255,255,.05),transparent 65%),#0c100f}
+.ws-logo-main{text-shadow:0 2px 24px rgba(0,0,0,.45)}
+.ws-logo-main span{color:rgba(190,205,198,.55)}
+.ws-ver-badge{color:rgba(200,215,208,.62);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.09);letter-spacing:.6px;font-size:12px}
+.ws-tagline{color:rgba(225,235,230,.72);letter-spacing:.3px}
+.ws-dev-name{color:rgba(240,246,243,.86)}
+.ws-dev-year{color:rgba(190,205,198,.5)}
+.ws-contact-btn{border-radius:var(--r-pill);border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);font-weight:600;padding:9px 18px}
+.ws-contact-btn:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.30);box-shadow:none;transform:translateY(-1px)}
+.ws-start-btn{background:#f2f2f3;color:#111213;border-radius:var(--r-pill);padding:15px 54px;font-family:var(--font-display);letter-spacing:1.5px;font-size:15px;box-shadow:0 10px 28px rgba(0,0,0,.35)}
+.ws-start-btn::after{display:none}
+.ws-start-btn:hover{background:#ffffff;transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,0,0,.4)}
+
+
+/* ── 4. TELA INICIAL ───────────────────────────────────────────────────────── */
+.home-topbar{background:var(--surface-glass);border-bottom:1px solid var(--border);height:56px;backdrop-filter:saturate(140%) blur(12px)}
+body.light-theme .home-topbar{background:var(--surface-glass)}
+.home-topbar-logo span{color:var(--text4)}
+.btn-topbar{background:transparent;border:1px solid transparent;border-radius:var(--r-pill);color:var(--text3);font-weight:600;padding:6px 13px}
+body.light-theme .btn-topbar{background:transparent;border-color:transparent;color:var(--text3)}
+.btn-topbar:hover,body.light-theme .btn-topbar:hover{background:var(--bg3);border-color:var(--border2);color:var(--text)}
+.btn-topbar-lang,body.light-theme .btn-topbar-lang{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-pill);padding:3px}
+.btn-topbar-lang .lang-btn{border-radius:var(--r-pill);padding:4px 11px}
+#langBtnPT.active,#langBtnEN.active{background:var(--bg4);color:var(--text);box-shadow:var(--sh-1),inset 0 0 0 1px var(--border2)}
+#langBtnPT.active::before,#langBtnEN.active::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:1px}
+#langBtnPT.active::before{background:#16a34a}
+#langBtnEN.active::before{background:#dc2626}
+#themeToggle,#themeToggleC{background:var(--bg4);border:1px solid var(--border2);box-shadow:var(--sh-1);border-radius:var(--r-pill)}
+#themeToggle:hover,#themeToggleC:hover{box-shadow:var(--sh-2)}
+.home-ver{background:var(--home-ver-bg);border:1px solid var(--border2);color:var(--text4);font-size:11.5px;font-weight:600;letter-spacing:.8px;padding:4px 14px;box-shadow:var(--sh-1)}
+.home-tagline{font-size:13px;font-weight:700;color:var(--eyebrow);letter-spacing:2.2px;text-transform:uppercase;margin-bottom:46px}
+.home-logo{letter-spacing:3px}
+.home-cards{gap:16px;max-width:820px}
+.home-card{--c:90,122,255;background:var(--card-bg);border-radius:var(--r-xl);padding:24px 20px 22px;width:252px;
+  box-shadow:var(--sh-1);transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+html body .home-card[class],html body.colorblind-theme .home-card[class]{border:1px solid var(--border)!important;box-shadow:var(--sh-1)!important}
+.home-card::before{background:linear-gradient(180deg,rgba(var(--c),.07),transparent 46%)!important}
+.home-card:hover{transform:translateY(-3px)}
+html body .home-card[class]:hover,html body.colorblind-theme .home-card[class]:hover{border-color:rgba(var(--c),.55)!important;box-shadow:var(--sh-2)!important}
+.home-card.card-simple{--c:90,122,255}
+.home-card.card-compare{--c:74,222,128}
+.home-card.card-eng{--c:245,158,11}
+.home-card.card-project{--c:248,113,113}
+.home-card.card-chartgen{--c:236,72,153}
+.home-card.card-treat{--c:45,212,191}
+body.colorblind-theme .home-card.card-simple{--c:0,114,178}
+body.colorblind-theme .home-card.card-compare{--c:0,158,115}
+body.colorblind-theme .home-card.card-eng{--c:230,159,0}
+body.colorblind-theme .home-card.card-project{--c:213,94,0}
+body.colorblind-theme .home-card.card-chartgen{--c:204,121,167}
+body.colorblind-theme .home-card.card-treat{--c:86,180,233}
+.home-card .card-icon{width:58px;height:58px;margin:0 auto 14px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;
+  background:rgba(var(--c),.12);box-shadow:inset 0 0 0 1px rgba(var(--c),.22)}
+.home-card h2{color:var(--text)!important;font-size:16px;font-weight:800;margin-bottom:7px}
+.home-card p{font-size:11.5px;color:var(--text4);line-height:1.6}
+.home-card .card-badge{margin-top:12px;font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:4px 10px;border-radius:var(--r-pill);
+  background:rgba(var(--c),.10)!important;color:rgb(var(--c))!important;border:1px solid rgba(var(--c),.26)!important}
+body.light-theme .home-card .card-badge{filter:saturate(1.1) brightness(.78)}
+.home-credit{font-size:12.5px;color:var(--text4);line-height:1.9}
+.home-credit strong{color:var(--text2);font-size:13px}
+.btn-suggest{background:var(--bg4);border:1px solid var(--border2);color:var(--text2);border-radius:var(--r-pill);font-weight:700;padding:9px 20px;box-shadow:var(--sh-2)}
+.btn-suggest:hover{background:var(--bg3);border-color:var(--accent-line);transform:translateY(-1px);box-shadow:var(--sh-2)}
+.btn-guide-round,.btn-pomodoro,.btn-guide,.btn-kbhelp{background:var(--bg4);border:1px solid var(--border2);color:var(--text);box-shadow:var(--sh-2)}
+.btn-guide-round:hover,.btn-pomodoro:hover,.btn-guide:hover,.btn-kbhelp:hover{background:var(--bg3);border-color:var(--border3);box-shadow:var(--sh-2);transform:translateY(-2px)}
+body.light-theme .btn-guide-round,body.light-theme .btn-pomodoro,body.light-theme .btn-guide,body.light-theme .btn-kbhelp{background:#ffffff;border-color:var(--border2);color:var(--text);box-shadow:var(--sh-2)}
+body.light-theme .btn-guide-round:hover,body.light-theme .btn-pomodoro:hover,body.light-theme .btn-guide:hover,body.light-theme .btn-kbhelp:hover{background:#f6f8f5;box-shadow:var(--sh-2)}
+.home-cbl-tip,.prof-tip{border-radius:var(--r-md);box-shadow:var(--sh-2)}
+.btn-anim,.btn-settings,.btn-profile{background:var(--bg4);border-color:var(--border2);color:var(--text2)}
+body.light-theme .btn-anim,body.light-theme .btn-settings,body.light-theme .btn-profile{background:#ffffff}
+.btn-settings:hover{background:var(--bg3);border-color:var(--border3)}
+.btn-anim:hover{background:var(--bg3);border-color:var(--border3);color:var(--text)}
+.btn-profile{box-shadow:0 0 0 3px rgba(251,191,36,.16)}
+.btn-profile.has-profile{box-shadow:0 0 0 3px rgba(74,222,128,.16)}
+.btn-profile:hover{background:var(--bg3)}
+.settings-menu,.prof-menu,.analysis-dropdown,.ctx-menu,.suggest-pop,.cg-type-menu{border-radius:var(--r-lg);border:1px solid var(--border2);box-shadow:var(--sh-2);background:var(--bg4)}
+.settings-menu,.prof-menu{padding:8px;background:var(--bg4)}
+.settings-menu-title,.ctx-menu-header{color:var(--eyebrow);letter-spacing:1.2px}
+.settings-item,.prof-menu-item{border-radius:var(--r-md)}
+.settings-item:hover,.prof-menu-item:hover{background:var(--bg3)}
+.si-switch.on,.prof-switch.on{background:rgba(var(--accent-rgb),.22);border-color:rgba(var(--accent-rgb),.6)}
+.si-switch.on .si-knob,.prof-switch.on .pk-knob{background:var(--accent)}
+.set-seg-btn{border-radius:var(--r-sm)}
+.set-seg-btn.active,.prof-lvl-btn.active{background:var(--accent-soft);border-color:var(--accent-line);color:var(--text)}
+.analysis-dropdown button{font-weight:600}
+.analysis-dropdown button:hover,.ctx-menu-item:hover{background:var(--bg3)}
+
+/* ── 5. BARRAS SUPERIORES E ABAS ───────────────────────────────────────────── */
+.topbar{background:var(--bg5);border-bottom:1px solid var(--border);padding:9px 18px;gap:10px;box-shadow:var(--sh-1);position:relative;z-index:5}
+.topbar .logo{flex-shrink:0;white-space:nowrap}
+.logo-name{color:var(--text)}
+.logo-name span{color:var(--text4)}
+.logo-ver{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-pill);color:var(--text4);font-weight:600;padding:2px 8px;font-size:10px;letter-spacing:.3px}
+.logo-mode{border-radius:var(--r-pill);padding:3px 10px;font-weight:700;font-size:10.5px;letter-spacing:.3px;
+  color:#5a7aff;background:rgba(90,122,255,.12);border:1px solid rgba(90,122,255,.30)}
+.logo-mode.compare{color:#22c55e;background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.30)}
+.logo-mode.project{color:#f87171;background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.32)}
+.logo-mode.engineering{color:#f59e0b;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.32)}
+body.light-theme .logo-mode{color:#3d5ce0}
+body.light-theme .logo-mode.compare{color:#15803d}
+body.light-theme .logo-mode.project{color:#dc2626}
+body.light-theme .logo-mode.engineering{color:#b45309}
+.tabs{gap:0;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:3px}
+.tab{border-radius:9px;padding:6px 11px;font-size:11.5px;letter-spacing:.4px;white-space:nowrap;color:var(--text4);border:1px solid transparent;transition:background .15s,color .15s,box-shadow .15s}
+.tab.active{background:var(--bg4);color:var(--text);border-color:var(--border2);box-shadow:var(--sh-1)}
+body:not(.light-theme) .tab.active{background:var(--tab-active-bg)}
+.tab:hover:not(.active){background:transparent;color:var(--text)}
+.topbar-btns{gap:8px;flex-shrink:0}
+.btn-analysis{background:rgba(99,179,237,.10);color:#63b3ed;border:1px solid rgba(99,179,237,.30);border-radius:var(--r-md);padding:6px 13px;font-weight:700}
+.btn-analysis:hover{background:rgba(99,179,237,.18);color:#90cdf4}
+body.light-theme .btn-analysis{color:#1d6fa5;background:rgba(56,140,200,.08);border-color:rgba(56,140,200,.32)}
+body.light-theme .btn-analysis:hover{background:rgba(56,140,200,.15);color:#155a87}
+.btn-clear{background:rgba(248,113,113,.10);color:#f87171;border:1px solid rgba(248,113,113,.30);border-radius:var(--r-md);padding:6px 13px;font-weight:700}
+.btn-clear:hover{background:rgba(248,113,113,.18)}
+body.light-theme .btn-clear{color:#c43c3c;background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.28)}
+body.light-theme .btn-clear:hover{background:rgba(220,38,38,.12)}
+.btn-home,.btn-corner,.btn-eng-back{border-radius:var(--r-md);border:1px solid var(--border2);background:var(--btn-home-bg);color:var(--text2);font-weight:600}
+.btn-home:hover,.btn-corner:hover,.btn-eng-back:hover{background:var(--btn-home-hover);color:var(--text)}
+.tour-topbtn{border-radius:var(--r-pill)}
+.eng-topbar-sub,.proj-topbar-sub,.proj-sub-topbar,.ftir-topbar-sub,.drx-topbar-sub,.tga-topbar-sub,.eds-topbar-sub,.mc-topbar-sub,.po-topbar-sub,.dc-topbar-sub{background:var(--bg5)}
+.eng-tabs,.proj-tabs-bar,.ftir-tabs,.drx-tabs,.tga-tabs,.eds-tabs,.mc-tabs,.po-tabs,.dc-tabs{background:var(--bg5);border-bottom:1px solid var(--border)}
+.eng-tab,.proj-tab,.ftir-tab,.drx-tab,.tga-tab,.eds-tab,.mc-tab,.po-tab,.dc-tab{letter-spacing:.6px;font-size:11.5px;color:var(--text4);transition:color .15s,background .15s,border-color .15s}
+.eng-tab:hover:not(.active),.proj-tab:hover:not(.active),.ftir-tab:hover:not(.active),.drx-tab:hover:not(.active),.tga-tab:hover:not(.active),
+.eds-tab:hover:not(.active),.mc-tab:hover:not(.active),.po-tab:hover:not(.active),.dc-tab:hover:not(.active){color:var(--text);background:transparent}
+.proj-tabs-bar{border-bottom-width:1px}
+
+/* ── 6. BARRA LATERAL E CONTROLES ──────────────────────────────────────────── */
+.sidebar,.eng-sidebar,.proj-sidebar,.treat-sidebar,.ftir-sidebar,.drx-sidebar,.tga-sidebar,.eds-sidebar,.mc-sidebar,.po-sidebar,.dc-sidebar{background:var(--bg2);border-right:1px solid var(--border)}
+.sidebar{padding:16px}
+.sidebar h3,.proj-sidebar-label{font-size:10.5px;font-weight:700;color:var(--eyebrow);letter-spacing:1.6px;text-transform:uppercase}
+.sidebar h3{margin-top:10px;margin-bottom:10px}
+.ctrl-group{margin-bottom:12px}
+.ctrl-label{font-size:12px;color:var(--text3);font-weight:500}
+.ctrl-label span{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+.upload-zone{border:1.5px dashed var(--border3);border-radius:var(--r-lg);background:var(--bg4);padding:18px 12px;transition:border-color .2s,background .2s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent-line);background:var(--upload-hover-bg)}
+.uz-icon{width:38px;height:38px;margin:0 auto 8px;border-radius:12px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px}
+.btn-template,.btn-paste{border-radius:var(--r-md);padding:8px 10px;font-weight:600;margin-top:8px}
+.btn-paste{border-style:dashed;border-width:1px}
+.btn-template{border-width:1px;background:rgba(74,222,128,.08)}
+body.light-theme .btn-template{color:#15803d;background:rgba(22,163,74,.07);border-color:rgba(22,163,74,.32)}
+body.light-theme .btn-paste[style*="2dd4bf"]{color:#0f8f80!important}
+#sColSelectors,#cColSelectors{margin-top:12px}
+.dev-credit{border-top:1px solid var(--border);font-style:normal;color:var(--text5);padding-top:12px;margin-top:16px}
+.pdfsec-list{border-radius:var(--r-md);background:var(--bg4)}
+.pdfsec-btn{border-radius:var(--r-sm)}
+.btn{border-radius:var(--r-md);font-weight:700;transition:background .18s,border-color .18s,box-shadow .18s,transform .18s,filter .18s}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 6px 16px rgba(var(--accent-rgb),.22)}
+.btn-primary:hover{background:var(--accent);filter:brightness(1.08);box-shadow:0 8px 20px rgba(var(--accent-rgb),.28)}
+.btn-primary:active{transform:translateY(1px)}
+.btn-green{background:rgba(74,222,128,.10);color:#4ade80;border:1px solid rgba(74,222,128,.32)}
+.btn-green:hover{background:rgba(74,222,128,.18)}
+body.light-theme .btn-green{color:#15803d;background:rgba(22,163,74,.07);border-color:rgba(22,163,74,.3)}
+.btn-sm{border-radius:var(--r-sm)}
+.btn-example{border-radius:var(--r-pill);padding:10px 22px;font-weight:700}
+.btn-alter,.btn-repmode,.btn-add-row,.btn-del-row{border-radius:var(--r-sm)}
+.btn-apply-edit{border-radius:var(--r-sm);background:var(--accent)}
+.btn-cancel-edit{border-radius:var(--r-sm)}
+.proj-calc-btn{border-radius:var(--r-md)}
+body.light-theme .proj-calc-btn{background:#dc2626;color:#fff;border-color:#dc2626}
+body.light-theme .proj-calc-btn:hover{background:#b91c1c}
+
+/* ── 7. CONTEÚDO: CARTÕES, MÉTRICAS, GRÁFICOS, TABELAS ─────────────────────── */
+.content{padding:22px 24px}
+.section-title{font-size:17px;font-weight:800;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:16px}
+.badge{border-radius:var(--r-pill);background:var(--bg3);border:1px solid var(--border2);color:var(--text4);font-weight:700;padding:2px 9px}
+.stats-grid{gap:10px;grid-template-columns:repeat(auto-fit,minmax(132px,1fr))}
+.stat-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px 12px;text-align:left;box-shadow:var(--sh-1);transition:border-color .18s}
+.stat-card:hover{border-color:var(--border3)}
+.stat-card .val{font-size:21px;font-weight:800;color:var(--text);line-height:1.15}
+.stat-card .lbl{font-size:10px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--eyebrow);margin-top:5px}
+.chart-row,.chart-row-3{gap:14px}
+.chart-box{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r-xl);padding:16px 16px 14px;box-shadow:var(--sh-1)}
+.chart-box h4{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:0;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.chart-box h4::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.75;flex-shrink:0}
+.test-card,.report-section,.diag-reco,.diag-scorepanel,.diag-headline,.diag-card,.proj-result-card,.proj-form-section,.study-slot,.cvar-kpi,.cvar-pair-cfg,.cvar-pair-side{
+  border-radius:var(--r-lg);box-shadow:var(--sh-1)}
+.test-card,.report-section,.diag-reco,.diag-scorepanel,.diag-headline{background:var(--card-bg);border-color:var(--border)}
+.test-card{padding:18px 20px}
+.test-card h4{font-size:15px;font-weight:800;color:var(--text)}
+.test-row{border-bottom-color:var(--border)}
+.test-key{color:var(--text3)}
+.diag-card{background:var(--card-bg);border-color:var(--border);border-left-width:3px}
+.diag-cat-title{color:var(--eyebrow);letter-spacing:1.2px;font-size:10.5px}
+.badge-ok,.badge-fail,.badge-warn{border-radius:var(--r-pill);font-weight:700;padding:2px 10px}
+body.light-theme .badge-ok{color:#15803d}
+body.light-theme .badge-fail{color:#c43c3c}
+body.light-theme .badge-notsig{color:#15803d}
+body.light-theme .badge-sig{color:#c43c3c}
+.outlier-badge{border-radius:var(--r-pill)}
+.report-section{padding:20px 22px}
+.report-section h3{font-weight:800;color:var(--text)}
+.empty-state{padding:72px 20px}
+.empty-state .icon{width:76px;height:76px;margin:0 auto 16px;border-radius:22px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:34px}
+.empty-state h3{font-size:17px;font-weight:800;color:var(--text2)}
+.empty-state p{color:var(--text4)}
+.study-tab{border-radius:var(--r-pill)}
+.study-slot{background:var(--card-bg);border-color:var(--border)}
+table.preview-tbl th,.cmp-table th,.cvar-table th,.quartil-table th,.proj-table th,.treat-table th,.data-edit-tbl th,.paste-preview-table th,.wiki-vars th,.wiki-beta-table th{
+  font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--eyebrow)}
+table.preview-tbl td,.cmp-table td,.cvar-table td,.proj-table td,.data-edit-tbl td{font-variant-numeric:tabular-nums}
+.data-preview,.treat-table-wrap,.data-edit-table-wrap,.paste-preview-wrap{border-radius:var(--r-lg);border-color:var(--border);background:var(--card-bg)}
+table.preview-tbl th{background:var(--bg3)}
+
+/* ── 8. JANELAS (MODAIS) E BALÕES ──────────────────────────────────────────── */
+.dev-overlay,.guide-overlay,.tec-overlay,#pasteModal,.data-edit-modal,#treatPreviewModal,#updNewsModal,#kbHelpModal,#pomodoroModal,#edaModal{
+  background:var(--overlay)!important;backdrop-filter:blur(6px)}
+.dev-box,.guide-modal,.tec-modal,.paste-modal-box,.data-edit-box,.kbhelp-box,.pomo-box,.pomo-alert-box,.treat-preview-card,.upd-news-card,.eda-box{
+  background:var(--bg4);border:1px solid var(--border2);box-shadow:var(--sh-3)}
+.dev-box,.guide-modal,.tec-modal,.eda-box{border-radius:22px}
+.paste-modal-box,.data-edit-box,.kbhelp-box,.pomo-box,.pomo-alert-box,.treat-preview-card,.upd-news-card{border-radius:var(--r-xl)}
+body.light-theme .dev-box,body.light-theme .guide-modal,body.light-theme .tec-modal,body.light-theme .paste-modal-box,body.light-theme .data-edit-box,
+body.light-theme .kbhelp-box,body.light-theme .pomo-box,body.light-theme .treat-preview-card,body.light-theme .upd-news-card,body.light-theme .eda-box{background:#ffffff}
+.guide-header{background:var(--bg4)}
+.guide-progress .gp-fill{background:var(--accent)}
+.guide-intro .gi-start,.guide-result .gr-go{background:var(--accent);border-radius:var(--r-pill);box-shadow:0 8px 20px rgba(var(--accent-rgb),.25)}
+.guide-card,.gr-chart-chip,.tec-card{border-width:1px;box-shadow:var(--sh-1)}
+.guide-card:hover,.gr-chart-chip:hover,.tec-card:hover{box-shadow:var(--sh-2)}
+.dev-avatar{background:var(--accent)}
+.dev-link-row{border-radius:var(--r-md)}
+.dev-link-val{color:var(--accent-text)}
+.prof-field input[type="text"]{border-radius:var(--r-md);background:var(--input-bg)}
+.prof-field input[type="text"]:focus{border-color:rgba(var(--accent-rgb),.65);box-shadow:var(--focus-ring)}
+.prof-btn{border-radius:var(--r-md)}
+.prof-btn.prof-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.prof-btn.prof-btn-primary:hover{background:var(--accent);filter:brightness(1.08)}
+.stat-lvl-notice{background:var(--accent-soft);border:1px solid var(--accent-line)}
+#pasteTextarea{border-radius:var(--r-md);border-width:1px}
+#pasteTextarea:focus{border-color:rgba(var(--accent-rgb),.65);box-shadow:var(--focus-ring)}
+.paste-modal-hint{border-radius:var(--r-md)}
+#tourBalloon{border-radius:var(--r-lg);box-shadow:var(--sh-3);background:var(--bg4)}
+#tourBalloon .tour-arrow{background:var(--bg4)}
+#tourBalloon .tour-step-of{color:var(--accent-text)}
+.tour-btn{border-radius:var(--r-pill)}
+.prof-toast{background:var(--bg4);border:1px solid var(--border2);border-left:3px solid #4ade80;border-radius:var(--r-md);box-shadow:var(--sh-2)}
+.prof-toast.prof-toast-danger{border-color:var(--border2);border-left-color:#f87171}
+.prof-toast.toast-warning{border-color:var(--border2);border-left-color:#fbbf24}
+.prof-toast.toast-info{border-color:var(--border2);border-left-color:#60a5fa}
+#statTipBox{border-radius:var(--r-md);box-shadow:var(--sh-2);border-color:var(--accent-line)}
+.stat-tip:hover,.stat-tip:focus{background:var(--accent);border-color:var(--accent)}
+#cgChartTooltip{border-radius:12px;box-shadow:var(--sh-2)}
+.ctx-menu{padding:5px}
+.ctx-menu-item{border-radius:var(--r-sm)}
+.analysis-dropdown{padding:4px}
+.analysis-dropdown button{border-radius:var(--r-sm)}
+.analysis-dropdown hr{margin:4px 6px}
+#updateBannerWelcome{background:rgba(16,30,23,.92);border:1px solid rgba(46,204,113,.45);border-radius:var(--r-lg);box-shadow:0 12px 32px rgba(0,0,0,.35);backdrop-filter:blur(8px)}
+#updateBannerHome{background:rgba(16,34,25,.95);border-bottom:1px solid rgba(46,204,113,.45);box-shadow:0 6px 18px rgba(0,0,0,.25);backdrop-filter:blur(8px)}
+.upd-btn-dl,.upd-btn-news{border-radius:var(--r-pill)}
+.upd-btn-dl:hover{transform:none;filter:brightness(1.05)}
+.upd-news-card{border-color:rgba(46,204,113,.45)}
+
+/* ── 9. HUBS (Engenharia / Projeto) E PÁGINAS ESPECÍFICAS ──────────────────── */
+.eng-test-card{--c:245,158,11}
+.proj-test-card{--c:248,113,113}
+.eng-test-card,.proj-test-card{border-radius:var(--r-xl);box-shadow:var(--sh-1);background:var(--card-bg);border:1px solid var(--border)}
+.eng-test-card:hover:not(.coming-soon),.proj-test-card:hover:not(.proj-soon){transform:translateY(-3px);box-shadow:var(--sh-2);border-color:rgba(var(--c),.55)}
+.eng-test-card::before,.proj-test-card::before{background:linear-gradient(180deg,rgba(var(--c),.06),transparent 50%)}
+.eng-test-card .etc-icon,.proj-test-card .ptc-icon{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;
+  background:rgba(var(--c),.12);box-shadow:inset 0 0 0 1px rgba(var(--c),.22);margin-bottom:14px}
+.proj-section-card .ptc-icon{width:72px;height:72px;border-radius:20px;font-size:36px;margin:0 auto 18px}
+.eng-test-card h3,.proj-test-card h3{color:var(--text)}
+.eng-test-card.active-test{border-color:rgba(var(--c),.8)}
+body.light-theme .eng-test-card .etc-badge{color:#b45309}
+body.light-theme .ptc-badge{color:#c43c3c}
+body.light-theme .eng-home-title{color:#d97706}
+body.light-theme .proj-home-title{color:#dc2626}
+.ptc-badge{border-radius:var(--r-pill);letter-spacing:.6px;text-transform:uppercase;font-size:9.5px}
+.proj-form-section{background:var(--card-bg)}
+.proj-field input,.proj-field select{border-radius:var(--r-sm)}
+.proj-result-card{background:var(--card-bg)}
+.proj-result-highlight{border-radius:var(--r-lg)}
+.proj-info-callout,.wiki-callout{border-radius:0 var(--r-md) var(--r-md) 0}
+.treat-main{padding:18px 22px 12px}
+.treat-accordion-hdr{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r-md);padding:11px 13px;margin-bottom:6px;box-shadow:var(--sh-1);transition:background .15s,border-color .15s}
+.treat-accordion-hdr:hover{background:var(--bg3);border-color:var(--border3)}
+.treat-chip{background:var(--card-bg);border-color:var(--border)}
+.treat-btn-op{border-radius:var(--r-sm)}
+.treat-field select,.treat-field input,.treat-arith-opval select,.treat-arith-opval input{border-radius:var(--r-sm);background:var(--input-bg);border-color:var(--border2)}
+.treat-sheets-bar,.treat-grid-hint{border-radius:var(--r-md)}
+.treat-sheet{border-radius:var(--r-sm)}
+body.light-theme .btn-topbar.btn-topbar-treat,body.light-theme .btn-topbar.btn-topbar-treat-clear{background:#ffffff;border-color:var(--border2)}
+.wiki-topbar{background:var(--surface-glass);backdrop-filter:saturate(140%) blur(12px)}
+.wiki-back{border-radius:var(--r-pill);border-width:1px}
+.wiki-title{font-weight:800}
+.wiki-section-header{border-bottom-width:1px}
+.wiki-section-badge{border-radius:var(--r-pill);background:var(--accent-soft)}
+.wiki-nav a{border-radius:var(--r-sm)}
+.wiki-nav-group{color:var(--accent-text)}
+.wiki-formula-block,.wiki-sim,.wiki-decision-item{border-radius:var(--r-lg)}
+.wiki-sim{border-color:var(--accent-line)}
+.wiki-formula,.wiki-vars td:first-child,.wiki-sim-label,.wiki-sim-control label .wsc-val{color:var(--accent-text)}
+#wikiToTopBtn{box-shadow:var(--sh-2)}
+#secMenu{--sm-rgb:var(--accent-rgb)}
+#secMenuBtn{background:var(--bg4);box-shadow:var(--sh-2)}
+#secMenuBtn .sm-logo i{color:var(--accent-text)}
+
+/* ── 10. AJUSTES PONTUAIS ──────────────────────────────────────────────────── */
+.diag-headline b{color:var(--text)}
+[style*="background:#3a1a1a"]{background:rgba(248,113,113,.10)!important;border:1px solid rgba(248,113,113,.32)!important;border-radius:var(--r-md)!important}
+body.light-theme [style*="background:#3a1a1a"]{color:#c43c3c!important}
+body.light-theme [style*="background:#1e3a1e"],body.light-theme [style*="background:#2a3a2a"]{background:rgba(22,163,74,.12)!important;color:#15803d!important}
+body.light-theme [style*="background:#2a3a2a"]{border-color:rgba(22,163,74,.32)!important}
+.eng-genchart-btn[style*="#0e7c4a"]{border-radius:var(--r-md)}
+
+
+/* ── 11. ov.1.2 — COR SÓ DENTRO DAS SEÇÕES ─────────────────────────────────────
+   Fora das seções (Início, Wiki, Perfil, Configurações, Guia, Técnicas…) o acento é
+   neutro: branco no tema escuro e preto no claro. Cada seção redefine o acento com a
+   sua cor de identidade; tudo que usa var(--accent) dentro dela segue essa cor. */
+/* texto sobre o acento acompanha o fundo (preto sobre branco / branco sobre cor) */
+.btn-primary,.btn-apply-edit,.tour-btn.primary,.tec-chip.on,.tec-btn-primary,.wiki-run-btn,.prof-avatar,.dev-avatar,
+.prof-btn.prof-btn-primary,.guide-intro .gi-start,.guide-result .gr-go,.eda-run,.stat-tip:hover,.stat-tip:focus,#wikiToTopBtn:hover,
+.guide-result .gr-steps li::before{color:var(--on-accent)!important}
+#appSimple{--accent:#5a7aff;--accent-rgb:90,122,255;--accent-text:#8ea2ff;--on-accent:#fff;--accent-soft:rgba(90,122,255,.14);--accent-line:rgba(90,122,255,.45);--focus-ring:0 0 0 3px rgba(90,122,255,.22)}
+body.light-theme #appSimple{--accent:#3d5ce0;--accent-rgb:61,92,224;--accent-text:#3d5ce0;--accent-soft:rgba(61,92,224,.10);--accent-line:rgba(61,92,224,.40);--focus-ring:0 0 0 3px rgba(61,92,224,.16)}
+#appCompare{--accent:#16a34a;--accent-rgb:22,163,74;--accent-text:#4ade80;--on-accent:#fff;--accent-soft:rgba(22,163,74,.14);--accent-line:rgba(22,163,74,.45);--focus-ring:0 0 0 3px rgba(22,163,74,.22)}
+body.light-theme #appCompare{--accent-text:#15803d}
+#appEngineering,#appFTIR,#appDRX,#appTGA,#appEDS,#appMC,#appPO,#appDC{--accent:#d97706;--accent-rgb:217,119,6;--accent-text:#f59e0b;--on-accent:#fff;--accent-soft:rgba(217,119,6,.14);--accent-line:rgba(217,119,6,.45);--focus-ring:0 0 0 3px rgba(217,119,6,.22)}
+body.light-theme #appEngineering,body.light-theme #appFTIR,body.light-theme #appDRX,body.light-theme #appTGA,body.light-theme #appEDS,body.light-theme #appMC,body.light-theme #appPO,body.light-theme #appDC{--accent-text:#b45309}
+#appProject{--accent:#dc2626;--accent-rgb:220,38,38;--accent-text:#f87171;--on-accent:#fff;--accent-soft:rgba(220,38,38,.12);--accent-line:rgba(220,38,38,.42);--focus-ring:0 0 0 3px rgba(220,38,38,.2)}
+body.light-theme #appProject{--accent-text:#c43c3c}
+#appChartGen{--accent:#db2777;--accent-rgb:219,39,119;--accent-text:#ec4899;--on-accent:#fff;--accent-soft:rgba(219,39,119,.12);--accent-line:rgba(219,39,119,.42);--focus-ring:0 0 0 3px rgba(219,39,119,.2)}
+#appTreat{--accent:#0d9488;--accent-rgb:13,148,136;--accent-text:#2dd4bf;--on-accent:#fff;--accent-soft:rgba(13,148,136,.14);--accent-line:rgba(13,148,136,.45);--focus-ring:0 0 0 3px rgba(13,148,136,.22)}
+body.light-theme #appTreat{--accent-text:#0f766e}
+/* Tema Daltônico: mesmas seções com a paleta Okabe-Ito */
+body.colorblind-theme #appSimple{--accent:#0072B2;--accent-rgb:0,114,178;--accent-text:#56B4E9;--accent-soft:rgba(0,114,178,.14);--accent-line:rgba(0,114,178,.45)}
+body.colorblind-theme #appCompare{--accent:#009E73;--accent-rgb:0,158,115;--accent-text:#009E73;--accent-soft:rgba(0,158,115,.14);--accent-line:rgba(0,158,115,.45)}
+body.colorblind-theme #appEngineering,body.colorblind-theme #appFTIR,body.colorblind-theme #appDRX,body.colorblind-theme #appTGA,body.colorblind-theme #appEDS,body.colorblind-theme #appMC,body.colorblind-theme #appPO,body.colorblind-theme #appDC{--accent:#E69F00;--accent-rgb:230,159,0;--accent-text:#E69F00}
+body.colorblind-theme #appProject{--accent:#D55E00;--accent-rgb:213,94,0;--accent-text:#D55E00}
+body.colorblind-theme #appChartGen{--accent:#CC79A7;--accent-rgb:204,121,167;--accent-text:#CC79A7}
+body.colorblind-theme #appTreat{--accent:#56B4E9;--accent-rgb:86,180,233;--accent-text:#56B4E9;--on-accent:#111}
+/* Análise Simples em azul: elementos que tinham verde/teal fixo passam ao azul da seção */
+#appSimple .btn-template{color:var(--accent-text);background:var(--accent-soft);border-color:var(--accent-line)}
+#appSimple .btn-template:hover{background:rgba(var(--accent-rgb),.22);border-color:var(--accent)}
+#appSimple .btn-paste:hover{border-color:var(--accent);color:var(--accent-text);background:var(--accent-soft)}
+#appSimple .btn-example{color:var(--accent-text)!important;background:var(--accent-soft)!important;border-color:var(--accent-line)!important}
+#appSimple .btn-example:hover{background:rgba(var(--accent-rgb),.22)!important;border-color:var(--accent)!important}
+#appSimple .pdfsec-count{color:var(--accent-text);background:var(--accent-soft);border-color:var(--accent-line)}
+#appSimple .pdfsec-btn:hover{border-color:var(--accent-line);color:var(--accent-text)}
+#appSimple .pdfsec-item input,#appSimple input[type=checkbox],#appSimple input[type=range]{accent-color:var(--accent)}
+#appSimple .tab.active{color:var(--accent-text);box-shadow:var(--sh-1),inset 0 -2px 0 var(--accent)}
+#appSimple .upload-zone:hover,#appSimple .upload-zone.drag{border-color:var(--accent-line)}
+#appSimple .diag-headline{border-left-color:var(--accent)}
+#appSimple .btn-alter{color:var(--accent-text);background:var(--accent-soft);border-color:var(--accent-line)}
+/* abas ativas das demais seções com o traço da cor da seção */
+#appCompare .tab.active{color:var(--accent-text);box-shadow:var(--sh-1),inset 0 -2px 0 var(--accent)}
+/* início: grade de fundo e menu flutuante neutros */
+#secMenuBtn .sm-logo i{color:var(--text4)}
+
+/* ── 12. ov.1.2 — ajustes de revisão ───────────────────────────────────────────
+   Tela inicial: brilho colorido ao passar o mouse (como na ov.1.1.2) e tags alinhadas. */
+.home-card{display:flex;flex-direction:column;align-items:center}
+.home-card p{margin-bottom:14px}
+.home-card .card-badge{margin-top:auto!important;align-self:center}
+.home-card::before{background:radial-gradient(ellipse at 50% 0%,rgba(var(--c),.16),transparent 70%)!important}
+html body .home-card[class]:hover,html body.colorblind-theme .home-card[class]:hover{
+  border-color:rgba(var(--c),.85)!important;box-shadow:0 12px 40px rgba(var(--c),.22)!important}
+body.light-theme .home-card[class]:hover{box-shadow:0 12px 36px rgba(var(--c),.20)!important}
+
+/* Técnicas de análise: botão "Gerador de Gráficos" no título de cada gráfico */
+.chart-box h4 .tec-cg-title{flex:1;min-width:0}
+.tec-cg-send{margin-left:auto;flex-shrink:0;display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:10.5px;font-weight:700;
+  padding:4px 10px;border-radius:var(--r-pill);cursor:pointer;color:#ec4899;background:rgba(236,72,153,.10);border:1px solid rgba(236,72,153,.35);transition:background .15s,border-color .15s}
+.tec-cg-send:hover{background:rgba(236,72,153,.20);border-color:rgba(236,72,153,.6)}
+body.light-theme .tec-cg-send{color:#be185d}
+body.colorblind-theme .tec-cg-send{color:#CC79A7;background:rgba(204,121,167,.12);border-color:rgba(204,121,167,.4)}
+
+/* ── Tratamento de Dados — acabamento completo ── */
+#appTreat .topbar .btn-topbar{background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r-md);color:var(--text2)}
+#appTreat .treat-tabsbar{background:var(--bg5)!important;padding:6px 16px!important}
+#appTreat .treat-sidebar{padding:18px 16px}
+#appTreat .treat-btn-op{border-radius:var(--r-md);padding:9px 12px;font-weight:700;background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent-text)}
+#appTreat .treat-btn-op:hover{background:rgba(var(--accent-rgb),.22)}
+#appTreat .treat-accordion-body{border-left-color:var(--accent-line)}
+#appTreat .treat-accordion-hdr.open{border-color:var(--accent-line);color:var(--text)}
+/* faixa de contagem (linhas/colunas/numéricas/texto) e estatísticas — maior e mais legível */
+#appTreat .treat-strip{gap:8px;margin-bottom:12px}
+#appTreat .treat-strip-chips{gap:8px}
+#appTreat .treat-strip-title{font-size:12.5px;font-weight:800;color:var(--text);margin-right:2px}
+#appTreat .treat-strip-sel{font-size:12.5px;padding:6px 10px;border-radius:var(--r-sm);max-width:240px}
+#appTreat .treat-chip{font-size:12px;font-weight:600;padding:7px 15px;gap:7px;border-radius:var(--r-md);background:var(--card-bg);border:1px solid var(--border);box-shadow:var(--sh-1);color:var(--text4)}
+#appTreat .treat-chip b{font-size:17px;font-weight:800;color:var(--text);font-family:var(--font-display);font-variant-numeric:tabular-nums}
+#appTreat .treat-chip.accent{background:var(--accent-soft);border-color:var(--accent-line)}
+#appTreat .treat-chip.accent b{color:var(--accent-text)}
+#appTreat .treat-preview-head{margin:4px 0 10px}
+/* prévia dos dados: grade mais legível */
+#appTreat .treat-table-wrap{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--card-bg);box-shadow:var(--sh-1)}
+#appTreat .treat-table{font-size:13px}
+#appTreat .treat-table.treat-grid th,#appTreat .treat-table.treat-grid td{border:none;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+#appTreat .treat-table.treat-grid td.tg-cell{padding:7px 14px;color:var(--text2);font-variant-numeric:tabular-nums}
+#appTreat .treat-table.treat-grid td.tg-num{text-align:center;font-family:ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;font-size:12.5px;color:var(--text)}
+#appTreat .treat-table.treat-grid tr:nth-child(even) td.tg-cell{background:rgba(127,127,127,.045)}
+#appTreat .treat-table.treat-grid tr:hover td.tg-cell{background:var(--accent-soft)}
+#appTreat .treat-table.treat-grid .tg-colhead{background:var(--bg3);color:var(--text4);padding:8px 14px;font-size:10px;letter-spacing:.8px;border-bottom:1px solid var(--border2)}
+#appTreat .treat-table.treat-grid .tg-colhead .tg-colname{font-size:12px;font-weight:700;color:var(--text);text-transform:none;letter-spacing:0;margin-top:2px}
+#appTreat .treat-table.treat-grid .tg-corner{background:var(--bg3)}
+#appTreat .treat-table.treat-grid .tg-rowhead{background:var(--bg3);color:var(--text5);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;width:44px;min-width:44px}
+#appTreat .treat-table.treat-grid .tg-colhead:hover,#appTreat .treat-table.treat-grid .tg-rowhead:hover{background:var(--bg2)}
+#appTreat .treat-grid-status{font-size:11.5px;padding-top:8px}
+body.light-theme #treatPageTitle{color:#0f766e!important}
+body.light-theme #treatBtnTabNew{color:#0f766e!important}
+
+/* ── 13. ov.1.2 — revisão: tela inicial em 1 linha + Gerador de Gráficos ───────── */
+/* Tela inicial: as 6 seções numa única linha (como na ov.1.1.2), tags sempre na mesma altura */
+.home-cards{max-width:none;flex-wrap:nowrap;gap:16px;align-items:stretch;padding:0 24px}
+.home-card{width:auto;flex:1 1 0;max-width:232px;min-width:0;padding:22px 14px 20px}
+.home-cards{width:100%;justify-content:center}
+.home-card h2{font-size:15px}
+.home-card p{font-size:11.2px}
+.home-card .card-icon{width:52px;height:52px;font-size:25px;border-radius:15px;margin-bottom:12px}
+@media(max-width:1180px){.home-cards{flex-wrap:wrap;max-width:800px}.home-card{flex:0 0 236px;max-width:236px}}
+/* botões redondos (Pomodoro, Guia, Técnicas): borda branca no escuro e preta no claro */
+.btn-guide-round,.btn-pomodoro{border:1.5px solid #ffffff!important}
+body.light-theme .btn-guide-round,body.light-theme .btn-pomodoro{border:1.5px solid #111111!important}
+
+/* ── Gerador de Gráficos — acabamento moderno ── */
+#appChartGen{font-family:var(--font-ui)!important}
+#appChartGen .logo-name{font-family:'Audiowide',sans-serif}
+#appChartGen .topbar{border-bottom:1px solid var(--border)!important}
+#appChartGen .topbar .btn.btn-sm{border-radius:var(--r-md)!important;padding:6px 14px!important;font-weight:700}
+/* barra de abas + ferramentas */
+#appChartGen > div[style*="justify-content:flex-end"]{background:var(--bg5)!important;padding:7px 16px!important;gap:6px!important;border-bottom:1px solid var(--border)!important}
+#appChartGen .btn.btn-sm[style*="background:var(--bg3)"]{background:var(--bg4)!important;border:1px solid var(--border2)!important;color:var(--text3)!important;
+  border-radius:var(--r-md)!important;padding:6px 11px!important;font-weight:600!important;font-size:11.5px!important;box-shadow:var(--sh-1)}
+#appChartGen .btn.btn-sm[style*="background:var(--bg3)"]:hover{background:var(--bg3)!important;color:var(--text)!important;border-color:var(--border3)!important}
+#cgBtnTabNew{border-radius:var(--r-md)!important;padding:5px 12px!important}
+#cgTabsList > *{border-radius:var(--r-md) var(--r-md) var(--r-md) var(--r-md)!important}
+/* menus suspensos (Templates, Paletas, Filtro) */
+#cgTemplatesMenu,#cgPalettesMenu,#cgFilterMenu{background:var(--bg4)!important;border:1px solid var(--border2)!important;border-radius:var(--r-lg)!important;box-shadow:var(--sh-2)!important;padding:12px!important}
+#cgTemplatesMenu button,#cgPalettesMenu button,#cgFilterMenu button{border-radius:var(--r-sm)!important}
+/* barra lateral */
+#cgSidebar{background:var(--bg2)!important;border-right:1px solid var(--border)!important}
+#cgChartTypeBar{background:var(--bg5)!important;border-bottom:1px solid var(--border)!important;padding:16px!important}
+#cgLblChartType{font-size:10.5px!important;letter-spacing:1.4px!important;color:var(--accent-text)!important}
+.cg-type-trigger{background:var(--input-bg);border:1px solid var(--accent-line);border-radius:var(--r-md);padding:9px 12px;box-shadow:var(--sh-1)}
+.cg-type-trigger:hover{border-color:var(--accent);background:var(--bg4)}
+.cg-type-menu,.cg-type-preview{background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r-lg);box-shadow:var(--sh-2)}
+.cg-type-item{border-radius:var(--r-sm)}
+.cg-type-item:hover{background:var(--accent-soft)}
+.cg-type-item.active{background:rgba(var(--accent-rgb),.18);color:var(--accent-text)}
+.cg-section{border-bottom:1px solid var(--border)}
+.cg-section-hdr,body.light-theme .cg-section-hdr{background:transparent;padding:13px 16px;font-size:12.5px;font-weight:700;color:var(--text)}
+.cg-section-hdr:hover,body.light-theme .cg-section-hdr:hover{background:var(--bg3)}
+.cg-chevron{color:var(--text5)}
+.cg-section-body{padding:6px 16px 16px}
+.cg-field{gap:5px;margin-bottom:10px}
+.cg-field label{font-size:11px;color:var(--text3);font-weight:600}
+.cg-field input,.cg-field select,.cg-field textarea{background:var(--input-bg);border:1px solid var(--border2);border-radius:var(--r-sm);padding:7px 9px;font-size:12px;transition:border-color .15s,box-shadow .15s}
+.cg-field input:hover,.cg-field select:hover,.cg-field textarea:hover{border-color:var(--border3)}
+.cg-field input:focus,.cg-field select:focus,.cg-field textarea:focus{border-color:rgba(var(--accent-rgb),.65);box-shadow:var(--focus-ring)}
+.cg-field input[type=checkbox],.cg-field input[type=color],.cg-field input[type=range]{padding:0;box-shadow:none}
+#appChartGen input[type=range],#appChartGen input[type=checkbox]{accent-color:var(--accent)}
+#appChartGen textarea{font-family:ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;font-size:11.5px;line-height:1.5}
+.cg-series-row,.cg-cv-row,.cg-sup-row{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r-lg);padding:10px 12px;box-shadow:var(--sh-1)}
+.cg-eval-btn{border-radius:var(--r-md);border:1px solid var(--border2);background:var(--bg4)}
+.cg-eval-btn.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-text)}
+#cgSidebar button[style*="rgba(236,72,153,.12)"],#cgSidebar button[style*="rgba(236,72,153,.15)"]{border-radius:var(--r-md)!important}
+#cgSidebar button[style*="background:var(--bg3)"]{background:var(--bg4)!important;border-color:var(--border2)!important;border-radius:var(--r-sm)!important}
+/* área do gráfico */
+#cgStatsBar{background:var(--bg5)!important;border-bottom:1px solid var(--border)!important;padding:9px 18px!important;font-size:11.5px!important;color:var(--text3)!important}
+#cgCanvasWrap{background:var(--bg)}
+/* modais do Gerador (estilo inline escuro fixo) */
+#appChartGen [style*="position:fixed;inset:0"]{background:var(--overlay)!important;backdrop-filter:blur(5px)}
+#appChartGen [style*="position:fixed;inset:0"] > div[style*="border-radius"]{background:var(--bg4)!important;border:1px solid var(--border2)!important;border-radius:var(--r-xl)!important;box-shadow:var(--sh-3)!important}
+body.light-theme #appChartGen [style*="position:fixed;inset:0"] > div[style*="border-radius"]{background:#ffffff!important}
+/* tags: mesma caixa (altura fixa p/ 2 linhas) em todos os cards → alinhadas na mesma altura */
+.home-card .card-badge{display:inline-flex!important;align-items:center;justify-content:center;min-height:34px;padding:4px 12px;border-radius:12px!important;
+  text-transform:none;letter-spacing:.2px;font-size:10.5px;line-height:1.3;max-width:100%}
+@media(max-width:1400px){.home-cards{gap:12px;padding:0 16px}.home-card .card-badge{min-height:46px;font-size:10px;padding:4px 10px}}
+
+/* ── 14. ov.1.2 — Comparativa › Individual: os 12 indicadores numa única fileira ── */
+.stats-grid.c-ind-stats{grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);grid-template-columns:none;gap:6px}
+.stats-grid.c-ind-stats .stat-card{padding:10px 7px 8px;min-width:0;text-align:center}
+.stats-grid.c-ind-stats .stat-card .val{font-size:clamp(11px,.92vw,15px)!important;white-space:nowrap;letter-spacing:-.02em}
+.stats-grid.c-ind-stats .stat-card .lbl{font-size:clamp(8px,.6vw,9.5px);letter-spacing:.2px;line-height:1.3;overflow-wrap:break-word;hyphens:auto}
+@media(max-width:1100px){.stats-grid.c-ind-stats{grid-auto-flow:row;grid-template-columns:repeat(6,minmax(0,1fr))}}
+</style>
 </head>
 <body>
 
@@ -3346,7 +3969,7 @@ body.light-theme .prof-hint::before{border-color:#d97706}
             de Gráficos está aberto, então a caixa de informações nunca aparecia. -->
 
   <div class="home-logo">STATLAB <span>Pro</span></div>
-  <div class="home-ver">ov.1.1.2</div>
+  <div class="home-ver">ov.1.2</div>
   <div class="home-tagline">Plataforma de análise estatística profissional</div>
   <!--  subtítulo ("Análise estatística profissional completa · Weibull · …") removido a pedido. -->
   <div class="home-sub" style="display:none"></div>
@@ -3358,7 +3981,7 @@ body.light-theme .prof-hint::before{border-color:#d97706}
       <div class="card-badge" data-i18n="home.card1.badge">1 Variável · 1 Arquivo</div>
     </div>
     <div class="home-card card-compare" onclick="launchCompare(event)">
-      <div class="card-icon">📈📉</div>
+      <div class="card-icon">📈</div>
       <h2 data-i18n="home.card2.title">Análise Comparativa</h2>
       <p data-i18n="home.card2.desc">2 ou mais arquivos do mesmo estudo<br>Comparação estatística, sobreposição de gráficos, relatório unificado</p>
       <div class="card-badge" data-i18n="home.card2.badge">Multi-arquivo · Comparativo</div>
@@ -3390,7 +4013,7 @@ body.light-theme .prof-hint::before{border-color:#d97706}
   </div>
   <div class="home-credit">
     <span data-i18n="home.credit">Desenvolvido por</span> <strong>Gabriel Abreu</strong> · 2026<br>
-    <span id="homeCreditVer">StatLab Pro ov.1.1.2</span> — <span data-i18n="home.credit2">Análise estatística profissional</span>
+    <span id="homeCreditVer">StatLab Pro ov.1.2</span> — <span data-i18n="home.credit2">Análise estatística profissional</span>
   </div>
 </div>
 
@@ -3518,7 +4141,7 @@ body.light-theme .prof-hint::before{border-color:#d97706}
 <!-- APP SIMPLES -->
 <div id="appSimple">
   <div class="topbar">
-    <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer"><div class="logo-name">STATLAB <span>Pro</span></div><div class="logo-ver">ov.1.1.2</div><div class="logo-mode">Análise Simples</div></div>
+    <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer"><div class="logo-name">STATLAB <span>Pro</span></div><div class="logo-ver">ov.1.2</div><div class="logo-mode">Análise Simples</div></div>
     <div class="tabs">
       <div class="tab active" onclick="sTab('sdados')">📊 DADOS</div>
       <div class="tab" onclick="sTab('sdescritiva')">📈 DESCRITIVA</div>
@@ -3722,7 +4345,7 @@ body.light-theme .prof-hint::before{border-color:#d97706}
 <!-- APP COMPARATIVO -->
 <div id="appCompare">
   <div class="topbar">
-    <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer"><div class="logo-name">STATLAB <span>Pro</span></div><div class="logo-ver">ov.1.1.2</div><div class="logo-mode compare">Análise Comparativa</div></div>
+    <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer"><div class="logo-name">STATLAB <span>Pro</span></div><div class="logo-ver">ov.1.2</div><div class="logo-mode compare">Análise Comparativa</div></div>
     <div class="tabs">
       <div class="tab active" onclick="cTab('cdados')">📂 DADOS</div>
       <div class="tab" onclick="cTab('cindividual')">📈 INDIVIDUAL</div>
@@ -5465,13 +6088,15 @@ function mkStats(arr, label, iqrMult=1.5, histNb=15, alpha=0.05){
 }
 function computeWeibull(y){
   const xPos=[...y].filter(v=>v>0).sort((a,b)=>a-b);
-  if(xPos.length<2)return{beta:0,eta:0,mean:0,t63:0,pts:[],slope:0,intercept:0};
+  // ov.1.2 FIX: com todos os valores iguais, ln(t) é constante e a regressão divide por ~0,
+  // devolvendo β/η arbitrários (ex.: β=0,7 para dados constantes). Agora é tratado como "sem ajuste".
+  if(xPos.length<2||xPos[xPos.length-1]===xPos[0])return{beta:0,eta:0,mean:0,t63:0,pts:[],slope:0,intercept:0,valid:false,nUsed:xPos.length,nTotal:y.length};
   const wPts=xPos.map((v,i,arr)=>{const F=(i+1-0.3)/(arr.length+0.4);return{t:v,F,lnt:Math.log(v),lnln:Math.log(Math.log(1/(1-F))),i:i+1}});
   const xwm=mean(wPts.map(p=>p.lnt)),ywm=mean(wPts.map(p=>p.lnln));
   const sl=wPts.reduce((s,p)=>s+(p.lnt-xwm)*(p.lnln-ywm),0)/wPts.reduce((s,p)=>s+(p.lnt-xwm)**2,0);
   const ic=ywm-sl*xwm,beta=sl,eta=Math.exp(-ic/beta);
   let wMean=eta;try{wMean=eta*gamma(1+1/beta)}catch(e){}
-  return{beta,eta,mean:wMean,t63:eta,pts:wPts,slope:sl,intercept:ic};
+  return{beta,eta,mean:wMean,t63:eta,pts:wPts,slope:sl,intercept:ic,valid:isFinite(beta)&&isFinite(eta),nUsed:xPos.length,nTotal:y.length};
 }
 function computePareto(arr){
   const nb=Math.min(10,arr.length);
@@ -7307,9 +7932,16 @@ function sRunAnalysis(){
   if(!sRaw||!sRaw.length){notify(getCurrentLang()==='en'?'Load a data file first!':'Carregue um arquivo de dados primeiro!');return}
   const cx=document.getElementById('sColX').value,cy=document.getElementById('sColY').value;
   if(!cx||!cy){notify(getCurrentLang()==='en'?'Select valid numeric columns!':'Selecione colunas numéricas válidas!');return}
-  const xa=sRaw.map(r=>parseFloat(r[cx])).filter(v=>!isNaN(v));
-  const ya=sRaw.map(r=>parseFloat(r[cy])).filter(v=>!isNaN(v));
+  // ov.1.2 FIX: X e Y eram filtrados SEPARADAMENTE — uma célula vazia/texto em uma das colunas
+  // deslocava todos os pares seguintes (x da linha i casava com y da linha i+1), corrompendo a
+  // regressão, a correlação, Cook/DFFITS e os gráficos de dispersão. Agora só entram linhas em que
+  // X e Y são numéricos (par completo), e o usuário é avisado de quantas linhas foram ignoradas.
+  const _pairs=sRaw.map(r=>[parseFloat(r[cx]),parseFloat(r[cy])]).filter(p=>isFinite(p[0])&&isFinite(p[1]));
+  const xa=_pairs.map(p=>p[0]), ya=_pairs.map(p=>p[1]);
   if(!xa.length||!ya.length){notify(nbi('Selecione colunas numéricas válidas!','Select valid numeric columns!'));return}
+  if(xa.length<3){notify(nbi('São necessários ao menos 3 pares X/Y numéricos para a análise.','At least 3 numeric X/Y pairs are required for the analysis.'));return}
+  const _skipped=sRaw.length-xa.length;
+  if(_skipped>0) notify(nbi(_skipped+' linha(s) ignorada(s): X ou Y vazio/não numérico.',_skipped+' row(s) skipped: X or Y empty/non-numeric.'),'info');
   const conf=parseFloat(document.getElementById('sConfLevel').value)/100;
   const alpha=parseFloat(document.getElementById('sAlphaLevel').value)/1000;
   const iqrM=parseFloat(document.getElementById('sIqrMult').value)/10;
@@ -7888,7 +8520,9 @@ function sRenderInf(r){
   </div>`;
 }
 function sRenderAdv(r){
-  const w=r.weibull,m=r.mtbf,mc=r.montecarlo;
+  const w0=r.weibull,m=r.mtbf,mc=r.montecarlo;
+  // ov.1.2: sem ajuste válido → "–" (antes aparecia 0, que parecia um resultado real)
+  const w=(w0&&w0.valid===false)?Object.assign({},w0,{beta:NaN,eta:NaN,mean:NaN,t63:NaN,slope:NaN,intercept:NaN}):w0;
   document.getElementById('sAdvCards').innerHTML=`
   <div class="test-grid" style="margin-top:14px">
   <div class="test-card"><h4>${t('adv.weibull.title')}${tip('weibull')} (${t('adv.linReg')})</h4>
@@ -8261,7 +8895,7 @@ function sDownloadTxt(){
 }
 // single source of truth for the program's version, so exported PDFs/filenames
 // and the update-checker never drift out of sync with the real running version again.
-var APP_VERSION = 'ov.1.1.2';
+var APP_VERSION = 'ov.1.2';
 // ══════════════════════════════════════════════════════════════════════════════
 // Escape central de HTML. Todo texto vindo de ARQUIVO ou INPUT do usuário
 // (cabeçalhos de colunas de CSV/XLSX, nomes de séries/estudos, nomes de arquivos, valores
@@ -9094,7 +9728,7 @@ function cAddStudySlot(){
     <div id="cColSel_${id}" style="display:none;margin-top:6px">
       <div class="ctrl-label" id="cColYLbl_${id}" style="margin-top:5px;font-size:11px">${t('csidebar.colY')}</div>
       <select id="cSelY_${id}" style="font-size:12px"></select>
-      <button class="btn-alter" style="margin-top:6px;width:100%" id="cBtnAlter_${id}" onclick="openDataEditCompare('${id}')">✏️ <span class="cAlterLbl">Alterar Dados</span></button>
+      <button class="btn-alter" style="margin-top:6px;width:100%" id="cBtnAlter_${id}" onclick="openDataEditCompare('${id}')">✏️ <span class="cAlterLbl">${t('btn.alterDados')}</span></button>
     </div>`;
   document.getElementById('cStudySlots').appendChild(div);
   // Wire up events via JS (avoids inline handler quoting issues)
@@ -9279,6 +9913,9 @@ function cRunAnalysis(){
   ['cindEmpty','ccmpEmpty','cvarEmpty','csobEmpty','clibEmpty','cdiagEmpty','crepEmpty'].forEach(id=>document.getElementById(id).style.display='none');
   ['cindContent','ccmpContent','cvarContent','csobContent','clibContent','cdiagContent','crepContent'].forEach(id=>document.getElementById(id).style.display='block');
   cTab('cindividual');
+  // ov.1.2 FIX: os títulos estáticos das abas só eram traduzidos ao TROCAR de idioma; com o
+  // programa já em inglês, uma comparação nova saía com títulos em português.
+  requestAnimationFrame(function(){ if(getCurrentLang()!=='pt'){ try{ cUpdateI18n(); }catch(e){} } });
 }
 // ══ HISTÓRICO — mesma ideia da Análise Simples, mas guardando o conjunto de
 // estudos (slots) inteiro. Session-only. ══
@@ -9794,7 +10431,7 @@ function cIndividualHTML(res,i){
   const zScoreMax=s.std?((s.max-s.mean)/s.std):0;
   const zScoreMin=s.std?((s.min-s.mean)/s.std):0;
   const mc=res.montecarlo;
-  return`<div class="stats-grid">${[[t('stat.n'),s.n],[t('stat.media')+unit,fmtSmart(s.mean)],[t('stat.mediana'),fmtSmart(s.median)],[t('stat.desvPad'),fmtSmart(s.std)],[t('rep.variance'),fmtSmart(s.variance)],['CV'+tip('cv'),fmt(s.cv,1)+'%'],[t('stat.assimetria'),fmtSmart(s.skewness)],[t('stat.amplitude'),fmtSmart(s.range)],[t('stat.outliers')+tip('outliers'),s.outliers.length],[t('stat.r2linear'),fmtSmart(res.r2)],[t('stat.r2exp'),(res.r2Exp!=null?fmtSmart(res.r2Exp):'—')],['r (Pearson)'+tip('pearson'),fmtSmart(res.pearson)]].map(([l,v])=>`<div class="stat-card"><div class="val" style="font-size:15px">${v}</div><div class="lbl">${l}</div></div>`).join('')}</div>
+  return`<div class="stats-grid c-ind-stats">${[[t('stat.n'),s.n],[t('stat.media')+unit,fmtSmart(s.mean)],[t('stat.mediana'),fmtSmart(s.median)],[t('stat.desvPad'),fmtSmart(s.std)],[t('rep.variance'),fmtSmart(s.variance)],['CV'+tip('cv'),fmt(s.cv,1)+'%'],[t('stat.assimetria'),fmtSmart(s.skewness)],[t('stat.amplitude'),fmtSmart(s.range)],[t('stat.outliers')+tip('outliers'),s.outliers.length],[t('stat.r2linear'),fmtSmart(res.r2)],[t('stat.r2exp'),(res.r2Exp!=null?fmtSmart(res.r2Exp):'—')],['r (Pearson)'+tip('pearson'),fmtSmart(res.pearson)]].map(([l,v])=>`<div class="stat-card"><div class="val" style="font-size:15px">${v}</div><div class="lbl">${l}</div></div>`).join('')}</div>
   <div class="chart-row-3" id="cIRow3_${i}">
     <div class="chart-box"><h4>${t('chart.hist')}</h4><div style="position:relative;height:280px"><canvas id="cIHist_${i}"></canvas></div></div>
     <div class="chart-box" id="cIFdpBox_${i}"><h4>${t('chart.fdp')}</h4><div style="position:relative;height:280px"><canvas id="cIFdp_${i}"></canvas></div></div>
@@ -17480,6 +18117,13 @@ function bmRenderApoiosTable(){
   }
 }
 
+// ov.1.2 FIX: o botão "+ Adicionar Apoio" chamava bmAddApoio(), que não existia (ReferenceError
+// se o botão fosse exibido). A quantidade de apoios é fixa por tipo de fixação; a função explica isso.
+function bmAddApoio(){
+  var isPT=getCurrentLang()!=='en';
+  notify(isPT?'O número de apoios é definido pelo tipo de fixação (biapoiada: 2 · balanço: 1). Ajuste a posição/tipo na tabela.'
+             :'The number of supports is set by the fixation type (simply supported: 2 · cantilever: 1). Adjust position/type in the table.','info');
+}
 // ── Cargas table ───────────────────────────────────────────────────────
 function bmAddCarga(){
   var L=parseFloat(document.getElementById('bmL').value)||4000;
@@ -23410,6 +24054,7 @@ function applyLang(){
   // Export buttons
   document.querySelectorAll('[onclick*="GeneratePDF"]').forEach(function(b){b.textContent=t('btn.exportPDF');});
   document.querySelectorAll('[onclick*="GenerateXLSX"]').forEach(function(b){b.textContent=t('btn.exportExcel');});
+  (function(){ var b=document.getElementById('sBtnDownloadTxt'); if(b) b.textContent=(getCurrentLang()==='en'?'📄 Export TXT':'📄 Exportar TXT'); })(); // ov.1.2
   el=document.querySelector('[onclick*="cAddStudySlot"]');if(el)el.textContent=t('btn.addEstudo');
   // Empty states
   document.querySelectorAll('#appSimple .empty-state h3').forEach(function(el){el.textContent=t('empty.simples');});
@@ -24841,8 +25486,16 @@ document.addEventListener('click',function(){ setTimeout(profHintSync,0); },true
 document.addEventListener('keydown',function(e){ if(e.key==='Escape') setTimeout(profHintSync,0); },true);
 
 
+var _profWarnedQuota=false;
 function profPersist(){
-  try{ localStorage.setItem(PROF_STORE_KEY, JSON.stringify(_userProfile)); }catch(e){}
+  try{ localStorage.setItem(PROF_STORE_KEY, JSON.stringify(_userProfile)); }
+  catch(e){
+    // ov.1.2 FIX: antes a falha era engolida e o usuário achava que o perfil estava salvo.
+    if(!_profWarnedQuota){ _profWarnedQuota=true;
+      try{ notify(getCurrentLang()==='en'
+        ?'Your profile could not be saved in this browser (data too large for its storage). Export the profile (.json) so you do not lose it.'
+        :'Não foi possível salvar o perfil neste navegador (dados grandes demais para o armazenamento). Exporte o perfil (.json) para não perdê-lo.','warning'); }catch(_){} }
+  }
 }
 
 // ── button click: no profile → toggle the 3-option dropdown · has profile → open it directly ──
@@ -26150,10 +26803,14 @@ function engApplyLang(){
   var engSub=document.querySelector('.eng-home-sub');
   if(engSub)engSub.textContent=t('eng.home.sub');
   // Test cards
-  var testIds=['tracao','flexao','dureza','tga','ftir','drx','arrhenius'];
+  // ov.1.2 FIX: o mapeamento era por POSIÇÃO; com os cards novos (Porosidade, Medida Comparada,
+  // Deconvolução, EDS) o 7º card deixou de ser o Arrhenius e ele ficava em português no modo EN.
+  // Agora o card é identificado pela própria ação de clique; os demais têm tradução própria.
+  var _engCardMap={"engLaunchTest('tracao')":'tracao',"engLaunchTest('flexao')":'flexao',"engLaunchTest('dureza')":'dureza',
+    'launchTGA()':'tga','launchFTIR()':'ftir','launchDRX()':'drx',"engLaunchTest('arrhenius')":'arrhenius'};
   var cards=document.querySelectorAll('.eng-test-card');
-  cards.forEach(function(card,i){
-    var tid=testIds[i];if(!tid)return;
+  cards.forEach(function(card){
+    var tid=_engCardMap[(card.getAttribute('onclick')||'').trim()];if(!tid)return;
     var h3=card.querySelector('h3');if(h3)h3.textContent=t('eng.test.'+tid);
     var p=card.querySelector('p');if(p)p.textContent=t('eng.desc.'+tid);
     var badge=card.querySelector('.etc-badge');
@@ -38105,6 +38762,8 @@ function drxExportPDF(){
 function drxApplyLangUI(){
   var isPT=getCurrentLang()!=='en';
   var el;
+  el=document.getElementById('drxDiffEmptyTitle'); if(el) el.textContent=isPT?'Nenhum dado carregado':'No data loaded'; // ov.1.2
+  el=document.getElementById('drxDiffEmptyDesc');  if(el) el.textContent=isPT?'Adicione amostras na barra lateral e clique em Processar':'Add samples in the sidebar and click Process';
   el=document.getElementById('drxEnsaiosLabel');      if(el) el.textContent=isPT?'Ensaios':'Tests';
   el=document.getElementById('drxClearLabel');         if(el) el.textContent=isPT?'Limpar':'Clear';
   el=document.getElementById('drxBtnAnalysisLabel');   if(el) el.textContent=isPT?'ANÁLISE':'ANALYSIS';
@@ -39098,6 +39757,8 @@ function tgaExportPDF(){
 function tgaApplyLangUI(){
   var isPT=getCurrentLang()!=='en';
   var el;
+  el=document.getElementById('tgaEmptyTitle'); if(el) el.textContent=isPT?'Nenhum dado carregado':'No data loaded'; // ov.1.2
+  el=document.getElementById('tgaEmptyDesc');  if(el) el.textContent=isPT?'Adicione amostras na barra lateral e clique em Processar':'Add samples in the sidebar and click Process';
   el=document.getElementById('tgaEnsaiosLabel');      if(el) el.textContent=isPT?'Ensaios':'Tests';
   el=document.getElementById('tgaClearLabel');         if(el) el.textContent=isPT?'Limpar':'Clear';
   el=document.getElementById('tgaBtnAnalysisLabel');   if(el) el.textContent=isPT?'ANÁLISE':'ANALYSIS';
@@ -39694,12 +40355,13 @@ document.addEventListener('keydown', function(e){
     ctx.clearRect(0, 0, W, H);
 
     var light = isLight();
-    var dotColorR = light ? 60  : 180;
-    var dotColorG = light ? 60  : 185;
-    var dotColorB = light ? 80  : 220;
-    var lineColorR = light ? 60  : 180;
-    var lineColorG = light ? 60  : 185;
-    var lineColorB = light ? 80  : 220;
+    // ov.1.2: grade neutra (preto/branco) — a tela inicial não usa cor
+    var dotColorR = light ? 60  : 190;
+    var dotColorG = light ? 60  : 190;
+    var dotColorB = light ? 64  : 194;
+    var lineColorR = light ? 60  : 190;
+    var lineColorG = light ? 60  : 190;
+    var lineColorB = light ? 64  : 194;
     var baseA  = light ? BASE_ALPHA_LIGHT  : BASE_ALPHA_DARK;
     var maxA   = light ? MAX_ALPHA_LIGHT   : MAX_ALPHA_DARK;
     var lineBase = light ? LINE_BASE_LIGHT : LINE_BASE_DARK;
@@ -40727,7 +41389,7 @@ function cgGoHome(ev){
   <div class="topbar" id="engTopbar">
     <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer">
       <div class="logo-name">STATLAB <span>Pro</span></div>
-      <div class="logo-ver">ov.1.1.2</div>
+      <div class="logo-ver">ov.1.2</div>
       <div class="logo-mode engineering" id="engModeLabel" data-i18n="eng.modeLabel">Análise de Engenharia</div>
     </div>
     <div class="topbar-btns" style="margin-left:auto">
@@ -40870,7 +41532,7 @@ function cgGoHome(ev){
   <div class="topbar">
     <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer">
       <div class="logo-name">STATLAB <span>Pro</span></div>
-      <div class="logo-ver">ov.1.1.2</div>
+      <div class="logo-ver">ov.1.2</div>
       <div class="logo-mode" style="color:#f59e0b;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35)">FTIR</div>
     </div>
     <div class="topbar-btns" style="margin-left:auto">
@@ -41130,7 +41792,7 @@ function cgGoHome(ev){
   <div class="topbar">
     <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer">
       <div class="logo-name">STATLAB <span>Pro</span></div>
-      <div class="logo-ver">ov.1.1.2</div>
+      <div class="logo-ver">ov.1.2</div>
       <div class="logo-mode engineering" id="poModeLabel">Análise de Engenharia</div>
     </div>
   </div>
@@ -41354,7 +42016,7 @@ function cgGoHome(ev){
   <div class="topbar">
     <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer">
       <div class="logo-name">STATLAB <span>Pro</span></div>
-      <div class="logo-ver">ov.1.1.2</div>
+      <div class="logo-ver">ov.1.2</div>
       <div class="logo-mode engineering" id="mcModeLabel">Análise de Engenharia</div>
     </div>
   </div>
@@ -41524,7 +42186,7 @@ function cgGoHome(ev){
   <div class="topbar">
     <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer">
       <div class="logo-name">STATLAB <span>Pro</span></div>
-      <div class="logo-ver">ov.1.1.2</div>
+      <div class="logo-ver">ov.1.2</div>
       <div class="logo-mode engineering" id="dcModeLabel">Análise de Engenharia</div>
     </div>
   </div>
@@ -41704,7 +42366,7 @@ function cgGoHome(ev){
   <div class="topbar">
     <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer">
       <div class="logo-name">STATLAB <span>Pro</span></div>
-      <div class="logo-ver">ov.1.1.2</div>
+      <div class="logo-ver">ov.1.2</div>
       <div class="logo-mode engineering" id="edsModeLabel">Análise de Engenharia</div>
     </div>
   </div>
@@ -42011,7 +42673,7 @@ function cgGoHome(ev){
   <div class="topbar">
     <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer">
       <div class="logo-name">STATLAB <span>Pro</span></div>
-      <div class="logo-ver">ov.1.1.2</div>
+      <div class="logo-ver">ov.1.2</div>
       <div class="logo-mode" style="color:#f59e0b;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3)">DRX</div>
     </div>
     <div class="topbar-btns" style="margin-left:auto">
@@ -42192,7 +42854,7 @@ function cgGoHome(ev){
   <div class="topbar">
     <div class="logo" onclick="goHome(event)" style="cursor:pointer">
       <div class="logo-name">STATLAB <span>Pro</span></div>
-      <div class="logo-ver">ov.1.1.2</div>
+      <div class="logo-ver">ov.1.2</div>
       <div class="logo-mode" style="color:#f59e0b;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3)">TGA</div>
     </div>
     <div class="topbar-btns" style="margin-left:auto">
@@ -42382,7 +43044,7 @@ function cgGoHome(ev){
   <div class="topbar" id="projTopbar">
     <div class="logo" onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer">
       <div class="logo-name">STATLAB <span>Pro</span></div>
-      <div class="logo-ver">ov.1.1.2</div>
+      <div class="logo-ver">ov.1.2</div>
       <div class="logo-mode project" id="projModeLabel">Análise de Projeto</div>
     </div>
     <div class="topbar-btns" style="margin-left:auto">
@@ -45825,7 +46487,7 @@ function cgGoHome(ev){
 <div id="appTreat">
   <div class="topbar">
     <div class="logo" style="display:flex;align-items:baseline;gap:6px">
-      <span onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer;display:flex;align-items:baseline;gap:6px"><div class="logo-name">STATLAB <span>Pro</span></div><div class="logo-ver">ov.1.1.2</div></span>
+      <span onclick="goHome(event)" title="Voltar ao início" style="cursor:pointer;display:flex;align-items:baseline;gap:6px"><div class="logo-name">STATLAB <span>Pro</span></div><div class="logo-ver">ov.1.2</div></span>
       <div class="logo-mode" id="treatPageTitle" style="color:#2dd4bf;background:rgba(45,212,191,.12);border-color:rgba(45,212,191,.3)">🧹 Tratamento de Dados</div>
     </div>
     <div style="flex:1"></div>
@@ -46282,7 +46944,7 @@ function cgGoHome(ev){
   <div class="topbar" style="border-bottom:1px solid rgba(236,72,153,.3)">
     <div class="logo" onclick="cgGoHome(event)" style="cursor:pointer">
       <div class="logo-name">STATLAB <span>Pro</span></div>
-      <div class="logo-ver">ov.1.1.2</div>
+      <div class="logo-ver">ov.1.2</div>
       <div class="logo-mode" style="color:#ec4899;background:rgba(236,72,153,.12);border-color:rgba(236,72,153,.3)" id="cgModeLabel">Gerador de Gráficos</div>
     </div>
     <div style="display:flex;gap:8px;margin-left:auto;align-items:center">
@@ -74877,7 +75539,7 @@ function _treatGridRowsHtml(from,to){
   for(var ri=from; ri<to; ri++){
     var row=_treatRows[ri]; if(!row) continue;
     out+='<tr data-row="'+ri+'"><th class="tg-rowhead" data-rowidx="'+ri+'" draggable="true">'+(ri+1)+'</th>'
-      +_treatFields.map(function(f,ci){ return '<td class="tg-cell" data-row="'+ri+'" data-colidx="'+ci+'" data-col="'+escapeHtml(f)+'">'+escapeCell(row[f])+'</td>'; }).join('')+'</tr>';
+      +_treatFields.map(function(f,ci){ return '<td class="tg-cell'+((row[f]!==null&&row[f]!==undefined&&String(row[f]).trim()!==''&&isFinite(Number(row[f])))?' tg-num':'')+'" data-row="'+ri+'" data-colidx="'+ci+'" data-col="'+escapeHtml(f)+'">'+escapeCell(row[f])+'</td>'; }).join('')+'</tr>';
   }
   return out;
 }
@@ -78163,6 +78825,37 @@ function _tChart(id,cfg){
   if(_tecChartIds.indexOf(id)<0) _tecChartIds.push(id);
   return ch;
 }
+/* ov.1.2: envia um gráfico das Técnicas de análise ao Gerador de Gráficos. Extrai a
+   configuração ANTES de fechar o pop-up (fechar destrói as instâncias do Chart.js) e reaproveita
+   o mesmo extrator/aplicador de abas usado pela Análise de Engenharia. */
+function tecSendChartToGen(id,btn){
+  var ch=allCharts[id]||((typeof Chart!=='undefined'&&Chart.getChart)?Chart.getChart(id):null);
+  var h4=btn&&btn.closest?btn.closest('h4'):null;
+  var tEl=h4?h4.querySelector('.tec-cg-title'):null;
+  var title=((tEl?tEl.textContent:'')||_tL('Gráfico','Chart')).trim();
+  if(!ch||!ch.data||!ch.data.datasets||!ch.data.datasets.length){ notify(_tL('Gere os resultados primeiro.','Generate the results first.')); return; }
+  var t=(ch.config&&ch.config.type)||'';
+  var ds0=ch.data.datasets[0]||{}, d0=(ds0.data||[])[0];
+  var xy=(d0&&typeof d0==='object'&&('x' in d0));
+  var ct=(t==='bar')?'bar':(t==='line'?'line':(xy?'scatter':'line'));
+  if(ch.data.datasets.some(function(d){ return d.type==='line'||d.showLine; }) && xy) ct='line';
+  var cfg=null;
+  // boxplots das Técnicas são desenhados por plugin (sem dados no dataset): usa os valores brutos guardados
+  var bx=ch.options&&ch.options.plugins&&ch.options.plugins.tecBox;
+  if(bx&&bx.raw&&bx.raw.length){
+    var pal=['#5A7AFF','#F0B01A','#E1413F','#2E7D32','#7A3FA0','#C02126','#63b3ed','#ec4899'];
+    var ser=bx.raw.filter(function(r){ return r.arr&&r.arr.length; }).map(function(r,i){
+      return {name:String(r.name||('Série '+(i+1))),color:(typeof _engRgbToHex==='function'&&_engRgbToHex(r.color))||pal[i%pal.length],
+        data:r.arr.filter(function(v){ return isFinite(v); }).map(function(v){ return _engNumFmt(v); }).join('\n')};
+    });
+    if(ser.length) cfg={chartType:'boxplot',mainTitle:title,xTitle:'',yTitle:bx.yTitle||'',series:ser,_tabName:title};
+  }
+  if(!cfg){ try{ cfg=_engExtractChartConfig(ch,{chartType:ct,title:title}); }catch(e){ console.error('tecSendChartToGen',e); } }
+  if(!cfg||!cfg.series||!cfg.series.length){ notify(_tL('Este gráfico não tem dados numéricos que possam ser transferidos.','This chart has no numeric data that can be transferred.')); return; }
+  try{ tecClose(); }catch(e){}
+  try{ launchChartGen(null,true); }catch(e){ console.error('launchChartGen',e); }
+  requestAnimationFrame(function(){ try{ _engApplyCgTabs([cfg]); }catch(e){ console.error('_engApplyCgTabs',e); } });
+}
 function _tecDestroyCharts(){
   _tecChartIds.forEach(function(id){ if(allCharts[id]){ try{ allCharts[id].destroy(); }catch(e){} delete allCharts[id]; } });
   _tecChartIds=[];
@@ -78250,7 +78943,9 @@ function _tTable(head,rows,opts){
   return h+'</tbody></table></div>';
 }
 function _tChartBox(id,title,h,extraCls){
-  return '<div class="chart-box'+(extraCls?' '+extraCls:'')+'"><h4>'+title+'</h4><div style="position:relative;height:'+(h||280)+'px"><canvas id="'+id+'"></canvas></div></div>';
+  // ov.1.2: botão para levar o gráfico ao Gerador de Gráficos (mesmo fluxo da Análise de Engenharia)
+  var sendBtn='<button type="button" class="tec-cg-send" onclick="tecSendChartToGen(\''+id+'\',this)" title="'+_tL('Abrir este gráfico no Gerador de Gráficos','Open this chart in the Chart Generator')+'">📐 '+_tL('Gerador de Gráficos','Chart Generator')+'</button>';
+  return '<div class="chart-box'+(extraCls?' '+extraCls:'')+'"><h4><span class="tec-cg-title">'+title+'</span>'+sendBtn+'</h4><div style="position:relative;height:'+(h||280)+'px"><canvas id="'+id+'"></canvas></div></div>';
 }
 function _tSecTitle(html){ return '<div class="section-title" style="margin:16px 0 10px">'+html+'</div>'; }
 function _tVarSelect(tab,items,lbl){
@@ -78279,7 +78974,7 @@ function _tBoxChart(id,items,k,title){
   var pad=(hi-lo)*0.08||1;
   _tChart(id,{type:'bar',data:{labels:items.map(function(i){ return i.name; }),datasets:[{data:items.map(function(){ return null; })}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
-      plugins:{legend:{display:false},tooltip:{enabled:false},tecBox:{stats:stats}},
+      plugins:{legend:{display:false},tooltip:{enabled:false},tecBox:{stats:stats,raw:items.map(function(it){ return {name:it.name,arr:[].concat(it.arr||[]),color:(it.color&&it.color.solid)||null}; }),yTitle:title||''}},
       scales:{x:_tAx('x'),y:_tAx('y',title,{beginAtZero:false,suggestedMin:lo-pad,suggestedMax:hi+pad})}},
     plugins:[_tecBoxPlugin]});
 }
@@ -80636,45 +81331,7 @@ wikiTecBuild();
 <!--  ═══ MENU DE SEÇÕES (flutuante) ═══
       Quadradinho com a logo, colado numa lateral da tela. Ligado/desligado pelo ⚙️ (Tela Inicial).
       Clique = abre a lista de seções; 2 cliques + arrastar = move (sempre gruda na lateral esquerda/direita). -->
-<style id="secMenuCss">
-#secMenu{--sm-c:var(--accent);--sm-rgb:90,122,255;position:fixed;z-index:9450;top:40%;left:auto;right:0;display:none;user-select:none;-webkit-user-select:none;touch-action:none}
-#secMenu.sm-on{display:block}
-/* cursor da seção atual (definido em JS no #secMenu); mesma regra do app: todo descendente herda, inclusive botões */
-#secMenu *{cursor:inherit!important}
-#secMenu.sm-snap{transition:left .22s cubic-bezier(.2,.8,.2,1),top .12s ease}
-#secMenuBtn{width:46px;height:46px;border:1.5px solid var(--accent);background:var(--bg2);color:var(--text8);display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 6px 20px rgba(0,0,0,.38);transition:background .15s,box-shadow .2s,border-color .2s;position:relative;z-index:2}
-#secMenu.sm-right #secMenuBtn{border-radius:14px 0 0 14px;border-right:none}
-#secMenu.sm-left #secMenuBtn{border-radius:0 14px 14px 0;border-left:none}
-/* borda e brilho seguem a cor da seção atual (--sm-c / --sm-rgb definidas em JS; branco/preto na Tela Inicial e Wiki) */
-#secMenuBtn:hover,#secMenuBtn:focus-visible,#secMenu.sm-open #secMenuBtn{background:var(--bg4);border-color:var(--sm-c);outline:none;box-shadow:0 0 0 1px rgba(var(--sm-rgb),.55),0 0 20px rgba(var(--sm-rgb),.7),0 6px 22px rgba(0,0,0,.38)}
-#secMenu.sm-dragging #secMenuBtn{border-radius:14px;border:1.5px solid var(--sm-c);box-shadow:0 0 26px rgba(var(--sm-rgb),.7),0 10px 30px rgba(0,0,0,.4);transform:scale(1.06)}
-#secMenuBtn .sm-logo{font-family:'Audiowide',sans-serif;font-size:16px;line-height:1;letter-spacing:.5px;color:var(--text8);display:flex;flex-direction:column;align-items:center;gap:2px}
-#secMenuBtn .sm-logo i{font-style:normal;font-size:7.5px;letter-spacing:1.5px;color:var(--accent);transition:color .2s}
-#secMenuBtn:hover .sm-logo i,#secMenu.sm-open .sm-logo i{color:var(--sm-c)}
-/* leque: origem no centro do botão. Camadas de desfoque do próprio fundo que se dissolvem para fora (sem borda e sem tinta de cor) */
-#secMenuPanel{position:absolute;left:23px;top:23px;width:0;height:0;pointer-events:none;visibility:hidden;transition:visibility 0s linear .28s}
-#secMenu.sm-open #secMenuPanel{visibility:visible;transition-delay:0s}
-.sm-disc,.sm-hit{position:absolute;border-radius:50%;transform:scale(.15);opacity:0;pointer-events:none;transition:transform .34s cubic-bezier(.2,.9,.25,1.08),opacity .25s}
-#secMenu.sm-open .sm-disc,#secMenu.sm-open .sm-hit{transform:none;opacity:1}
-.sm-hit{pointer-events:auto}
-.sm-disc{-webkit-mask-composite:source-in;mask-composite:intersect}
-.sm-b1{-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);-webkit-mask-image:radial-gradient(circle closest-side,#000 30%,transparent 68%),var(--vm,linear-gradient(#000,#000));mask-image:radial-gradient(circle closest-side,#000 30%,transparent 68%),var(--vm,linear-gradient(#000,#000))}
-.sm-b2{-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);-webkit-mask-image:radial-gradient(circle closest-side,#000 45%,transparent 84%),var(--vm,linear-gradient(#000,#000));mask-image:radial-gradient(circle closest-side,#000 45%,transparent 84%),var(--vm,linear-gradient(#000,#000))}
-.sm-b3{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);-webkit-mask-image:radial-gradient(circle closest-side,#000 62%,transparent 100%),var(--vm,linear-gradient(#000,#000));mask-image:radial-gradient(circle closest-side,#000 62%,transparent 100%),var(--vm,linear-gradient(#000,#000))}
-/* botões das seções: fundo sólido + anel colorido = legíveis sobre qualquer conteúdo */
-.sm-item{position:absolute;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border-radius:50%;pointer-events:auto;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;font-family:inherit;color:var(--text);background:var(--bg2);border:2px solid rgba(var(--c-rgb),.85);box-shadow:0 4px 14px rgba(0,0,0,.35);transform:translate(0,0) scale(.3);opacity:0;transition:transform .32s cubic-bezier(.2,.9,.25,1.15) calc(var(--i)*26ms),opacity .2s calc(var(--i)*26ms),box-shadow .15s,background .15s}
-#secMenu.sm-open .sm-item{transform:translate(var(--dx),var(--dy)) scale(1);opacity:1}
-.sm-item:hover,.sm-item:focus-visible{transform:translate(var(--dx),var(--dy)) scale(1.15);background:linear-gradient(rgba(var(--c-rgb),.22),rgba(var(--c-rgb),.22)),var(--bg2);box-shadow:0 0 16px rgba(var(--c-rgb),.75),0 4px 14px rgba(0,0,0,.35);z-index:3;outline:none;transition-delay:0s}
-.sm-item.sm-cur{background:linear-gradient(rgba(var(--c-rgb),.40),rgba(var(--c-rgb),.40)),var(--bg2);box-shadow:0 0 0 3px rgba(var(--c-rgb),.35),0 4px 14px rgba(0,0,0,.35);cursor:default}
-/* nome da seção aparece ao passar o mouse (sempre aberto para o lado de dentro da tela) */
-.sm-item::after{content:attr(data-n);position:absolute;bottom:calc(100% + 9px);white-space:nowrap;padding:5px 10px;border-radius:7px;font-size:12.5px;font-weight:700;color:var(--text);background:var(--bg2);border:1px solid rgba(var(--c-rgb),.75);box-shadow:0 4px 14px rgba(0,0,0,.4);opacity:0;pointer-events:none;transform:translateY(3px);transition:opacity .12s,transform .12s}
-#secMenu.sm-right .sm-item::after{right:-4px}
-#secMenu.sm-left .sm-item::after{left:-4px}
-.sm-key{position:absolute;right:-4px;bottom:-4px;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;line-height:1;font-family:inherit;color:var(--text);background:var(--bg2);border:1.5px solid rgba(var(--c-rgb),.9);pointer-events:none}
-.sm-item.sm-tipb::after{bottom:auto;top:calc(100% + 9px)}
-.sm-item:hover::after,.sm-item:focus-visible::after{opacity:1;transform:none}
-#secMenu.sm-noanim .sm-item,#secMenu.sm-noanim .sm-disc,#secMenu.sm-noanim .sm-hit,#secMenu.sm-noanim #secMenuPanel{transition:none!important}
-</style>
+
 <div id="secMenu" class="sm-right" aria-label="Menu de seções">
   <button type="button" id="secMenuBtn" aria-haspopup="true" aria-expanded="false" title="Menu de seções — 2 cliques e arraste para mover"><span class="sm-logo">SL<i>PRO</i></span></button>
   <div id="secMenuPanel" role="menu"></div>
@@ -80979,6 +81636,7 @@ wikiTecBuild();
 <div class="prof-toast-wrap" id="profToastWrap"></div><!-- avisos (toasts): filho direto do <body>, pois dentro do #homeScreen (display:none nas outras seções) nunca apareciam -->
 <div id="cgSbyTooltip"></div><!-- hover da Dispersão lado a lado -->
 <div id="cgChartTooltip"></div><!-- card de hover sobre pontos (todos os tipos) -->
+
 </body>
 </html>
 
