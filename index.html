@@ -3678,6 +3678,11 @@ body.light-theme #appChartGen [style*="position:fixed;inset:0"] > div[style*="bo
 .stats-grid.c-ind-stats .stat-card .val{font-size:clamp(11px,.92vw,15px)!important;white-space:nowrap;letter-spacing:-.02em}
 .stats-grid.c-ind-stats .stat-card .lbl{font-size:clamp(8px,.6vw,9.5px);letter-spacing:.2px;line-height:1.3;overflow-wrap:break-word;hyphens:auto}
 @media(max-width:1100px){.stats-grid.c-ind-stats{grid-auto-flow:row;grid-template-columns:repeat(6,minmax(0,1fr))}}
+
+/* ── 15. ov.1.2 — Gerador de Gráficos: janela expandida do HUD em rosa ── */
+.cg-section-hdr.cg-open,body.light-theme .cg-section-hdr.cg-open{background:rgba(var(--accent-rgb),.14);color:var(--accent-text);box-shadow:inset 3px 0 0 var(--accent)}
+.cg-section-hdr.cg-open:hover,body.light-theme .cg-section-hdr.cg-open:hover{background:rgba(var(--accent-rgb),.20)}
+.cg-section-hdr.cg-open .cg-chevron{color:var(--accent-text)}
 </style>
 </head>
 <body>
@@ -13729,6 +13734,10 @@ function _ctxMenuChartGen(e){
   var onCanvas=!!e.target.closest('#cgMainCanvas,#cgCanvasWrap');
   var items=[];
   if(onCanvas){
+    // ov.1.2: atalho para voltar o zoom ao original, no topo do menu
+    items.push({icon:'🔍',label:'Reset zoom',disabled:typeof _cgChart==='undefined'||!_cgChart,
+      action:function(){ if(typeof cgZoomReset==='function') cgZoomReset(); }});
+    items.push({sep:true});
     items.push({icon:'🖼️',label:nbi('Exportar como PNG','Export as PNG'),disabled:typeof _cgChart==='undefined'||!_cgChart,
       action:function(){ if(typeof cgExport==='function') cgExport('png'); }});
     items.push({icon:'✒️',label:nbi('Exportar como SVG','Export as SVG'),disabled:typeof _cgChart==='undefined'||!_cgChart,
@@ -53142,7 +53151,27 @@ function cgToggle(id){
   var open = body.style.display!=='none';
   body.style.display = open?'none':'block';
   if(chev) chev.style.transform = open?'rotate(-90deg)':'rotate(0deg)';
+  cgSyncSectionState();
 }
+/* ov.1.2: marca com .cg-open a barra das janelas EXPANDIDAS do HUD (fica rosa). Um observador
+   cobre também quem abre/fecha as janelas por outros caminhos (Ctrl+', templates, desfazer…). */
+function cgSyncSectionState(){
+  var sb=document.getElementById('cgSidebar'); if(!sb) return;
+  sb.querySelectorAll('.cg-section-body').forEach(function(b){
+    var h=b.previousElementSibling;
+    if(h && h.classList.contains('cg-section-hdr')) h.classList.toggle('cg-open', b.style.display!=='none');
+  });
+}
+(function(){
+  function wire(){
+    var sb=document.getElementById('cgSidebar'); if(!sb) return;
+    cgSyncSectionState();
+    var pend=false;
+    new MutationObserver(function(){ if(pend) return; pend=true; requestAnimationFrame(function(){ pend=false; cgSyncSectionState(); }); })
+      .observe(sb,{subtree:true,attributes:true,attributeFilter:['style']});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire); else wire();
+})();
 
 // ── Undo / Redo (Ctrl+Z / Ctrl+Shift+Z) — ─────────────────────────────────
 // Estratégia: em vez de rastrear cada mutação individualmente (o Gerador de Gráficos tem
@@ -69137,7 +69166,7 @@ function _cgMakeTabRow(t){
   row.style.cssText='display:flex;align-items:center;gap:6px;padding:5px 6px 5px 10px;'
     +'border-radius:7px 7px 0 0;border:1px solid '+(active?'rgba(236,72,153,.5)':'var(--border2)')+';'
     +'border-bottom:2px solid '+t.color+';background:'+(active?'var(--bg3)':'var(--bg2)')+';'
-    +'cursor:pointer;white-space:nowrap;max-width:180px;flex-shrink:0';
+    +'cursor:pointer;white-space:nowrap;max-width:200px;flex-shrink:0';
   row.title=t.name;
   row.onclick=function(){ cgTabSwitch(t.id); };
   // Drag-and-drop: arrastar a aba
@@ -69170,7 +69199,8 @@ function _cgMakeTabRow(t){
 
   var nameSpan=document.createElement('span');
   nameSpan.textContent=t.name;
-  nameSpan.style.cssText='font-size:11px;color:'+(active?'var(--text)':'var(--text4)')+';overflow:hidden;text-overflow:ellipsis;max-width:110px';
+  // ov.1.2: fonte um pouco maior e mais encorpada (era 11px/normal e ficava fina demais)
+  nameSpan.style.cssText='font-size:12.5px;font-weight:'+(active?'700':'600')+';color:'+(active?'var(--text)':'var(--text3)')+';overflow:hidden;text-overflow:ellipsis;max-width:130px';
   nameSpan.title=cgT('cgTabRenameHint');
   nameSpan.ondblclick=function(ev){ ev.stopPropagation(); cgTabRename(t.id); };
   row.appendChild(nameSpan);
@@ -72163,7 +72193,7 @@ document.addEventListener('keydown', function(e){
       GERADOR DE GRÁFICOS (só quando o Gerador está aberto):
         Ctrl+Espaço = nova aba de gráfico
         Ctrl+' = expandir/contrair TODAS as janelas do HUD (painel esquerdo)
-        Ctrl+Enter = ocultar/mostrar o painel lateral
+        Ctrl+Backspace = ocultar/mostrar o painel lateral (ov.1.2: era Ctrl+Enter, que conflitava com o Menu de seções)
         Ctrl+1..9 = alternar entre as abas de gráficos
       NOTA HONESTA: Ctrl+1..9 é, na maioria dos navegadores, um acelerador RESERVADO para
       trocar de aba DO NAVEGADOR e costuma ser tratado antes da página — nesses casos o
@@ -72249,8 +72279,9 @@ document.addEventListener('keydown', function(e){
       if(ctrl && !e.shiftKey && !e.altKey && (key === ' ' || e.code === 'Space' || key === 'Spacebar')){
         e.preventDefault(); _run('cgTabNew'); return;
       }
-      // Ctrl+Enter → ocultar/mostrar painel lateral
-      if(ctrl && (key === 'Enter')){
+      // Ctrl+Backspace → ocultar/mostrar painel lateral. ov.1.2: antes era Ctrl+Enter, que também abre o
+      // Menu de seções. Dentro de um campo de texto o Ctrl+Backspace continua apagando a palavra (não intercepta).
+      if(ctrl && !e.shiftKey && !e.altKey && key === 'Backspace' && !_kbTyping()){
         e.preventDefault(); _run('cgToggleHud'); return;
       }
       // Ctrl+'  → expandir/contrair TODAS as janelas do HUD
@@ -72308,7 +72339,7 @@ document.addEventListener('keydown', function(e){
     { sec:{pt:'Gerador de Gráficos', en:'Chart Generator'}, items:[
       { keys:['Ctrl','Espaço'], keysEn:['Ctrl','Space'], pt:'Abrir nova aba de gráfico', en:'Open a new chart tab' },
       { keys:['Ctrl',"'"], pt:'Expandir/contrair janelas do HUD esquerdo', en:'Expand/collapse the left HUD panels' },
-      { keys:['Ctrl','Enter'], pt:'Ocultar/mostrar painel lateral', en:'Hide/show the side panel' },
+      { keys:['Ctrl','Backspace'], pt:'Ocultar/mostrar painel lateral', en:'Hide/show the side panel' },
       { keys:['Ctrl','1–9'], pt:'Alternar entre as abas de gráficos', en:'Switch between chart tabs' }
     ]},
     { sec:{pt:'Medida Comparada e Detecção de Porosidade', en:'Comparative Measurement & Porosity Detection'}, items:[
