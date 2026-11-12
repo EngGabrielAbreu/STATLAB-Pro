@@ -526,7 +526,13 @@ body.light-theme .btn-guide:hover{background:#1f2937;box-shadow:0 6px 22px rgba(
       section and the home only vanished at the very end (all at once). var(--bg) matches the
       sections that already looked perfect (Engineering/Project/ChartGen). During CLOSE this bg
       is only visible INSIDE the shrinking circle, so the home is still progressively revealed. */
-.radial-anim-open{position:fixed!important;inset:0!important;z-index:9000!important;display:flex!important;background:var(--bg)!important}
+.radial-anim-open{position:fixed!important;inset:0!important;z-index:9000!important;display:flex!important;background:var(--bg)!important;will-change:clip-path}
+/* ov.1.2 (fluidez): durante a transição entre seções */
+html.nav-anim #homeScreen,html.nav-anim #homeScreen *{animation-play-state:paused!important}
+html.nav-anim .home-topbar,html.nav-anim .wiki-topbar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* Técnicas de análise / Guia: o desfoque do fundo era recalculado a cada quadro da animação — trocado por escurecimento simples */
+.tec-overlay,.guide-overlay{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(0,0,0,.72)!important}
+body.light-theme .tec-overlay,body.light-theme .guide-overlay{background:rgba(20,24,36,.55)!important}
 .home-anim-toggle{position:fixed;top:60px;right:20px;z-index:210;display:flex;align-items:center;gap:10px}
 .btn-anim{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;color:rgba(220,220,240,.8);cursor:pointer;transition:all .2s;white-space:nowrap}
 body.light-theme .btn-anim{background:var(--bg4);border-color:var(--border2);color:var(--text2)}
@@ -4830,6 +4836,55 @@ function _radialMaxRadius(cx,cy){
 function _radialSetClip(el,val){ el.style.webkitClipPath=val; el.style.clipPath=val; }
 function _radialClearClip(el){ el.style.transition=''; el.style.webkitClipPath=''; el.style.clipPath=''; }
 
+/* ov.1.2 (fluidez): enquanto a transição roda, a página entra em "modo navegação" (html.nav-anim):
+   o fundo animado e as animações CSS decorativas da home pausam e os desfoques (backdrop-filter) da
+   barra superior saem — todos custam repintura a cada quadro e disputavam o orçamento de 16 ms com
+   o círculo. Ao terminar, tudo volta ao normal. */
+var _navAnimDepth=0;
+function _navBegin(){
+  _navAnimDepth++;
+  document.documentElement.classList.add('nav-anim');
+  try{ if(typeof window._gridPause==='function') window._gridPause(); }catch(e){}
+}
+function _navEnd(){
+  _navAnimDepth=Math.max(0,_navAnimDepth-1);
+  if(_navAnimDepth>0) return;
+  document.documentElement.classList.remove('nav-anim');
+  try{ if(typeof window._gridResume==='function') window._gridResume(); }catch(e){}   // só retoma se o fundo estiver visível
+}
+// Anima o clip-path de targetEl (Web Animations API → pode rodar no compositor; sem reflow forçado).
+// Retorna uma função cancel(). Se a API não existir, usa a transição CSS antiga.
+function _radialRun(targetEl, from, to, easing, onFinish){
+  var fired=false, anim=null, timer=null;
+  _navBegin();
+  targetEl.classList.add('radial-anim-open');
+  _radialSetClip(targetEl, from);
+  function done(){
+    if(fired) return; fired=true;
+    clearTimeout(timer);
+    try{ if(anim) anim.cancel(); }catch(e){}
+    targetEl.removeEventListener('transitionend', te);
+    _radialClearClip(targetEl);
+    targetEl.classList.remove('radial-anim-open');
+    _navEnd();
+    try{ onFinish(); }catch(e){ console.error('radial finish',e); }
+  }
+  function te(e){ if(e.target===targetEl && (e.propertyName==='clip-path'||e.propertyName==='-webkit-clip-path')) done(); }
+  if(targetEl.animate){
+    try{
+      anim=targetEl.animate({clipPath:[from,to]},{duration:_RADIAL_MS,easing:easing,fill:'forwards'});
+      anim.onfinish=done;
+    }catch(e){ anim=null; }
+  }
+  if(!anim){                                   // fallback: transição CSS
+    targetEl.style.transition='none'; void targetEl.offsetWidth;
+    targetEl.style.transition='clip-path '+_RADIAL_MS+'ms '+easing+', -webkit-clip-path '+_RADIAL_MS+'ms '+easing;
+    _radialSetClip(targetEl, to);
+    targetEl.addEventListener('transitionend', te);
+  }
+  timer=setTimeout(done, _RADIAL_MS+220);      // rede de segurança
+}
+
 // Grow a circle from originEl's center to reveal targetEl over the (still-visible) home.
 // Business logic that shows the section keeps running normally right after this call.
 function radialOpen(targetEl, originEl){
@@ -4842,57 +4897,26 @@ function radialOpen(targetEl, originEl){
   }
   if(home) home.style.display='flex';          // keep home visible behind during the reveal
   var c=_radialCenter(originEl), R=_radialMaxRadius(c.x,c.y);
-  targetEl.classList.add('radial-anim-open');  // overlay + force-visible during anim
-  targetEl.style.transition='none';
-  _radialSetClip(targetEl, 'circle(0px at '+c.x+'px '+c.y+'px)');
-  void targetEl.offsetWidth;                   // force reflow so the 0px start is committed
-  targetEl.style.transition='clip-path '+_RADIAL_MS+'ms ease-out, -webkit-clip-path '+_RADIAL_MS+'ms ease-out';
-  _radialSetClip(targetEl, 'circle('+R+'px at '+c.x+'px '+c.y+'px)');
-  var fired=false;
-  function done(){
-    if(fired) return; fired=true;
-    targetEl.removeEventListener('transitionend', te);
-    _radialClearClip(targetEl);
-    targetEl.classList.remove('radial-anim-open'); // back to normal flow (section fills screen)
-    if(home) home.style.display='none';            // only now hide the home
-  }
-  function te(e){ if(e.target===targetEl && (e.propertyName==='clip-path'||e.propertyName==='-webkit-clip-path')) done(); }
-  targetEl.addEventListener('transitionend', te);
-  setTimeout(done, _RADIAL_MS+140);              // safety fallback
+  _radialRun(targetEl,'circle(0px at '+c.x+'px '+c.y+'px)','circle('+R+'px at '+c.x+'px '+c.y+'px)','ease-out',function(){
+    if(home) home.style.display='none';        // only now hide the home
+  });
 }
 
 // Shrink a circle toward originEl's center over targetEl, revealing the home behind,
 // then run onDone() (the section's real reset logic) once it's already invisible.
 function radialClose(targetEl, originEl, onDone){
   var home=document.getElementById('homeScreen');
-  // measure the clicked logo BEFORE revealing the home. The sections sit AFTER
-  // #homeScreen in normal flow, so showing the home first pushed the still-in-flow section
-  // (and its logo) down ~100vh — getBoundingClientRect then read a bottom-left point, which
-  // made the circle collapse toward the BOTTOM-left instead of the logo (top-left). Reading
-  // the origin while the home is still hidden keeps the logo at its true top-left position.
+  // measure the clicked logo BEFORE revealing the home (ver comentário original: a home empurra a seção
+  // para baixo no fluxo normal e o círculo colapsaria para o lugar errado).
   var c=_radialCenter(originEl), R=_radialMaxRadius(c.x,c.y);
   if(home) home.style.display='flex';           // reveal home behind before shrinking
   if(!targetEl || !_animEnabled){
     if(typeof onDone==='function') onDone();     // instant path
     return;
   }
-  targetEl.classList.add('radial-anim-open');
-  targetEl.style.transition='none';
-  _radialSetClip(targetEl, 'circle('+R+'px at '+c.x+'px '+c.y+'px)');
-  void targetEl.offsetWidth;
-  targetEl.style.transition='clip-path '+_RADIAL_MS+'ms ease-in, -webkit-clip-path '+_RADIAL_MS+'ms ease-in';
-  _radialSetClip(targetEl, 'circle(0px at '+c.x+'px '+c.y+'px)');
-  var fired=false;
-  function done(){
-    if(fired) return; fired=true;
-    targetEl.removeEventListener('transitionend', te);
-    _radialClearClip(targetEl);
-    targetEl.classList.remove('radial-anim-open');
+  _radialRun(targetEl,'circle('+R+'px at '+c.x+'px '+c.y+'px)','circle(0px at '+c.x+'px '+c.y+'px)','ease-in',function(){
     if(typeof onDone==='function') onDone();     // now do the real hide/reset
-  }
-  function te(e){ if(e.target===targetEl && (e.propertyName==='clip-path'||e.propertyName==='-webkit-clip-path')) done(); }
-  targetEl.addEventListener('transitionend', te);
-  setTimeout(done, _RADIAL_MS+140);
+  });
 }
 
 // Which full-screen section is currently visible (home excluded)?
@@ -40377,85 +40401,94 @@ document.addEventListener('keydown', function(e){
     if(document.visibilityState==='hidden') window._gridPause();
     else if(_gridIsVisible()) window._gridResume();
   });
+  // ov.1.2 (fluidez): antes cada quadro desenhava ~1.600 formas separadas (cada linha e cada ponto com
+  // beginPath/stroke/fill próprios) 60x por segundo, mesmo com o mouse parado. Agora:
+  //  • tudo que está no estado "repouso" (linhas e pontos sem destaque) sai em UM único traçado/preenchimento;
+  //  • só linhas/pontos perto do mouse são desenhados individualmente;
+  //  • se nada mudou desde o último quadro (mouse parado, pontos já apagados), o quadro é pulado.
+  var _dirty = true, _lastLight = null, _lastMX = -1, _lastMY = -1;
   function render(){
     if(!_running) return;                       // pausado → não reagenda
     if(!_gridIsVisible()){ window._gridPause(); return; }
     _raf = requestAnimationFrame(render);
 
-    ctx.clearRect(0, 0, W, H);
-
     var light = isLight();
-    // ov.1.2: grade neutra (preto/branco) — a tela inicial não usa cor
+    if(light !== _lastLight){ _lastLight = light; _dirty = true; }
+    if(mouseX !== _lastMX || mouseY !== _lastMY){ _lastMX = mouseX; _lastMY = mouseY; _dirty = true; }
+    if(!_dirty) return;                         // nada mudou → mantém o desenho anterior
+
+    ctx.clearRect(0, 0, W, H);
     var dotColorR = light ? 60  : 190;
     var dotColorG = light ? 60  : 190;
     var dotColorB = light ? 64  : 194;
-    var lineColorR = light ? 60  : 190;
-    var lineColorG = light ? 60  : 190;
-    var lineColorB = light ? 64  : 194;
-    var baseA  = light ? BASE_ALPHA_LIGHT  : BASE_ALPHA_DARK;
+    var rgb = dotColorR+','+dotColorG+','+dotColorB;   // ov.1.2: grade neutra (preto/branco) — a tela inicial não usa cor
+    var baseA  = light ? BASE_ALPHA_LIGHT : BASE_ALPHA_DARK;
     var maxA   = light ? MAX_ALPHA_LIGHT   : MAX_ALPHA_DARK;
     var lineBase = light ? LINE_BASE_LIGHT : LINE_BASE_DARK;
     var lineMax  = light ? LINE_MAX_LIGHT  : LINE_MAX_DARK;
 
-    /* ── Grid lines ── */
-    // Vertical
+    /* ── Linhas: repouso em um único path; as perto do mouse, uma a uma ── */
+    ctx.lineWidth = 1;
+    var near = [];
+    ctx.beginPath();
     for(var c = 0; c < cols; c++){
-      var lx = c * GRID;
-      // Check proximity to mouse for line segments near mouse
-      var dx = lx - mouseX;
-      var linePct = Math.max(0, 1 - Math.abs(dx) / RADIUS);
-      var la = lineBase + (lineMax - lineBase) * ease(linePct) * 0.6;
-      ctx.beginPath();
-      ctx.moveTo(lx, 0);
-      ctx.lineTo(lx, H);
-      ctx.strokeStyle = 'rgba('+lineColorR+','+lineColorG+','+lineColorB+','+la.toFixed(3)+')';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      var lx = c * GRID, pctV = Math.max(0, 1 - Math.abs(lx - mouseX) / RADIUS);
+      if(pctV > 0){ near.push([lx,0,lx,H,pctV]); continue; }
+      ctx.moveTo(lx, 0); ctx.lineTo(lx, H);
     }
-    // Horizontal
     for(var r = 0; r < rows; r++){
-      var ly = r * GRID;
-      var dy2 = ly - mouseY;
-      var linePct2 = Math.max(0, 1 - Math.abs(dy2) / RADIUS);
-      var la2 = lineBase + (lineMax - lineBase) * ease(linePct2) * 0.6;
-      ctx.beginPath();
-      ctx.moveTo(0, ly);
-      ctx.lineTo(W, ly);
-      ctx.strokeStyle = 'rgba('+lineColorR+','+lineColorG+','+lineColorB+','+la2.toFixed(3)+')';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      var ly = r * GRID, pctH = Math.max(0, 1 - Math.abs(ly - mouseY) / RADIUS);
+      if(pctH > 0){ near.push([0,ly,W,ly,pctH]); continue; }
+      ctx.moveTo(0, ly); ctx.lineTo(W, ly);
+    }
+    ctx.strokeStyle = 'rgba('+rgb+','+lineBase.toFixed(3)+')';
+    ctx.stroke();
+    for(var q = 0; q < near.length; q++){
+      var nl = near[q], la = lineBase + (lineMax - lineBase) * ease(nl[4]) * 0.6;
+      ctx.beginPath(); ctx.moveTo(nl[0], nl[1]); ctx.lineTo(nl[2], nl[3]);
+      ctx.strokeStyle = 'rgba('+rgb+','+la.toFixed(3)+')'; ctx.stroke();
     }
 
-    /* ── Dots (animate brightness toward target) ── */
-    var LERP_SPEED = 0.08; // convergence speed per frame
+    /* ── Pontos (brilho anima em direção ao alvo) ── */
+    var LERP_SPEED = 0.08, animating = false;
+    ctx.beginPath();                            // repouso: todos juntos
+    var lit = [];
     for(var i = 0; i < dots.length; i++){
       var d = dots[i];
-      var ddx = d.x - mouseX;
-      var ddy = d.y - mouseY;
+      var ddx = d.x - mouseX, ddy = d.y - mouseY;
       var dist = Math.sqrt(ddx*ddx + ddy*ddy);
       var target = dist < RADIUS ? ease(1 - dist / RADIUS) : 0;
-      // Smooth approach
       d.bright += (target - d.bright) * LERP_SPEED;
       if(d.bright < 0.001) d.bright = 0;
-
-      var alpha = baseA + (maxA - baseA) * d.bright;
-      var radius = DOT_MIN + (DOT_MAX - DOT_MIN) * d.bright;
-
+      // só enquanto ainda não convergiu (ponto apagado com alvo minúsculo nunca sai de 0 — o 'snap' abaixo de 0.001 — então não conta)
+      if(Math.abs(target - d.bright) > 0.002 && !(d.bright === 0 && target < 0.0125)) animating = true;
+      if(d.bright === 0){ ctx.moveTo(d.x + DOT_MIN, d.y); ctx.arc(d.x, d.y, DOT_MIN, 0, Math.PI * 2); }
+      else lit.push(d);
+    }
+    ctx.fillStyle = 'rgba('+rgb+','+baseA.toFixed(3)+')';
+    ctx.fill();
+    for(var k = 0; k < lit.length; k++){
+      var dl = lit[k];
+      var alpha = baseA + (maxA - baseA) * dl.bright;
+      var radius = DOT_MIN + (DOT_MAX - DOT_MIN) * dl.bright;
       ctx.beginPath();
-      ctx.arc(d.x, d.y, radius, 0, Math.PI * 2);
-
-      if(d.bright > 0.05){
-        // Glowing dot with radial gradient
-        var grad = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, radius * 2.5);
-        grad.addColorStop(0, 'rgba('+dotColorR+','+dotColorG+','+dotColorB+','+Math.min(1, alpha * 3).toFixed(3)+')');
-        grad.addColorStop(1, 'rgba('+dotColorR+','+dotColorG+','+dotColorB+',0)');
+      ctx.arc(dl.x, dl.y, radius, 0, Math.PI * 2);
+      if(dl.bright > 0.05){
+        var grad = ctx.createRadialGradient(dl.x, dl.y, 0, dl.x, dl.y, radius * 2.5);
+        grad.addColorStop(0, 'rgba('+rgb+','+Math.min(1, alpha * 3).toFixed(3)+')');
+        grad.addColorStop(1, 'rgba('+rgb+',0)');
         ctx.fillStyle = grad;
       } else {
-        ctx.fillStyle = 'rgba('+dotColorR+','+dotColorG+','+dotColorB+','+alpha.toFixed(3)+')';
+        ctx.fillStyle = 'rgba('+rgb+','+alpha.toFixed(3)+')';
       }
       ctx.fill();
     }
+    _dirty = animating;                         // continua redesenhando só enquanto houver pontos animando
   }
+  // o redesenho completo é forçado após retomar a animação e após redimensionar
+  var _origResume = window._gridResume;
+  window._gridResume = function(){ _dirty = true; _origResume(); };
+  window.addEventListener('resize', function(){ _dirty = true; }, { passive: true });
   // inicia apenas se o fundo estiver visível (na home ele está; dentro de uma seção,
   // começa pausado e só roda ao voltar para a home).
   window._gridResume();
@@ -53861,6 +53894,7 @@ function cgRedo(){
 (function(){
   var _cgUpdateChartOrig=cgUpdateChart;
   cgUpdateChart=function(){
+    if(typeof _cgInitBatch!=='undefined' && _cgInitBatch) return;   // ov.1.2: agrupado pelo cgInit
     var _r=_cgUpdateChartOrig.apply(this, arguments);
     try{ _cgUndoCaptureSnapshot(); }catch(e){}
     return _r;
@@ -54208,7 +54242,20 @@ function _cgCollapseAllSections(){
   sb.querySelectorAll('.cg-chevron').forEach(function(c){ c.style.transform='rotate(-90deg)'; });
   try{ if(typeof cgSyncSectionState==='function') cgSyncSectionState(); }catch(e){}
 }
+var _cgInitBatch=false;   // ov.1.2 (fluidez): durante o cgInit só a ÚLTIMA atualização do gráfico é feita (eram 4)
 function cgInit(){
+  _cgInitBatch=true;
+  try{ _cgInitBody(); }
+  finally{ _cgInitBatch=false; }
+  cgUpdateChart();
+  // Tour guiado — cgInit() é o ponto comum das DUAS formas de abrir o Gerador
+  // (abertura normal com animação e a abertura direta vinda da Análise de Engenharia).
+  try{ tourEnsureButtons(); tourMaybeAutoStart('chartgen'); }catch(e){}
+}
+function _cgInitBody(){
+  // ov.1.2 (fluidez): contrai as janelas do painel ANTES de qualquer trabalho que force layout — o 1º layout
+  // do Gerador deixa de medir centenas de campos que ficariam escondidos de qualquer jeito.
+  try{ _cgCollapseAllSections(); }catch(e){}
   if(_cgSeriesCount===0){
     cgAddSeries();
   try{cgApplyLang();}catch(e){} // start with 1 series
@@ -54245,10 +54292,6 @@ function cgInit(){
   try{ cgTypeSyncTrigger(); }catch(e){}
   try{ cgSetupSelection(); }catch(e){}
   try{ _cgCollapseAllSections(); }catch(e){}   // ov.1.2: ao abrir o Gerador, todas as janelas do painel esquerdo vêm contraídas
-  cgUpdateChart();
-  // Tour guiado — cgInit() é o ponto comum das DUAS formas de abrir o Gerador
-  // (abertura normal com animação e a abertura direta vinda da Análise de Engenharia).
-  try{ tourEnsureButtons(); tourMaybeAutoStart('chartgen'); }catch(e){}
 }
 // rede de segurança — força as linhas de opção que contêm um checkbox a ficarem em
 // linha (caixa e texto lado a lado), caso o navegador não suporte o seletor CSS :has().
@@ -72284,10 +72327,12 @@ function _guideNorm(s){ return String(s||'').toLowerCase().normalize('NFD').repl
 function guideOpen(){
   _guideHistory=[]; _guideCurrent='intro'; _guideGlossOpen=false;
   var ov=document.getElementById('guideOverlay'); if(ov) ov.classList.add('open');
+  try{ if(typeof window._gridPause==='function') window._gridPause(); }catch(e){}   // ov.1.2: fundo animado parado atrás da janela
   guideRenderNode();
 }
 function guideClose(){
   var ov=document.getElementById('guideOverlay'); if(ov) ov.classList.remove('open');
+  try{ if(typeof window._gridResume==='function') window._gridResume(); }catch(e){}
 }
 function guideReset(){                 // 🔁 restart the questionnaire (skip the splash)
   _guideHistory=[]; _guideCurrent='q_root'; _guideGlossOpen=false;
@@ -79859,6 +79904,7 @@ function tecApplyCursor(){
 function tecOpen(){
   var ov=document.getElementById('tecOverlay'); if(!ov) return;
   tecApplyCursor();
+  try{ if(typeof window._gridPause==='function') window._gridPause(); }catch(e){}   // ov.1.2: fundo animado parado atrás da janela
   _tecOpen=true; ov.classList.add('open');
   _tecView='catalog'; _tecMsg=null; _tecPasteOpen=false; tecRender();
   var b=document.getElementById('tecBody'); if(b) b.scrollTop=0;
@@ -79866,6 +79912,7 @@ function tecOpen(){
 function tecClose(){
   var ov=document.getElementById('tecOverlay'); if(ov) ov.classList.remove('open');
   _tecOpen=false; _tecDestroyCharts();
+  try{ if(typeof window._gridResume==='function') window._gridResume(); }catch(e){}   // retoma só se o fundo estiver visível
   // ov.1.1.2: fechar sem escolher tecnica descarta o envio pendente. O guard existe porque
   // a variavel e declarada no bloco JS do Tratamento de Dados, que e um bloco separado.
   try{ if(typeof _tecPendingImport!=='undefined') _tecPendingImport=null; }catch(e){}
