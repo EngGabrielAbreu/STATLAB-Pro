@@ -47950,7 +47950,7 @@ function cgGoHome(ev){
                 </div>
                 <div id="cgErrPerSeriesBox" style="margin-top:8px;padding:8px;background:rgba(236,72,153,.05);border:1px solid rgba(236,72,153,.15);border-radius:6px">
                   <div style="font-size:10.5px;color:var(--text4);margin-bottom:6px" id="cgErrPerSeriesHint">Escolha em quais séries as barras aparecem. Séries com várias colunas Y precisam de uma coluna de referência.</div>
-                  <div id="cgErrPerSeriesList"></div>
+                  <div id="cgErrWarn" role="status" style="display:none;margin-bottom:6px;padding:6px 8px;border-radius:6px;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.4);color:#f59e0b;font-size:10.5px;line-height:1.4"></div><div id="cgErrPerSeriesList"></div>
                 </div>
                 <div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-top:8px">
                   <label id="cgLblErrRegion" style="flex:1">Região de Erro</label>
@@ -52776,6 +52776,17 @@ function cgToggleErrorOptions(){
 // • seletor da coluna Y de referência (item 3) — aparece só quando a série tem vários Y,
 // porque com uma coluna só a escolha não faria sentido.
 // Os valores digitados são preservados entre reconstruções.
+/* Aviso das barras de erro: tipos baseados em dispersão (σ, EPM, IC, IQR) precisam de 2+ pontos por série. Antes a barra
+   simplesmente não aparecia, sem explicar o motivo. */
+function _cgErrWarnUpdate(list){
+  var el=document.getElementById('cgErrWarn'); if(!el) return;
+  if(!list||!list.length){ el.style.display='none'; el.textContent=''; return; }
+  var shown=list.slice(0,6).join(', ')+(list.length>6?' … (+'+(list.length-6)+')':'');
+  el.textContent='⚠️ '+nbi('Sem barra por ter só 1 ponto: ','No bar because there is only 1 point: ')+shown+'. '
+    +nbi('Desvio padrão, EPM, IC e IQR precisam de 2 ou mais pontos por série. Com 1 ponto por série, escolha outro tipo (valor fixo, % do valor, assimétrica, colunas ou limites).',
+         'Standard deviation, SEM, CI and IQR need 2 or more points per series. With 1 point per series, choose another type (fixed value, % of value, asymmetric, columns or bounds).');
+  el.style.display='block';
+}
 function cgRebuildErrPerSeries(){
   var box=document.getElementById('cgErrPerSeriesBox');
   var list=document.getElementById('cgErrPerSeriesList');
@@ -59792,6 +59803,7 @@ function _cgUpdateChartRaw(){
   var _cgMinorGridCustom=_cgMinorGridCustomOn ? _cgGridHexRgba((document.getElementById('cgMinorGridColor')||{}).value||'#888888', _mgOpMin/100) : null;
   // Scatter/line error bars
   var showError    = (document.getElementById('cgShowError')||{}).checked===true;
+  var _errFew      = [];   // séries sem pontos suficientes para o tipo de erro escolhido (vira aviso no painel)
   var showDataLegend = (document.getElementById('cgShowDataLegend')||{checked:true}).checked!==false;
   var showDataLabels = (document.getElementById('cgShowDataLabels')||{}).checked===true;
   var dataLabelContent = (document.getElementById('cgDataLabelContent')||{}).value||'y';
@@ -60379,7 +60391,12 @@ function _cgUpdateChartRaw(){
       var _errRefCol = parseInt((document.getElementById('cgErrRefCol_'+i)||{value:'0'}).value);
       if(!isFinite(_errRefCol)) _errRefCol=0;
       var _errColOk = (_nY<=1) || (_errRefCol===-1) || (_yc===_errRefCol);
-      if(showError&&pts.length>1&&_errOnForSeries&&_errColOk){
+      // BUG: a condição exigia 2+ pontos para QUALQUER tipo de barra, então uma série de 1 ponto (ex.: um valor médio por
+      // categoria) nunca recebia barra — nem nos tipos que não dependem de dispersão (valor fixo, % do valor, assimétrica,
+      // colunas, limites). Agora só os tipos calculados a partir da dispersão dos pontos (σ, EPM, IC, IQR) exigem 2+ pontos.
+      var _errNeedsSpread=(errType==='std'||errType==='std2'||errType==='std3'||errType==='sem'||errType==='ci95'||errType==='ci99'||errType==='iqr');
+      if(showError&&_errOnForSeries&&_errColOk&&_errNeedsSpread&&pts.length<2) _errFew.push(nameCol);
+      if(showError&&_errOnForSeries&&_errColOk&&(pts.length>1||!_errNeedsSpread)){
         var yVals2=pts.map(function(p){return p.y;});
         var n2=yVals2.length;
         var errHi=std, errLo=std; // default ±1σ
@@ -60441,6 +60458,7 @@ function _cgUpdateChartRaw(){
     }
   }
 
+  try{ _cgErrWarnUpdate(_errFew); }catch(e){ window._swallow&&_swallow(e); }
   var regrInfoLines = [];
   // Map from regrType value to human-readable short name
   var regrTypeNames = {
