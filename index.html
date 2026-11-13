@@ -47351,6 +47351,12 @@ function cgGoHome(ev){
               <div class="cg-field"><label id="cgLblYMax">Y máx</label><input type="number" id="cgYMax" placeholder="auto" oninput="cgUpdateChart()"></div>
             </div>
             <!--  ocultar os valores (números) de cada eixo, separadamente — todos os tipos -->
+            <!-- ov.1.2: texto no eixo X (Dispersão XY): 3ª coluna não numérica dá nome ao x -->
+            <div id="cgXTextWrap" class="cg-field" style="display:none;align-items:center;gap:8px;margin-top:6px;margin-bottom:0;flex-wrap:wrap">
+              <label id="cgLblXTextOnly" style="flex:1" title="Para dar nome a um X, escreva o texto depois dos números: 3, 20.42, Gastos">Mostrar só os textos no eixo X</label>
+              <input type="checkbox" id="cgXTextOnly" onchange="cgUpdateChart()" style="width:16px;height:16px;accent-color:#ec4899">
+              <div id="cgLblXTextHint" style="flex-basis:100%;font-size:10.5px;color:var(--text4);line-height:1.4">Dê nome a um X escrevendo o texto depois dos números: <b>3, 20.42, Gastos</b> → o x=3 vira "Gastos".</div>
+            </div>
             <div style="display:flex;align-items:center;gap:16px;margin-top:4px">
               <div class="cg-field" style="display:flex;align-items:center;gap:8px;margin-bottom:0;flex:1">
                 <label id="cgLblHideXValues" style="flex:1">Ocultar valores X</label>
@@ -50989,6 +50995,7 @@ function cgSwitchDataPanel(){
   if(hmAxisFsField) hmAxisFsField.style.display=(ct==='heatmap')?'':'none';
   // Show/hide Marcador + Linha selects and boxplot-specific fields in each series row
   try{ cgLinkSync(); }catch(e){}
+  var _xtW=document.getElementById('cgXTextWrap'); if(_xtW) _xtW.style.display=(ct==='scatter'||ct==='line')?'flex':'none';
   var _lkW=document.getElementById('cgLinkWrap'); if(_lkW) _lkW.style.display=(ct==='scatter')?'block':'none';
   var showSeriesStyle=(ct==='scatter'||ct==='line'||ct==='sideby');
   var showMarkerOnly=(ct==='weibull');
@@ -55722,7 +55729,7 @@ var _cgI18N={
     bpBoxWidth:'Largura da Caixa',bpShowOutliers:'Mostrar Outliers',bpShowMean:'Mostrar Média (✕)',
     bpMeanIcon:'Ícone',bpMeanColorMatch:'Usar a cor da série',bpMeanColor:'Cor do marcador',
     bpMeanSize:'Tamanho',bpMedianPos:'Posição do valor',bpMedianSize:'Tamanho do valor',
-    bpOnlyData:'Apenas Dados (sem caixa e sem whiskers)',bpShowMeanVal:'Mostrar valor da Média',bpOnlyMean:'Mostrar somente a média',bpOnlyMedian:'Mostrar somente mediana',
+    bpOnlyData:'Apenas Dados (sem caixa e sem whiskers)',xTextOnly:'Mostrar só os textos no eixo X',xTextHint:'Dê nome a um X escrevendo o texto depois dos números: <b>3, 20.42, Gastos</b> → o x=3 vira "Gastos".',bpShowMeanVal:'Mostrar valor da Média',bpOnlyMean:'Mostrar somente a média',bpOnlyMedian:'Mostrar somente mediana',
     bpMedCustomHint:'⟵ Dê 2 cliques sobre o valor no gráfico e arraste para reposicioná-lo.',
     bpMeanIcCross:'✕ Cruz',bpMeanIcPlus:'+ Mais',bpMeanIcCircle:'● Círculo',bpMeanIcCircleO:'○ Círculo vazado',
     bpMeanIcSquare:'■ Quadrado',bpMeanIcSquareO:'□ Quadrado vazado',bpMeanIcDiamond:'◆ Losango',
@@ -55977,7 +55984,7 @@ var _cgI18N={
     bpBoxWidth:'Box Width',bpShowOutliers:'Show Outliers',bpShowMean:'Show Mean (✕)',
     bpMeanIcon:'Icon',bpMeanColorMatch:'Use the series colour',bpMeanColor:'Marker colour',
     bpMeanSize:'Size',bpMedianPos:'Value position',bpMedianSize:'Value size',
-    bpOnlyData:'Data only (no box, no whiskers)',bpShowMeanVal:'Show Mean value',bpOnlyMean:'Show mean only',bpOnlyMedian:'Show median only',
+    bpOnlyData:'Data only (no box, no whiskers)',xTextOnly:'Show only the texts on the X axis',xTextHint:'Name an X by writing the text after the numbers: <b>3, 20.42, Costs</b> → x=3 becomes "Costs".',bpShowMeanVal:'Show Mean value',bpOnlyMean:'Show mean only',bpOnlyMedian:'Show median only',
     bpMedCustomHint:'⟵ Double-click the value on the chart and drag to reposition it.',
     bpMeanIcCross:'✕ Cross',bpMeanIcPlus:'+ Plus',bpMeanIcCircle:'● Circle',bpMeanIcCircleO:'○ Open circle',
     bpMeanIcSquare:'■ Square',bpMeanIcSquareO:'□ Open square',bpMeanIcDiamond:'◆ Diamond',
@@ -57342,7 +57349,7 @@ function cgApplyLang(){
     'cgLblBpShowMedianVal':'bpShowMedianVal','cgLblBpOnlyQ1Q3':'bpOnlyQ1Q3','cgLblBpOnlyMaxMin':'bpOnlyMaxMin',
     'cgLblBpMeanIcon':'bpMeanIcon','cgLblBpMeanColorMatch':'bpMeanColorMatch','cgLblBpMeanColor':'bpMeanColor',
     'cgLblBpMeanSize':'bpMeanSize','cgLblBpMedianPos':'bpMedianPos','cgLblBpMedianSize':'bpMedianSize',
-    'cgLblBpOnlyData':'bpOnlyData','cgLblBpShowMeanVal':'bpShowMeanVal','cgLblBpOnlyMean':'bpOnlyMean','cgLblBpOnlyMedian':'bpOnlyMedian','cgLblVlShowMeanVal':'bpShowMeanVal','cgLblVlOnlyMean':'bpOnlyMean','cgLblVlOnlyMedian':'bpOnlyMedian','cgBoxMedianCustomHint':'bpMedCustomHint',
+    'cgLblBpOnlyData':'bpOnlyData','cgLblXTextOnly':'xTextOnly','cgLblXTextHint':'xTextHint','cgLblBpShowMeanVal':'bpShowMeanVal','cgLblBpOnlyMean':'bpOnlyMean','cgLblBpOnlyMedian':'bpOnlyMedian','cgLblVlShowMeanVal':'bpShowMeanVal','cgLblVlOnlyMean':'bpOnlyMean','cgLblVlOnlyMedian':'bpOnlyMedian','cgBoxMedianCustomHint':'bpMedCustomHint',
     'cgBpMeanIcCross':'bpMeanIcCross','cgBpMeanIcPlus':'bpMeanIcPlus','cgBpMeanIcCircle':'bpMeanIcCircle',
     'cgBpMeanIcCircleO':'bpMeanIcCircleO','cgBpMeanIcSquare':'bpMeanIcSquare','cgBpMeanIcSquareO':'bpMeanIcSquareO',
     'cgBpMeanIcDiamond':'bpMeanIcDiamond','cgBpMeanIcTriangle':'bpMeanIcTriangle','cgBpMeanIcStar':'bpMeanIcStar',
@@ -57831,7 +57838,7 @@ function cgParseData(text){
 // Mantemos cgParseData intacto para não afetar os outros tipos de gráfico que dependem dele.
 function cgParseDataMultiY(text){
   var lines=String(text||'').trim().split(/\n/);
-  var cols=[], nY=0;
+  var cols=[], nY=0, xLabels={};
   lines.forEach(function(line){
     var raw=line.trim(); if(!raw) return;
     // a vírgula é ambígua — pode separar colunas OU ser o decimal (pt-BR).
@@ -57851,16 +57858,24 @@ function cgParseDataMultiY(text){
     }
     var x=parseFloat(parts[0].replace(',','.'));
     if(!isFinite(x)) return;
+    // ov.1.2: texto no eixo X — células NÃO numéricas depois do X viram o NOME desse X
+    // (ex.: "3, 20.42, Gastos" → o x=3 passa a se chamar "Gastos"; palavras seguidas formam um nome só).
+    var _lbl=[];
     for(var k=1;k<parts.length;k++){
       var y=parseFloat(parts[k].replace(',','.'));
-      if(!isFinite(y)) continue;            // célula vazia/inválida: ignora só ela
+      if(!isFinite(y)){                     // texto: acumula como nome do X (ignora só se vazio)
+        var _tk=String(parts[k]).trim(); if(_tk) _lbl.push(_tk);
+        continue;
+      }
+      if(_lbl.length) { /* número depois do texto: continua sendo valor Y */ }
       if(!cols[k-1]) cols[k-1]=[];
       cols[k-1].push({x:x,y:y});
       nY=Math.max(nY,k);
     }
+    if(_lbl.length) xLabels[String(x)]=_lbl.join(' ');
   });
   for(var c=0;c<nY;c++) if(!cols[c]) cols[c]=[];
-  return {cols:cols.slice(0,nY), nCols:nY};
+  return {cols:cols.slice(0,nY), nCols:nY, xLabels:xLabels};
 }
 // Nome de cada coluna Y: usa o cabeçalho salvo em cgColName_<série> (JSON) quando existir,
 // senão numera. Com uma coluna só, o nome da série é usado tal como antes.
@@ -60231,6 +60246,7 @@ function _cgUpdateChartRaw(){
   var allDatasets = [];
   var statsText = [];
   var firstPts = null;
+  var _xTextLabels = {};   // ov.1.2: x → texto (vindo da última coluna não numérica das linhas de dados)
 
   for(var i=1;i<=_cgSeriesCount;i++){
     if(_cgSeriesVisible[i]===false) continue;
@@ -60246,6 +60262,7 @@ function _cgUpdateChartRaw(){
     // uma série pode trazer VÁRIAS colunas Y (1ª coluna = X). Cada coluna Y vira um
     // dataset próprio, herdando cor/marcador/estilo da série e recebendo um sufixo no nome.
     var _multi = cgParseDataMultiY(txtEl.value||'');
+    try{ var _xl=_multi.xLabels||{}; Object.keys(_xl).forEach(function(k){ _xTextLabels[k]=_xl[k]; }); }catch(e){}
     var _nY = Math.max(1, _multi.nCols||1);
     var _yCols = (_nY>1) ? _multi.cols : [cgParseData(txtEl.value||'')];
     var pts = _yCols[0]||[];
@@ -61675,7 +61692,7 @@ function _cgUpdateChartRaw(){
             var val=ds.data&&ds.data[idx]!==undefined?ds.data[idx]:null;
             if(val===null) return;
             if(blHideZero && Math.abs(val)<1e-9) return;
-            var lbl=parseFloat(val).toPrecision(4).replace(/\.?0+$/,'');
+            var lbl=String(Number(parseFloat(val).toPrecision(4)));
             // cor da etiqueta — "igual à cor da barra" usa ds.borderColor[idx] (ou o
             // valor único) para respeitar a cor individual escolhida por duplo-clique na barra;
             // senão usa a cor personalizada escolhida pelo usuário.
@@ -65917,6 +65934,7 @@ function _cgUpdateChartRaw(){
     if(showError){
       chart.data.datasets.forEach(function(ds){
         if(!ds._errorPts) return;
+        var yAxis=(ds.yAxisID==='y2'&&chart.scales.y2)?chart.scales.y2:chart.scales.y;   // ov.1.2: série no Y2 usa a escala da direita
         var errHi=ds._errorHi!==undefined?ds._errorHi:(ds._errorStd||0);
         var errLo=ds._errorLo!==undefined?ds._errorLo:(ds._errorStd||0);
         var hasCols = ds._errorColsLo && ds._errorColsHi && ds._errorColsLo.length>0;
@@ -66045,6 +66063,10 @@ function _cgUpdateChartRaw(){
         if(ds._isRegr) return;
         if(ds.label&&ds.label.startsWith('_')) return;
         if(!ds.data||!ds.data.length) return;
+        // ov.1.2: o rótulo era posicionado SEMPRE pela escala Y da esquerda; os pontos de séries no Y2 (dir.)
+        // caíam fora da área do gráfico e eram descartados — por isso os rótulos "sumiam".
+        var yAxis=(ds.yAxisID==='y2'&&chart.scales.y2)?chart.scales.y2:chart.scales.y;
+        var xAxis=(ds.xAxisID==='x2'&&chart.scales.x2)?chart.scales.x2:chart.scales.x;
         ctx.save();
         ctx.font='bold '+dataLabelFontSize+'px '+(tv.fontFamily||'sans-serif');
         var seriesLabelPos=globalLabelPos;
@@ -66073,8 +66095,8 @@ function _cgUpdateChartRaw(){
           var _cgArea=chart.chartArea;
           if(px2<_cgArea.left-1||px2>_cgArea.right+1||py2<_cgArea.top-1||py2>_cgArea.bottom+1) return;
           var lbl='';
-          if(dataLabelContent==='y') lbl=parseFloat(pt.y).toPrecision(4).replace(/\.?0+$/,'');
-          else if(dataLabelContent==='x') lbl=parseFloat(pt.x).toPrecision(4).replace(/\.?0+$/,'');
+          if(dataLabelContent==='y') lbl=String(Number(parseFloat(pt.y).toPrecision(4)));
+          else if(dataLabelContent==='x') lbl=String(Number(parseFloat(pt.x).toPrecision(4)));
           else if(dataLabelContent==='xy') lbl='('+parseFloat(pt.x).toPrecision(3)+', '+parseFloat(pt.y).toPrecision(3)+')';
           else if(dataLabelContent==='name') lbl=ds.label;
           else if(dataLabelContent==='custom'){
@@ -66180,6 +66202,37 @@ function _cgUpdateChartRaw(){
   // original em vez de tentar formatar o índice como número.
   xScaleOpts.ticks.callback=function(v){ if(this&&this.type==='category'){ return (this.getLabelForValue?this.getLabelForValue(v):v); } var s=_cgSigFig(Number(v), _cgXSig); return (s===null)?v:s; };
   yScaleOpts.ticks.callback=function(v){ if(this&&this.type==='category'){ return (this.getLabelForValue?this.getLabelForValue(v):v); } var s=_cgSigFig(Number(v), _cgYSig); return (s===null)?v:s; };
+  // ov.1.2: TEXTO NO EIXO X (Dispersão/Linha) — cada x que tem nome (3ª coluna de texto) mostra o nome no lugar do número.
+  var _xTextKeys=Object.keys(_xTextLabels);
+  if(_xTextKeys.length && (chartType==='scatter'||chartType==='line') && xScaleOpts.type!=='category' && xScaleOpts.type!=='logarithmic'){
+    var _xTextOnly=(document.getElementById('cgXTextOnly')||{}).checked===true;
+    var _xTextPairs=_xTextKeys.map(function(k){ return {x:Number(k),t:_xTextLabels[k]}; }).filter(function(o){return isFinite(o.x);});
+    var _xTextFind=function(v){
+      for(var q=0;q<_xTextPairs.length;q++){ var o=_xTextPairs[q]; if(Math.abs(v-o.x)<=1e-9*Math.max(1,Math.abs(o.x))) return o.t; }
+      return undefined;
+    };
+    var _xSigOn=function(){ return (parseInt((document.getElementById('cgXSigFig')||{}).value)||0)>0; };
+    var _xBaseCb=xScaleOpts.ticks.callback;
+    xScaleOpts.ticks.callback=function(v){
+      var t=_xTextFind(Number(v)); if(t!==undefined) return t;
+      if(_xTextOnly) return '';
+      return _xBaseCb.apply(this,arguments);
+    };
+    xScaleOpts.ticks.autoSkip=false;      // nunca esconder um nome de X por falta de espaço
+    xScaleOpts.afterBuildTicks=function(scale){
+      var lo=scale.min, hi=scale.max, span=hi-lo; if(!(span>0)) return;
+      var own=_xTextPairs.filter(function(o){return o.x>=lo-1e-9&&o.x<=hi+1e-9;}).map(function(o){return {value:o.x};});
+      var keep=[];
+      if(!_xTextOnly){                    // mantém os números automáticos que não colidem com um nome
+        scale.ticks.forEach(function(tk){
+          if(own.some(function(o){return Math.abs(o.value-tk.value)<span*0.04;})) return;
+          if(_xBaseCb && _xBaseCb.call(scale,tk.value)===_xBaseCb.call(scale,Math.round(tk.value)) && Math.abs(tk.value-Math.round(tk.value))>1e-9 && !(scale._xSig>0)){ if(!_xSigOn()) return; }
+          keep.push(tk);
+        });
+      }
+      scale.ticks=keep.concat(own).sort(function(a,b){return a.value-b.value;});
+    };
+  }
   // "Valor X entre duas linhas" — offset desloca os pontos/rótulos para o MEIO entre as linhas de
   // grade (estilo faixa); OFF mantém o valor X centralizado no marcador (sobre a linha de grade).
   if(_cgXBetween){ xScaleOpts.offset=true; if(xScaleOpts.grid) xScaleOpts.grid.offset=true; }
@@ -67483,8 +67536,8 @@ function _cgUpdateChartRaw(){
               var x=ix(pt.x), y=iy(pt.y);
               if(x<pL-1||x>pR+1||y<pT-1||y>pB+1) return;
               var lbl='';
-              if(dataLabelContent==='y') lbl=parseFloat(pt.y).toPrecision(4).replace(/\.?0+$/,'');
-              else if(dataLabelContent==='x') lbl=parseFloat(pt.x).toPrecision(4).replace(/\.?0+$/,'');
+              if(dataLabelContent==='y') lbl=String(Number(parseFloat(pt.y).toPrecision(4)));
+              else if(dataLabelContent==='x') lbl=String(Number(parseFloat(pt.x).toPrecision(4)));
               else if(dataLabelContent==='xy') lbl='('+parseFloat(pt.x).toPrecision(3)+', '+parseFloat(pt.y).toPrecision(3)+')';
               else if(dataLabelContent==='name') lbl=String(mds.label||'');
               else if(dataLabelContent==='custom'){
